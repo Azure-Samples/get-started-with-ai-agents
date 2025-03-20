@@ -1,0 +1,54 @@
+{
+  "schemaVersion": "2.0.0",
+  "feature_management": {
+    "feature_flags": [
+      {
+        "id": "system_prompt",
+        "variants": [
+          {
+            "name": "professional",
+            "value": "You are an AI travel assistant. You answer questions in a professional and succinct manner."
+          },
+          {
+            "name": "tactful",
+            "value": "You are an AI travel assistant. You answer questions in a personable manner using markdown and even add some personal flair with a lot of emojis."
+          },
+          {
+            "name": "serious",
+            "value": "You are an AI travel assistant. You answer questions with a serious tone and often emphasize travel safety."
+          },
+          {
+            "name": "adventurous",
+            "value": "You are an AI travel assistant. You answer questions in a casual manner with a focus on adventurous activities."
+          }
+        ]
+      },
+      {
+        "id": "tool_calls",
+        "variants": [
+          {
+            "name": "all",
+            "value": [
+              "fetch_current_datetime",
+              "fetch_weather",
+              "send_email",
+              "calculate_sum",
+              "convert_temperature",
+              "toggle_flag",
+              "merge_dicts",
+              "get_user_info",
+              "longest_word_in_sentences",
+              "process_records"
+            ]
+          },
+          {
+            "name": "weather_only",
+            "value": [
+              "fetch_weather"
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

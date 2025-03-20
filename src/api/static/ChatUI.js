@@ -223,7 +223,7 @@ class ChatUI {
             const reversedResponse = [...json_response].reverse();
             for (let response of reversedResponse) {
                 var msg = response.content;
-                if (message.role === "user") {
+                if (response.role === "user") {
                     this.appendUserMessage(msg);
                 } else {
                     var messageDiv = this.createAssistantMessageDiv();

@@ -6,10 +6,10 @@ import logging
 import os
 import sys
 import json
-from typing import Dict, Optional
+from typing import Dict, List, Optional, Set
 
 from azure.ai.projects.aio import AIProjectClient
-from azure.ai.projects.models import FilePurpose, FileSearchTool, AsyncToolSet, FileSearchToolResource
+from azure.ai.projects.models import Agent, FilePurpose, FileSearchTool, ToolDefinition, ToolResources, FileSearchToolResource, AsyncFunctionTool
 from azure.identity import DefaultAzureCredential
 
 import fastapi
@@ -19,7 +19,8 @@ from fastapi.responses import JSONResponse
 from dotenv import load_dotenv
 
 from logging_config import configure_logging
-
+from user_functions import fns
+from feature_model import FeatureModel
 enable_trace = False
 logger = None
 
@@ -50,7 +51,10 @@ async def lifespan(app: fastapi.FastAPI):
                 configure_azure_monitor(connection_string=application_insights_connection_string)
                 # Do not instrument the code yet, before trace fix is available.
                 #ai_client.telemetry.enable()
-
+                
+        logger.info("FeatureModel created from feature.json")
+        
+        
         if os.environ.get("AZURE_AI_AGENT_ID"):
             try: 
                 agent = await ai_client.agents.get_agent(os.environ["AZURE_AI_AGENT_ID"])
@@ -73,7 +77,8 @@ async def lifespan(app: fastapi.FastAPI):
 
         if not agent:
             raise RuntimeError("No agent found. Ensure qunicorn.py created one or set AZURE_AI_AGENT_ID.")
-
+        agent = await update_agent_by_feature_flag(ai_client, agent)
+        
         app.state.ai_client = ai_client
         app.state.agent = agent
         
@@ -90,6 +95,33 @@ async def lifespan(app: fastapi.FastAPI):
         except Exception as e:
             logger.error("Error closing AIProjectClient", exc_info=True)
 
+async def update_agent_by_feature_flag(ai_client: AIProjectClient, agent: Agent):
+    file = os.path.join(os.path.dirname(__file__), '..', 'data', 'feature.json')
+    
+    with open(file, "r", encoding="utf-8") as f:
+        feature = FeatureModel.from_json(f.read())
+    
+        tool_defs: List[ToolDefinition] = []
+        for tool in agent.tools:
+            if tool.type != "function":
+                tool_defs.append(tool)
+        
+        funcs = fns.copy()   
+        funcs_in_feature_flag = feature.get_variants("tool_calls", "weather_only")
+        tool_calls: Set = set()
+        for func in funcs:
+            if func.__name__ in funcs_in_feature_flag:
+                tool_calls.add(func)
+        if len(tool_calls) > 0:
+            tool_defs.extend(AsyncFunctionTool(tool_calls).definitions)
+
+        agent = await ai_client.agents.update_agent(
+            agent_id=agent.id,
+            instructions=feature.get_variant("system_prompt", "professional"),
+            tools=tool_defs
+        )
+        return agent
+        
 
 def create_app():
     if not os.getenv("RUNNING_IN_PRODUCTION"):
