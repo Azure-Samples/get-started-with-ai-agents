@@ -4,8 +4,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.33.93.31351",
-      "templateHash": "10307769654054798782"
+      "version": "0.34.44.8038",
+      "templateHash": "7202009530597557735"
     }
   },
   "parameters": {
@@ -133,30 +133,23 @@
         "description": "The log analytics workspace name. If ommited will be generated"
       }
     },
-    "principalId": {
-      "type": "string",
-      "defaultValue": "",
-      "metadata": {
-        "description": "Id of the user or app to assign application roles"
-      }
-    },
     "agentModelFormat": {
       "type": "string",
+      "defaultValue": "OpenAI",
       "allowedValues": [
         "Microsoft",
         "OpenAI"
       ],
       "metadata": {
         "description": "Format of the chat model to deploy"
-      },
-      "defaultValue": "OpenAI"
+      }
     },
     "agentName": {
       "type": "string",
+      "defaultValue": "agent-template-assistant",
       "metadata": {
         "description": "Name of agent to deploy"
-      },
-      "defaultValue": "agent-template-assistant"
+      }
     },
     "aiAgentID": {
       "type": "string",
@@ -167,91 +160,91 @@
     },
     "agentModelName": {
       "type": "string",
+      "defaultValue": "gpt-4o-mini",
       "metadata": {
         "description": "Name of the chat model to deploy"
-      },
-      "defaultValue": "gpt-4o-mini"
+      }
     },
     "agentDeploymentName": {
       "type": "string",
+      "defaultValue": "gpt-4o-mini",
       "metadata": {
         "description": "Name of the model deployment"
-      },
-      "defaultValue": "gpt-4o-mini"
+      }
     },
     "agentModelVersion": {
       "type": "string",
+      "defaultValue": "2024-07-18",
       "metadata": {
         "description": "Version of the chat model to deploy"
-      },
-      "defaultValue": "2024-07-18"
+      }
     },
     "agentDeploymentSku": {
       "type": "string",
+      "defaultValue": "GlobalStandard",
       "metadata": {
         "description": "Sku of the chat deployment"
-      },
-      "defaultValue": "GlobalStandard"
+      }
     },
     "agentDeploymentCapacity": {
       "type": "int",
+      "defaultValue": 30,
       "metadata": {
         "description": "Capacity of the chat deployment"
-      },
-      "defaultValue": 30
+      }
     },
     "embedModelFormat": {
       "type": "string",
+      "defaultValue": "OpenAI",
       "allowedValues": [
         "Microsoft",
         "OpenAI"
       ],
       "metadata": {
         "description": "Format of the embedding model to deploy"
-      },
-      "defaultValue": "OpenAI"
+      }
     },
     "embedModelName": {
       "type": "string",
+      "defaultValue": "text-embedding-3-small",
       "metadata": {
         "description": "Name of the embedding model to deploy"
-      },
-      "defaultValue": "text-embedding-3-small"
+      }
     },
     "embeddingDeploymentName": {
       "type": "string",
+      "defaultValue": "text-embedding-3-small",
       "metadata": {
         "description": "Name of the embedding model deployment"
-      },
-      "defaultValue": "text-embedding-3-small"
+      }
     },
     "embeddingDeploymentDimensions": {
       "type": "string",
+      "defaultValue": "100",
       "metadata": {
         "description": "Embedding model dimensionality"
-      },
-      "defaultValue": "100"
+      }
     },
     "embedModelVersion": {
       "type": "securestring",
+      "defaultValue": "1",
       "metadata": {
         "description": "Version of the embedding model to deploy"
-      },
-      "defaultValue": "1"
+      }
     },
     "embedDeploymentSku": {
       "type": "string",
+      "defaultValue": "Standard",
       "metadata": {
         "description": "Sku of the embeddings model deployment"
-      },
-      "defaultValue": "Standard"
+      }
     },
     "embedDeploymentCapacity": {
       "type": "int",
+      "defaultValue": 30,
       "metadata": {
         "description": "Capacity of the embedding deployment"
-      },
-      "defaultValue": 30
+      }
     },
     "useContainerRegistry": {
       "type": "bool",
@@ -513,8 +506,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.33.93.31351",
-              "templateHash": "15889232546324762694"
+              "version": "0.34.44.8038",
+              "templateHash": "176568871386984851"
             }
           },
           "parameters": {
@@ -656,8 +649,8 @@
                   "metadata": {
                     "_generator": {
                       "name": "bicep",
-                      "version": "0.33.93.31351",
-                      "templateHash": "13130383671788479174"
+                      "version": "0.34.44.8038",
+                      "templateHash": "15763543685523415597"
                     }
                   },
                   "parameters": {
@@ -750,8 +743,8 @@
                           "metadata": {
                             "_generator": {
                               "name": "bicep",
-                              "version": "0.33.93.31351",
-                              "templateHash": "7122112742823669491"
+                              "version": "0.34.44.8038",
+                              "templateHash": "8365666898075252029"
                             },
                             "description": "Creates an Azure Key Vault."
                           },
@@ -903,8 +896,8 @@
                           "metadata": {
                             "_generator": {
                               "name": "bicep",
-                              "version": "0.33.93.31351",
-                              "templateHash": "12864803261297690712"
+                              "version": "0.34.44.8038",
+                              "templateHash": "13434473786895597507"
                             },
                             "description": "Creates an Azure storage account."
                           },
@@ -1164,8 +1157,8 @@
                           "metadata": {
                             "_generator": {
                               "name": "bicep",
-                              "version": "0.33.93.31351",
-                              "templateHash": "10891050604045084701"
+                              "version": "0.34.44.8038",
+                              "templateHash": "47350922261847171"
                             },
                             "description": "Creates a Log Analytics workspace."
                           },
@@ -1241,8 +1234,8 @@
                           "metadata": {
                             "_generator": {
                               "name": "bicep",
-                              "version": "0.33.93.31351",
-                              "templateHash": "14340411145619798597"
+                              "version": "0.34.44.8038",
+                              "templateHash": "14508427667657106623"
                             },
                             "description": "Creates an Application Insights instance based on an existing Log Analytics workspace."
                           },
@@ -1306,8 +1299,8 @@
                                   "metadata": {
                                     "_generator": {
                                       "name": "bicep",
-                                      "version": "0.33.93.31351",
-                                      "templateHash": "7959658909084813949"
+                                      "version": "0.34.44.8038",
+                                      "templateHash": "14424091050138344443"
                                     },
                                     "description": "Creates a dashboard for an Application Insights instance."
                                   },
@@ -2594,8 +2587,8 @@
                           "metadata": {
                             "_generator": {
                               "name": "bicep",
-                              "version": "0.33.93.31351",
-                              "templateHash": "2145724256803712087"
+                              "version": "0.34.44.8038",
+                              "templateHash": "17712331398077065307"
                             },
                             "description": "Creates an Azure Container Registry."
                           },
@@ -2870,8 +2863,8 @@
                           "metadata": {
                             "_generator": {
                               "name": "bicep",
-                              "version": "0.33.93.31351",
-                              "templateHash": "2742619007415743976"
+                              "version": "0.34.44.8038",
+                              "templateHash": "13237299269915090657"
                             },
                             "description": "Creates an Azure Cognitive Services instance."
                           },
@@ -3023,8 +3016,8 @@
                           "metadata": {
                             "_generator": {
                               "name": "bicep",
-                              "version": "0.33.93.31351",
-                              "templateHash": "12801695898195206028"
+                              "version": "0.34.44.8038",
+                              "templateHash": "4408217411559527029"
                             },
                             "description": "Creates an Azure AI Search instance."
                           },
@@ -3117,7 +3110,6 @@
                               "tags": "[parameters('tags')]",
                               "identity": "[variables('searchIdentityProvider')]",
                               "properties": {
-                                "authOptions": "[parameters('authOptions')]",
                                 "disableLocalAuth": "[parameters('disableLocalAuth')]",
                                 "disabledDataExfiltrationOptions": "[parameters('disabledDataExfiltrationOptions')]",
                                 "encryptionWithCmk": "[parameters('encryptionWithCmk')]",
@@ -3283,8 +3275,8 @@
                   "metadata": {
                     "_generator": {
                       "name": "bicep",
-                      "version": "0.33.93.31351",
-                      "templateHash": "4566184424223608313"
+                      "version": "0.34.44.8038",
+                      "templateHash": "9261538417066443136"
                     }
                   },
                   "parameters": {
@@ -3517,8 +3509,8 @@
                   "metadata": {
                     "_generator": {
                       "name": "bicep",
-                      "version": "0.33.93.31351",
-                      "templateHash": "11131437551089852806"
+                      "version": "0.34.44.8038",
+                      "templateHash": "1627900001840505883"
                     }
                   },
                   "parameters": {
@@ -3633,8 +3625,8 @@
                           "metadata": {
                             "_generator": {
                               "name": "bicep",
-                              "version": "0.33.93.31351",
-                              "templateHash": "1623829276601313671"
+                              "version": "0.34.44.8038",
+                              "templateHash": "3777159230715895126"
                             },
                             "description": "Assigns an Azure Key Vault access policy."
                           },
@@ -3707,8 +3699,8 @@
                           "metadata": {
                             "_generator": {
                               "name": "bicep",
-                              "version": "0.33.93.31351",
-                              "templateHash": "15211825627429393471"
+                              "version": "0.34.44.8038",
+                              "templateHash": "17716749299453150125"
                             },
                             "description": "Creates a role assignment for a service principal."
                           },
@@ -3776,8 +3768,8 @@
                           "metadata": {
                             "_generator": {
                               "name": "bicep",
-                              "version": "0.33.93.31351",
-                              "templateHash": "15211825627429393471"
+                              "version": "0.34.44.8038",
+                              "templateHash": "17716749299453150125"
                             },
                             "description": "Creates a role assignment for a service principal."
                           },
@@ -3950,8 +3942,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.33.93.31351",
-              "templateHash": "10891050604045084701"
+              "version": "0.34.44.8038",
+              "templateHash": "47350922261847171"
             },
             "description": "Creates a Log Analytics workspace."
           },
@@ -4027,8 +4019,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.33.93.31351",
-              "templateHash": "8941198530079295746"
+              "version": "0.34.44.8038",
+              "templateHash": "14860267170148532952"
             },
             "description": "Assigns MonitoringMetricsContributor role to Application Insights."
           },
@@ -4087,8 +4079,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.33.93.31351",
-              "templateHash": "15211825627429393471"
+              "version": "0.34.44.8038",
+              "templateHash": "17716749299453150125"
             },
             "description": "Creates a role assignment for a service principal."
           },
@@ -4162,8 +4154,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.33.93.31351",
-              "templateHash": "10112531134359314233"
+              "version": "0.34.44.8038",
+              "templateHash": "9394622775734536856"
             },
             "description": "Creates an Azure Container Registry and an Azure Container Apps environment."
           },
@@ -4234,8 +4226,8 @@
                   "metadata": {
                     "_generator": {
                       "name": "bicep",
-                      "version": "0.33.93.31351",
-                      "templateHash": "14460805373354283791"
+                      "version": "0.34.44.8038",
+                      "templateHash": "11331806587581464666"
                     },
                     "description": "Creates an Azure Container Apps environment."
                   },
@@ -4337,8 +4329,8 @@
                   "metadata": {
                     "_generator": {
                       "name": "bicep",
-                      "version": "0.33.93.31351",
-                      "templateHash": "2145724256803712087"
+                      "version": "0.34.44.8038",
+                      "templateHash": "17712331398077065307"
                     },
                     "description": "Creates an Azure Container Registry."
                   },
@@ -4632,6 +4624,9 @@
           "tags": {
             "value": "[variables('tags')]"
           },
+          "serviceName": {
+            "value": "api_and_frontend"
+          },
           "identityName": {
             "value": "[format('{0}api-{1}', variables('abbrs').managedIdentityUserAssignedIdentities, variables('resourceToken'))]"
           },
@@ -4641,7 +4636,7 @@
           "containerRegistryName": {
             "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, if(not(empty(parameters('resourceGroupName'))), parameters('resourceGroupName'), format('{0}{1}', variables('abbrs').resourcesResourceGroups, parameters('environmentName')))), 'Microsoft.Resources/deployments', 'container-apps'), '2022-09-01').outputs.registryName.value]"
           },
-          "projectConnectionString": "[if(empty(if(empty(parameters('aiExistingProjectConnectionString')), split(reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, if(not(empty(parameters('resourceGroupName'))), parameters('resourceGroupName'), format('{0}{1}', variables('abbrs').resourcesResourceGroups, parameters('environmentName')))), 'Microsoft.Resources/deployments', 'ai'), '2022-09-01').outputs.discoveryUrl.value, '/')[2], '')), createObject('value', parameters('aiExistingProjectConnectionString')), createObject('value', format('{0};{1};{2};{3}', if(empty(parameters('aiExistingProjectConnectionString')), split(reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, if(not(empty(parameters('resourceGroupName'))), parameters('resourceGroupName'), format('{0}{1}', variables('abbrs').resourcesResourceGroups, parameters('environmentName')))), 'Microsoft.Resources/deployments', 'ai'), '2022-09-01').outputs.discoveryUrl.value, '/')[2], ''), subscription().subscriptionId, if(not(empty(parameters('resourceGroupName'))), parameters('resourceGroupName'), format('{0}{1}', variables('abbrs').resourcesResourceGroups, parameters('environmentName'))), variables('projectName'))))]",
+          "projectConnectionString": "[if(empty(if(and(and(empty(parameters('aiExistingProjectConnectionString')), not(empty(reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, if(not(empty(parameters('resourceGroupName'))), parameters('resourceGroupName'), format('{0}{1}', variables('abbrs').resourcesResourceGroups, parameters('environmentName')))), 'Microsoft.Resources/deployments', 'ai'), '2022-09-01').outputs.discoveryUrl.value))), contains(reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, if(not(empty(parameters('resourceGroupName'))), parameters('resourceGroupName'), format('{0}{1}', variables('abbrs').resourcesResourceGroups, parameters('environmentName')))), 'Microsoft.Resources/deployments', 'ai'), '2022-09-01').outputs.discoveryUrl.value, '/')), split(reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, if(not(empty(parameters('resourceGroupName'))), parameters('resourceGroupName'), format('{0}{1}', variables('abbrs').resourcesResourceGroups, parameters('environmentName')))), 'Microsoft.Resources/deployments', 'ai'), '2022-09-01').outputs.discoveryUrl.value, '/')[2], '')), createObject('value', parameters('aiExistingProjectConnectionString')), createObject('value', format('{0};{1};{2};{3}', if(and(and(empty(parameters('aiExistingProjectConnectionString')), not(empty(reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, if(not(empty(parameters('resourceGroupName'))), parameters('resourceGroupName'), format('{0}{1}', variables('abbrs').resourcesResourceGroups, parameters('environmentName')))), 'Microsoft.Resources/deployments', 'ai'), '2022-09-01').outputs.discoveryUrl.value))), contains(reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, if(not(empty(parameters('resourceGroupName'))), parameters('resourceGroupName'), format('{0}{1}', variables('abbrs').resourcesResourceGroups, parameters('environmentName')))), 'Microsoft.Resources/deployments', 'ai'), '2022-09-01').outputs.discoveryUrl.value, '/')), split(reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, if(not(empty(parameters('resourceGroupName'))), parameters('resourceGroupName'), format('{0}{1}', variables('abbrs').resourcesResourceGroups, parameters('environmentName')))), 'Microsoft.Resources/deployments', 'ai'), '2022-09-01').outputs.discoveryUrl.value, '/')[2], ''), subscription().subscriptionId, if(not(empty(parameters('resourceGroupName'))), parameters('resourceGroupName'), format('{0}{1}', variables('abbrs').resourcesResourceGroups, parameters('environmentName'))), variables('projectName'))))]",
           "agentDeploymentName": {
             "value": "[parameters('agentDeploymentName')]"
           },
@@ -4674,8 +4669,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.33.93.31351",
-              "templateHash": "7354448195453216647"
+              "version": "0.34.44.8038",
+              "templateHash": "14954821991030280750"
             }
           },
           "parameters": {
@@ -4734,6 +4729,9 @@
               "type": "string"
             }
           },
+          "variables": {
+            "module_name": "[replace(parameters('serviceName'), ' ', '-')]"
+          },
           "resources": [
             {
               "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
@@ -4744,7 +4742,7 @@
             {
               "type": "Microsoft.Resources/deployments",
               "apiVersion": "2022-09-01",
-              "name": "[format('{0}-container-app-module', parameters('serviceName'))]",
+              "name": "[format('{0}-container-app-module', variables('module_name'))]",
               "properties": {
                 "expressionEvaluationOptions": {
                   "scope": "inner"
@@ -4830,8 +4828,8 @@
                   "metadata": {
                     "_generator": {
                       "name": "bicep",
-                      "version": "0.33.93.31351",
-                      "templateHash": "2230923515415311113"
+                      "version": "0.34.44.8038",
+                      "templateHash": "1142675002948692193"
                     },
                     "description": "Creates or updates an existing Azure Container App."
                   },
@@ -5090,8 +5088,8 @@
                           "metadata": {
                             "_generator": {
                               "name": "bicep",
-                              "version": "0.33.93.31351",
-                              "templateHash": "7808053560162357966"
+                              "version": "0.34.44.8038",
+                              "templateHash": "11938328258258588737"
                             },
                             "description": "Creates a container app in an Azure Container App environment."
                           },
@@ -5354,8 +5352,8 @@
                                   "metadata": {
                                     "_generator": {
                                       "name": "bicep",
-                                      "version": "0.33.93.31351",
-                                      "templateHash": "18228807762088856507"
+                                      "version": "0.34.44.8038",
+                                      "templateHash": "13289176905057751552"
                                     },
                                     "description": "Assigns ACR Pull permissions to access an Azure Container Registry."
                                   },
@@ -5449,15 +5447,15 @@
             },
             "SERVICE_API_NAME": {
               "type": "string",
-              "value": "[reference(resourceId('Microsoft.Resources/deployments', format('{0}-container-app-module', parameters('serviceName'))), '2022-09-01').outputs.name.value]"
+              "value": "[reference(resourceId('Microsoft.Resources/deployments', format('{0}-container-app-module', variables('module_name'))), '2022-09-01').outputs.name.value]"
             },
             "SERVICE_API_URI": {
               "type": "string",
-              "value": "[reference(resourceId('Microsoft.Resources/deployments', format('{0}-container-app-module', parameters('serviceName'))), '2022-09-01').outputs.uri.value]"
+              "value": "[reference(resourceId('Microsoft.Resources/deployments', format('{0}-container-app-module', variables('module_name'))), '2022-09-01').outputs.uri.value]"
             },
             "SERVICE_API_IMAGE_NAME": {
               "type": "string",
-              "value": "[reference(resourceId('Microsoft.Resources/deployments', format('{0}-container-app-module', parameters('serviceName'))), '2022-09-01').outputs.imageName.value]"
+              "value": "[reference(resourceId('Microsoft.Resources/deployments', format('{0}-container-app-module', variables('module_name'))), '2022-09-01').outputs.imageName.value]"
             }
           }
         }
@@ -5469,7 +5467,6 @@
       ]
     },
     {
-      "condition": "[not(empty(parameters('principalId')))]",
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "user-role-acr-push",
@@ -5481,7 +5478,7 @@
         "mode": "Incremental",
         "parameters": {
           "principalId": {
-            "value": "[parameters('principalId')]"
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, if(not(empty(parameters('resourceGroupName'))), parameters('resourceGroupName'), format('{0}{1}', variables('abbrs').resourcesResourceGroups, parameters('environmentName')))), 'Microsoft.Resources/deployments', 'api'), '2022-09-01').outputs.SERVICE_API_IDENTITY_PRINCIPAL_ID.value]"
           },
           "roleDefinitionId": {
             "value": "8311e382-0749-4cb8-b61a-304f252e45ec"
@@ -5493,8 +5490,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.33.93.31351",
-              "templateHash": "15211825627429393471"
+              "version": "0.34.44.8038",
+              "templateHash": "17716749299453150125"
             },
             "description": "Creates a role assignment for a service principal."
           },
@@ -5533,11 +5530,11 @@
         }
       },
       "dependsOn": [
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, if(not(empty(parameters('resourceGroupName'))), parameters('resourceGroupName'), format('{0}{1}', variables('abbrs').resourcesResourceGroups, parameters('environmentName')))), 'Microsoft.Resources/deployments', 'api')]",
         "[subscriptionResourceId('Microsoft.Resources/resourceGroups', if(not(empty(parameters('resourceGroupName'))), parameters('resourceGroupName'), format('{0}{1}', variables('abbrs').resourcesResourceGroups, parameters('environmentName'))))]"
       ]
     },
     {
-      "condition": "[not(empty(parameters('principalId')))]",
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "user-role-acr-pull",
@@ -5549,7 +5546,7 @@
         "mode": "Incremental",
         "parameters": {
           "principalId": {
-            "value": "[parameters('principalId')]"
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, if(not(empty(parameters('resourceGroupName'))), parameters('resourceGroupName'), format('{0}{1}', variables('abbrs').resourcesResourceGroups, parameters('environmentName')))), 'Microsoft.Resources/deployments', 'api'), '2022-09-01').outputs.SERVICE_API_IDENTITY_PRINCIPAL_ID.value]"
           },
           "roleDefinitionId": {
             "value": "7f951dda-4ed3-4680-a7ca-43fe172d538d"
@@ -5561,8 +5558,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.33.93.31351",
-              "templateHash": "15211825627429393471"
+              "version": "0.34.44.8038",
+              "templateHash": "17716749299453150125"
             },
             "description": "Creates a role assignment for a service principal."
           },
@@ -5601,11 +5598,11 @@
         }
       },
       "dependsOn": [
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, if(not(empty(parameters('resourceGroupName'))), parameters('resourceGroupName'), format('{0}{1}', variables('abbrs').resourcesResourceGroups, parameters('environmentName')))), 'Microsoft.Resources/deployments', 'api')]",
         "[subscriptionResourceId('Microsoft.Resources/resourceGroups', if(not(empty(parameters('resourceGroupName'))), parameters('resourceGroupName'), format('{0}{1}', variables('abbrs').resourcesResourceGroups, parameters('environmentName'))))]"
       ]
     },
     {
-      "condition": "[not(empty(parameters('principalId')))]",
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "user-role-data-scientist",
@@ -5617,7 +5614,7 @@
         "mode": "Incremental",
         "parameters": {
           "principalId": {
-            "value": "[parameters('principalId')]"
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, if(not(empty(parameters('resourceGroupName'))), parameters('resourceGroupName'), format('{0}{1}', variables('abbrs').resourcesResourceGroups, parameters('environmentName')))), 'Microsoft.Resources/deployments', 'api'), '2022-09-01').outputs.SERVICE_API_IDENTITY_PRINCIPAL_ID.value]"
           },
           "roleDefinitionId": {
             "value": "f6c7c914-8db3-469d-8ca1-694a8f32e121"
@@ -5629,8 +5626,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.33.93.31351",
-              "templateHash": "15211825627429393471"
+              "version": "0.34.44.8038",
+              "templateHash": "17716749299453150125"
             },
             "description": "Creates a role assignment for a service principal."
           },
@@ -5669,11 +5666,11 @@
         }
       },
       "dependsOn": [
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, if(not(empty(parameters('resourceGroupName'))), parameters('resourceGroupName'), format('{0}{1}', variables('abbrs').resourcesResourceGroups, parameters('environmentName')))), 'Microsoft.Resources/deployments', 'api')]",
         "[subscriptionResourceId('Microsoft.Resources/resourceGroups', if(not(empty(parameters('resourceGroupName'))), parameters('resourceGroupName'), format('{0}{1}', variables('abbrs').resourcesResourceGroups, parameters('environmentName'))))]"
       ]
     },
     {
-      "condition": "[not(empty(parameters('principalId')))]",
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "user-role-secrets-reader",
@@ -5685,7 +5682,7 @@
         "mode": "Incremental",
         "parameters": {
           "principalId": {
-            "value": "[parameters('principalId')]"
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, if(not(empty(parameters('resourceGroupName'))), parameters('resourceGroupName'), format('{0}{1}', variables('abbrs').resourcesResourceGroups, parameters('environmentName')))), 'Microsoft.Resources/deployments', 'api'), '2022-09-01').outputs.SERVICE_API_IDENTITY_PRINCIPAL_ID.value]"
           },
           "roleDefinitionId": {
             "value": "ea01e6af-a1c1-4350-9563-ad00f8c72ec5"
@@ -5697,8 +5694,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.33.93.31351",
-              "templateHash": "15211825627429393471"
+              "version": "0.34.44.8038",
+              "templateHash": "17716749299453150125"
             },
             "description": "Creates a role assignment for a service principal."
           },
@@ -5737,11 +5734,11 @@
         }
       },
       "dependsOn": [
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, if(not(empty(parameters('resourceGroupName'))), parameters('resourceGroupName'), format('{0}{1}', variables('abbrs').resourcesResourceGroups, parameters('environmentName')))), 'Microsoft.Resources/deployments', 'api')]",
         "[subscriptionResourceId('Microsoft.Resources/resourceGroups', if(not(empty(parameters('resourceGroupName'))), parameters('resourceGroupName'), format('{0}{1}', variables('abbrs').resourcesResourceGroups, parameters('environmentName'))))]"
       ]
     },
     {
-      "condition": "[not(empty(parameters('principalId')))]",
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "user-role-azureai-developer",
@@ -5753,7 +5750,7 @@
         "mode": "Incremental",
         "parameters": {
           "principalId": {
-            "value": "[parameters('principalId')]"
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, if(not(empty(parameters('resourceGroupName'))), parameters('resourceGroupName'), format('{0}{1}', variables('abbrs').resourcesResourceGroups, parameters('environmentName')))), 'Microsoft.Resources/deployments', 'api'), '2022-09-01').outputs.SERVICE_API_IDENTITY_PRINCIPAL_ID.value]"
           },
           "roleDefinitionId": {
             "value": "64702f94-c441-49e6-a78b-ef80e0188fee"
@@ -5765,8 +5762,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.33.93.31351",
-              "templateHash": "15211825627429393471"
+              "version": "0.34.44.8038",
+              "templateHash": "17716749299453150125"
             },
             "description": "Creates a role assignment for a service principal."
           },
@@ -5805,6 +5802,7 @@
         }
       },
       "dependsOn": [
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, if(not(empty(parameters('resourceGroupName'))), parameters('resourceGroupName'), format('{0}{1}', variables('abbrs').resourcesResourceGroups, parameters('environmentName')))), 'Microsoft.Resources/deployments', 'api')]",
         "[subscriptionResourceId('Microsoft.Resources/resourceGroups', if(not(empty(parameters('resourceGroupName'))), parameters('resourceGroupName'), format('{0}{1}', variables('abbrs').resourcesResourceGroups, parameters('environmentName'))))]"
       ]
     },
@@ -5833,8 +5831,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.33.93.31351",
-              "templateHash": "15211825627429393471"
+              "version": "0.34.44.8038",
+              "templateHash": "17716749299453150125"
             },
             "description": "Creates a role assignment for a service principal."
           },
@@ -5902,8 +5900,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.33.93.31351",
-              "templateHash": "15211825627429393471"
+              "version": "0.34.44.8038",
+              "templateHash": "17716749299453150125"
             },
             "description": "Creates a role assignment for a service principal."
           },
@@ -5971,8 +5969,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.33.93.31351",
-              "templateHash": "15211825627429393471"
+              "version": "0.34.44.8038",
+              "templateHash": "17716749299453150125"
             },
             "description": "Creates a role assignment for a service principal."
           },
@@ -6016,7 +6014,7 @@
       ]
     },
     {
-      "condition": "[and(parameters('useSearchService'), not(empty(parameters('principalId'))))]",
+      "condition": "[parameters('useSearchService')]",
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "user-role-azure-index-data-contributor-rg",
@@ -6028,7 +6026,7 @@
         "mode": "Incremental",
         "parameters": {
           "principalId": {
-            "value": "[parameters('principalId')]"
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, if(not(empty(parameters('resourceGroupName'))), parameters('resourceGroupName'), format('{0}{1}', variables('abbrs').resourcesResourceGroups, parameters('environmentName')))), 'Microsoft.Resources/deployments', 'api'), '2022-09-01').outputs.SERVICE_API_IDENTITY_PRINCIPAL_ID.value]"
           },
           "roleDefinitionId": {
             "value": "8ebe5a00-799e-43f5-93ac-243d3dce84a7"
@@ -6040,8 +6038,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.33.93.31351",
-              "templateHash": "15211825627429393471"
+              "version": "0.34.44.8038",
+              "templateHash": "17716749299453150125"
             },
             "description": "Creates a role assignment for a service principal."
           },
@@ -6080,11 +6078,12 @@
         }
       },
       "dependsOn": [
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, if(not(empty(parameters('resourceGroupName'))), parameters('resourceGroupName'), format('{0}{1}', variables('abbrs').resourcesResourceGroups, parameters('environmentName')))), 'Microsoft.Resources/deployments', 'api')]",
         "[subscriptionResourceId('Microsoft.Resources/resourceGroups', if(not(empty(parameters('resourceGroupName'))), parameters('resourceGroupName'), format('{0}{1}', variables('abbrs').resourcesResourceGroups, parameters('environmentName'))))]"
       ]
     },
     {
-      "condition": "[and(parameters('useSearchService'), not(empty(parameters('principalId'))))]",
+      "condition": "[parameters('useSearchService')]",
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "user-role-azure-index-data-reader-rg",
@@ -6096,7 +6095,7 @@
         "mode": "Incremental",
         "parameters": {
           "principalId": {
-            "value": "[parameters('principalId')]"
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, if(not(empty(parameters('resourceGroupName'))), parameters('resourceGroupName'), format('{0}{1}', variables('abbrs').resourcesResourceGroups, parameters('environmentName')))), 'Microsoft.Resources/deployments', 'api'), '2022-09-01').outputs.SERVICE_API_IDENTITY_PRINCIPAL_ID.value]"
           },
           "roleDefinitionId": {
             "value": "1407120a-92aa-4202-b7e9-c0e197c71c8f"
@@ -6108,8 +6107,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.33.93.31351",
-              "templateHash": "15211825627429393471"
+              "version": "0.34.44.8038",
+              "templateHash": "17716749299453150125"
             },
             "description": "Creates a role assignment for a service principal."
           },
@@ -6148,11 +6147,12 @@
         }
       },
       "dependsOn": [
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, if(not(empty(parameters('resourceGroupName'))), parameters('resourceGroupName'), format('{0}{1}', variables('abbrs').resourcesResourceGroups, parameters('environmentName')))), 'Microsoft.Resources/deployments', 'api')]",
         "[subscriptionResourceId('Microsoft.Resources/resourceGroups', if(not(empty(parameters('resourceGroupName'))), parameters('resourceGroupName'), format('{0}{1}', variables('abbrs').resourcesResourceGroups, parameters('environmentName'))))]"
       ]
     },
     {
-      "condition": "[and(parameters('useSearchService'), not(empty(parameters('principalId'))))]",
+      "condition": "[parameters('useSearchService')]",
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "user-role-azure-search-service-contributor-rg",
@@ -6164,7 +6164,7 @@
         "mode": "Incremental",
         "parameters": {
           "principalId": {
-            "value": "[parameters('principalId')]"
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, if(not(empty(parameters('resourceGroupName'))), parameters('resourceGroupName'), format('{0}{1}', variables('abbrs').resourcesResourceGroups, parameters('environmentName')))), 'Microsoft.Resources/deployments', 'api'), '2022-09-01').outputs.SERVICE_API_IDENTITY_PRINCIPAL_ID.value]"
           },
           "roleDefinitionId": {
             "value": "7ca78c08-252a-4471-8644-bb5ff32d4ba0"
@@ -6176,8 +6176,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.33.93.31351",
-              "templateHash": "15211825627429393471"
+              "version": "0.34.44.8038",
+              "templateHash": "17716749299453150125"
             },
             "description": "Creates a role assignment for a service principal."
           },
@@ -6216,6 +6216,7 @@
         }
       },
       "dependsOn": [
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, if(not(empty(parameters('resourceGroupName'))), parameters('resourceGroupName'), format('{0}{1}', variables('abbrs').resourcesResourceGroups, parameters('environmentName')))), 'Microsoft.Resources/deployments', 'api')]",
         "[subscriptionResourceId('Microsoft.Resources/resourceGroups', if(not(empty(parameters('resourceGroupName'))), parameters('resourceGroupName'), format('{0}{1}', variables('abbrs').resourcesResourceGroups, parameters('environmentName'))))]"
       ]
     },
@@ -6243,8 +6244,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.33.93.31351",
-              "templateHash": "15211825627429393471"
+              "version": "0.34.44.8038",
+              "templateHash": "17716749299453150125"
             },
             "description": "Creates a role assignment for a service principal."
           },
@@ -6299,7 +6300,7 @@
     },
     "AZURE_AIPROJECT_CONNECTION_STRING": {
       "type": "string",
-      "value": "[if(empty(if(empty(parameters('aiExistingProjectConnectionString')), split(reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, if(not(empty(parameters('resourceGroupName'))), parameters('resourceGroupName'), format('{0}{1}', variables('abbrs').resourcesResourceGroups, parameters('environmentName')))), 'Microsoft.Resources/deployments', 'ai'), '2022-09-01').outputs.discoveryUrl.value, '/')[2], '')), parameters('aiExistingProjectConnectionString'), format('{0};{1};{2};{3}', if(empty(parameters('aiExistingProjectConnectionString')), split(reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, if(not(empty(parameters('resourceGroupName'))), parameters('resourceGroupName'), format('{0}{1}', variables('abbrs').resourcesResourceGroups, parameters('environmentName')))), 'Microsoft.Resources/deployments', 'ai'), '2022-09-01').outputs.discoveryUrl.value, '/')[2], ''), subscription().subscriptionId, if(not(empty(parameters('resourceGroupName'))), parameters('resourceGroupName'), format('{0}{1}', variables('abbrs').resourcesResourceGroups, parameters('environmentName'))), variables('projectName')))]"
+      "value": "[if(empty(if(and(and(empty(parameters('aiExistingProjectConnectionString')), not(empty(reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, if(not(empty(parameters('resourceGroupName'))), parameters('resourceGroupName'), format('{0}{1}', variables('abbrs').resourcesResourceGroups, parameters('environmentName')))), 'Microsoft.Resources/deployments', 'ai'), '2022-09-01').outputs.discoveryUrl.value))), contains(reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, if(not(empty(parameters('resourceGroupName'))), parameters('resourceGroupName'), format('{0}{1}', variables('abbrs').resourcesResourceGroups, parameters('environmentName')))), 'Microsoft.Resources/deployments', 'ai'), '2022-09-01').outputs.discoveryUrl.value, '/')), split(reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, if(not(empty(parameters('resourceGroupName'))), parameters('resourceGroupName'), format('{0}{1}', variables('abbrs').resourcesResourceGroups, parameters('environmentName')))), 'Microsoft.Resources/deployments', 'ai'), '2022-09-01').outputs.discoveryUrl.value, '/')[2], '')), parameters('aiExistingProjectConnectionString'), format('{0};{1};{2};{3}', if(and(and(empty(parameters('aiExistingProjectConnectionString')), not(empty(reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, if(not(empty(parameters('resourceGroupName'))), parameters('resourceGroupName'), format('{0}{1}', variables('abbrs').resourcesResourceGroups, parameters('environmentName')))), 'Microsoft.Resources/deployments', 'ai'), '2022-09-01').outputs.discoveryUrl.value))), contains(reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, if(not(empty(parameters('resourceGroupName'))), parameters('resourceGroupName'), format('{0}{1}', variables('abbrs').resourcesResourceGroups, parameters('environmentName')))), 'Microsoft.Resources/deployments', 'ai'), '2022-09-01').outputs.discoveryUrl.value, '/')), split(reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, if(not(empty(parameters('resourceGroupName'))), parameters('resourceGroupName'), format('{0}{1}', variables('abbrs').resourcesResourceGroups, parameters('environmentName')))), 'Microsoft.Resources/deployments', 'ai'), '2022-09-01').outputs.discoveryUrl.value, '/')[2], ''), subscription().subscriptionId, if(not(empty(parameters('resourceGroupName'))), parameters('resourceGroupName'), format('{0}{1}', variables('abbrs').resourcesResourceGroups, parameters('environmentName'))), variables('projectName')))]"
     },
     "AZURE_AI_AGENT_DEPLOYMENT_NAME": {
       "type": "string",
