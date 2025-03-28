@@ -2,9 +2,9 @@
 # TODO: do we need hooks? 
 # TODO: do we need all of the variables?
 
-name: azd-get-started-with-ai-agents
+name: bogus
 metadata:
-  template: azd-get-started-with-ai-agents@0.0.1-beta
+  template: bogus@0.0.1-beta
 
 services:
   api_and_frontend:

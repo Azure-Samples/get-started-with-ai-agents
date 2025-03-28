@@ -140,7 +140,7 @@ resource app 'Microsoft.App/containerApps@2023-05-02-preview' = {
       serviceBinds: !empty(serviceBinds) ? serviceBinds : null
       containers: [
         {
-          image: !empty(imageName) ? imageName : 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
+          image: !empty(imageName) ? imageName : 'mcr.microsoft.com/azuredocs/containerapps-hh:latest'
           name: containerName
           env: env
           resources: {
