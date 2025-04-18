@@ -17,6 +17,7 @@ echo "AZURE_AI_SEARCH_INDEX_NAME=$(azd env get-value AZURE_AI_SEARCH_INDEX_NAME)
 echo "AZURE_AI_SEARCH_ENDPOINT=$(azd env get-value AZURE_AI_SEARCH_ENDPOINT)" >> $ENV_FILE_PATH
 echo "AZURE_AI_AGENT_NAME=$(azd env get-value AZURE_AI_AGENT_NAME)" >> $ENV_FILE_PATH
 echo "AZURE_TENANT_ID=$(azd env get-value AZURE_TENANT_ID)" >> $ENV_FILE_PATH
+echo "APP_CONFIGURATION_ENDPOINT=$(azd env get-value APP_CONFIGURATION_ENDPOINT)" >> $ENV_FILE_PATH
 
 echo "Web app URL:"
 echo -e "\033[0;36m $(azd env get-value SERVICE_API_URI)"

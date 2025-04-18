@@ -104,12 +104,25 @@ param embedDeploymentSku string = 'Standard'
 // https://learn.microsoft.com/azure/ai-services/openai/quotas-limits
 param embedDeploymentCapacity int = 30
 
+@description('Whether to use Azure Application Insights')
 param useApplicationInsights bool = true
+
+@description('Whether to use Azure App Configuration')
+param useAppConfiguration bool = true
+
+@description('Sku for the App Configuration')
+// Recommend to upgrade for production use. See pricing plan:
+// https://azure.microsoft.com/en-us/pricing/details/app-configuration/
+param appConfigurationSku string = 'free' 
+
 @description('Do we want to use the Azure AI Search')
 param useSearchService bool = false
 
+@description('Id of the user or app to assign application roles')
+param principalId string = ''
+
 @description('Random seed to be used during generation of new resources suffixes.')
-param seed string = newGuid()
+param seed string = '' //newGuid() // why do we need this?
 
 var abbrs = loadJsonContent('./abbreviations.json')
 var resourceToken = toLower(uniqueString(subscription().id, environmentName, location, seed))
@@ -257,6 +270,19 @@ module containerApps 'core/host/container-apps.bicep' = {
   }
 }
 
+// App Configuration
+module configStore 'core/config/configstore.bicep' = if (useApplicationInsights && useAppConfiguration) {
+  name: 'config-store'
+  scope: rg
+  params: {
+    location: location
+    sku: appConfigurationSku
+    name: '${abbrs.appConfigurationStores}${resourceToken}'
+    tags: tags
+    appInsightsName: ai.outputs.applicationInsightsName
+  }
+}
+
 // API app
 module api 'api.bicep' = {
   name: 'api'
@@ -277,6 +303,7 @@ module api 'api.bicep' = {
     agentName: agentName
     agentID: agentID
     projectName: projectName
+    appConfigurationEndpoint: configStore.outputs.endpoint
   }
 }
 
@@ -388,6 +415,24 @@ module backendRoleAzureAIDeveloperRG 'core/security/role.bicep' = {
   }
 }
 
+module userRoleConfigStoreDataOwner 'core/security/role.bicep' = {
+  name: 'user-role-config-store-data-owner'
+  scope: rg
+  params: {
+    principalId: principalId
+    roleDefinitionId: '5ae67dd6-50cb-40e7-96ff-dc2bfa4b606b' 
+  }
+}
+
+module backendRoleConfigStoreDataOwner 'core/security/role.bicep' = {
+  name: 'backend-role-config-store-data-reader'
+  scope: rg
+  params: {
+    principalId: api.outputs.SERVICE_API_IDENTITY_PRINCIPAL_ID
+    roleDefinitionId: '516239f1-63e1-4d78-a4de-a74fb236a071' 
+  }
+}
+
 output AZURE_RESOURCE_GROUP string = rg.name
 
 // Outputs required for local development server
@@ -401,6 +446,7 @@ output AZURE_AI_SEARCH_ENDPOINT string = searchServiceEndpoint
 output AZURE_AI_EMBED_DIMENSIONS string = embeddingDeploymentDimensions
 output AZURE_AI_AGENT_NAME string = agentName
 output AZURE_AI_AGENT_ID string = agentID
+output APP_CONFIGURATION_ENDPOINT string = configStore.outputs.endpoint
 
 // Outputs required by azd for ACA
 output AZURE_CONTAINER_ENVIRONMENT_NAME string = containerApps.outputs.environmentName

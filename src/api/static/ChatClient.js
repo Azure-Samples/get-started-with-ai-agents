@@ -45,8 +45,10 @@ class ChatClient {
                 throw new Error('ReadableStream not supported or response.body is null');
             }
 
+            const agentVariant = response.headers.get('agent-variant');
+
             console.log("[ChatClient] Starting to handle streaming response...");
-            this.handleMessages(response.body);
+            this.handleMessages(response.body, agentVariant);
 
         } catch (error) {
             document.getElementById("generating-message").style.display = "none";
@@ -61,7 +63,7 @@ class ChatClient {
         }
     }
 
-    handleMessages(stream) {
+    handleMessages(stream, agentVariant) {
         let messageDiv = null;
         let accumulatedContent = '';
         let isStreaming = true;
@@ -110,7 +112,7 @@ class ChatClient {
 
                         if (data.error) {
                             if (!messageDiv) {
-                                messageDiv = this.ui.createAssistantMessageDiv();
+                                messageDiv = this.ui.createAssistantMessageDiv(agentVariant);
                                 console.log("[ChatClient] Created new messageDiv for assistant.");
                             }
                             document.getElementById("generating-message").style.display = "none";
@@ -119,7 +121,7 @@ class ChatClient {
                                 data.error.message || "An error occurred.",
                                 false
                             );           
-                            return;                 
+                            return;       
                         }
 
                         // Check the data type to decide how to update the UI
@@ -135,7 +137,7 @@ class ChatClient {
                         } else {
                             // If we have no messageDiv yet, create one
                             if (!messageDiv) {
-                                messageDiv = this.ui.createAssistantMessageDiv();
+                                messageDiv = this.ui.createAssistantMessageDiv(agentVariant);
                                 console.log("[ChatClient] Created new messageDiv for assistant.");
                             }
                             

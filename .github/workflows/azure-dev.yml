@@ -18,7 +18,9 @@ permissions:
 
 jobs:
   build:
+    name: Deploy
     runs-on: ubuntu-latest
+    if: ${{ vars.AZURE_CLIENT_ID != '' }}
     env:
       AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
       AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
@@ -74,3 +76,28 @@ jobs:
 
       - name: Deploy Application
         run: azd deploy --no-prompt
+
+  update-experiments:
+        name: Update Experiments
+        needs: build
+        runs-on: ubuntu-latest
+        env:
+          APP_CONFIGURATION_FILE: .config/feature-flags.json 
+        steps:
+          - name: Checkout
+            uses: actions/checkout@v4
+
+          - name: Azure login using Federated Credentials
+            uses: azure/login@v2
+            with:
+                client-id: ${{ vars.AZURE_CLIENT_ID }}
+                tenant-id: ${{ vars.AZURE_TENANT_ID }}
+                subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+                enable-AzPSSession: true
+
+          - name: Deploy App Config feature flags
+            uses: azure/app-configuration-deploy-feature-flags@v1-beta
+            with:
+                path: ${{ env.APP_CONFIGURATION_FILE }}
+                app-configuration-endpoint: ${{ vars.APP_CONFIGURATION_ENDPOINT }}
+                strict: false

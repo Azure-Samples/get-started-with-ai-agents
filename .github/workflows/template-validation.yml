@@ -52,5 +52,6 @@ jobs:
           AZURE_AI_EMBED_MODEL_FORMAT: ${{ vars.AZURE_AI_EMBED_MODEL_FORMAT }}
           AZURE_AI_EMBED_MODEL_VERSION: ${{ vars.AZURE_AI_EMBED_MODEL_VERSION }}
           AZURE_EXISTING_AIPROJECT_CONNECTION_STRING: ${{ vars.AZURE_EXISTING_AIPROJECT_CONNECTION_STRING }}
+          APP_CONFIGURATION_ENDPOINT: ${{ vars.APP_CONFIGURATION_ENDPOINT }}
       - name: print result
         run: cat ${{ steps.validation.outputs.resultFile }}

@@ -178,3 +178,7 @@ html, body {
 .toast-body {
     padding: 0.75rem;
 }
+
+.new-thread:hover {
+    background-color: gray
+}

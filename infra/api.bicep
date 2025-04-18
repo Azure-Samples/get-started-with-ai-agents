@@ -14,6 +14,7 @@ param searchServiceEndpoint string
 param agentName string
 param agentID string
 param projectName string
+param appConfigurationEndpoint string
 
 resource apiIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
   name: identityName
@@ -64,6 +65,10 @@ var env = [
   {
     name: 'AZURE_AI_SEARCH_ENDPOINT'
     value: searchServiceEndpoint
+  }
+  {
+    name: 'APP_CONFIGURATION_ENDPOINT'
+    value: appConfigurationEndpoint
   }
 ]
 

@@ -16,6 +16,7 @@ $azureAIEmbedDimensions = azd env get-value AZURE_AI_EMBED_DIMENSIONS
 $azureAISearchIndexName = azd env get-value AZURE_AI_SEARCH_INDEX_NAME
 $azureAISearchEndpoint = azd env get-value AZURE_AI_SEARCH_ENDPOINT
 $serviceAPIUri = azd env get-value SERVICE_API_URI
+$appConfigurationEndpoint = azd env get-value APP_CONFIGURATION_ENDPOINT
 
 Add-Content -Path $envFilePath -Value "AZURE_AIPROJECT_CONNECTION_STRING=$azureAiProjectConnectionString"
 Add-Content -Path $envFilePath -Value "AZURE_AI_AGENT_DEPLOYMENT_NAME=$azureAiagentDeploymentName"
@@ -28,6 +29,7 @@ Add-Content -Path $envFilePath -Value "AZURE_AI_SEARCH_INDEX_NAME=$azureAISearch
 Add-Content -Path $envFilePath -Value "AZURE_AI_SEARCH_ENDPOINT=$azureAISearchEndpoint"
 Add-Content -Path $envFilePath -Value "AZURE_AI_AGENT_NAME=$azureAiAgentName"
 Add-Content -Path $envFilePath -Value "AZURE_TENANT_ID=$azureTenantId"
+Add-Content -Path $envFilePath -Value "APP_CONFIGURATION_ENDPOINT=$appConfigurationEndpoint"
 
 Write-Host "Web app URL:"
 Write-Host $serviceAPIUri -ForegroundColor Cyan

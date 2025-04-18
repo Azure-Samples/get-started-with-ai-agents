@@ -11,6 +11,7 @@ class ChatUI {
         }
         this.addCitationClickListener();
         this.attachCloseButtonListener();
+        this.addNewThreadClickListener();
     }
 
     preprocessContent(content, annotations) {
@@ -40,6 +41,16 @@ class ChatUI {
             placeholderWrapper.remove();
         }            
     }    
+
+    addNewThreadClickListener() {
+        const newThreadButton = document.getElementById('new-thread-button');
+        newThreadButton.addEventListener('click', async () => {
+            // Clear the chat messages and the thread_id cookie         
+            document.querySelectorAll('.toast-container').forEach(element => element.remove());
+            document.cookie = "thread_id=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+            console.log("thread_id cookie cleared to start new thread");
+        });    
+    }
 
     addCitationClickListener() {
         document.addEventListener('click', (event) => {
@@ -175,7 +186,7 @@ class ChatUI {
         }
     }
 
-    createAssistantMessageDiv() {        
+    createAssistantMessageDiv(agentVariant) {        
         const assistantTemplateClone = this.assistantTemplate.content.cloneNode(true);
         if (!assistantTemplateClone) {
             console.error("Failed to clone assistant template.");
@@ -184,7 +195,7 @@ class ChatUI {
 
         // Remove the placeholder message
         this.removePlaceholder();
-    
+
         // Append the clone to the target container
         this.targetContainer.appendChild(assistantTemplateClone);
     
@@ -203,6 +214,14 @@ class ChatUI {
     
         if (!messageDiv) {
             console.error("Message content div not found in the template.");
+        }
+
+        // Update message title if a variant is used
+        if (agentVariant) {
+            const messageTitleDiv = newlyAddedToast.querySelector(".message-title");
+            if (messageTitleDiv) {
+                messageTitleDiv.innerHTML += ` (Variant: ${agentVariant})`;
+            } 
         }
     
         return messageDiv;

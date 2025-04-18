@@ -1,0 +1,7 @@
+{
+  "schemaVersion": "2.0.0",
+  "feature_management": {
+    "feature_flags": [
+    ]
+  }    
+}

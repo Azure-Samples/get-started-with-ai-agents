@@ -56,6 +56,9 @@
                 <div id="chat-area" class="text-light px-4 py-2 rounded-top text-dark d-flex flex-column justify-content-center background-user">
                     <form id="chat-form" onsubmit="event.preventDefault();">
                         <div class="input-group">
+                            <button class="btn btn-secondary new-thread" id="new-thread-button" title="Start New Thread">
+                                <i class="bi bi-pencil-square" aria-hidden="true"></i>
+                            </button>
                             <i class="bi bi-body-text input-group-text" aria-hidden="true"></i>
                             <input id="message" name="message" class="form-control form-control-sm" type="text" placeholder="Your Message" aria-label="Ask ChatGPT"></input>
                             <button type="submit" class="btn btn-outline-light">
@@ -92,7 +95,7 @@
     <template id="message-template-assistant">
         <div class="toast-container position-static w-100 d-flex flex-column align-items-stretch">
             <div class="toast fade show w-75 rounded-3 align-self-start">
-                <div class="toast-header text-light background-assistant">
+                <div class="toast-header text-light background-assistant message-title">
                     <i class="bi bi-robot me-1" aria-hidden="true"></i>
                     <strong class="me-auto text-capitalize">Assistant</strong>
                 </div>

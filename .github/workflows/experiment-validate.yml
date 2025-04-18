@@ -1,0 +1,30 @@
+name: Validate Experiments
+on:
+    workflow_dispatch:
+
+# GitHub Actions workflow to deploy to Azure using azd
+# To configure required secrets for connecting to Azure, simply run `azd pipeline config`
+
+# Set up permissions for deploying with secretless Azure federated credentials
+# https://learn.microsoft.com/en-us/azure/developer/github/connect-from-azure?tabs=azure-portal%2Clinux#set-up-azure-login-with-openid-connect-authentication
+permissions:
+    id-token: write
+    contents: read
+
+env:
+    APP_CONFIGURATION_FILE: .config/feature-flags.json
+
+jobs:         
+    validate-feature-flags:
+        name: Validate Feature Flags
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Validate App Config feature flags
+              uses: azure/app-configuration-deploy-feature-flags@v1-beta
+              with:
+                path: ${{ env.APP_CONFIGURATION_FILE }}
+                operation: validate
+  

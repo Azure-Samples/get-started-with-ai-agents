@@ -50,6 +50,12 @@
     "useSearchService": {
       "value": "${USE_AZURE_AI_SEARCH_SERVICE=false}"
     },
+    "useAppConfiguration": {
+      "value": "${USE_APP_CONFIGURATION=true}"
+    },
+    "appConfigurationSku": {
+      "value": "${APP_CONFIGURATION_SKU=free}"
+    },
     "agentName": {
       "value": "${AZURE_AI_AGENT_NAME=agent-template-assistant}"
     },

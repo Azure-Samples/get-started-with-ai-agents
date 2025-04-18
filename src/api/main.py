@@ -48,8 +48,31 @@ async def lifespan(app: fastapi.FastAPI):
             else:
                 from azure.monitor.opentelemetry import configure_azure_monitor
                 configure_azure_monitor(connection_string=application_insights_connection_string)
-                # Do not instrument the code yet, before trace fix is available.
-                #ai_client.telemetry.enable()
+                ai_client.telemetry.enable()
+                logger.info("Configured Application Insights for tracing.")
+
+                app_config_endpoint = os.getenv("APP_CONFIGURATION_ENDPOINT")
+                if app_config_endpoint:
+                    try: 
+                        from azure.appconfiguration.provider.aio import load
+                        from featuremanagement.aio import FeatureManager
+                        from featuremanagement.azuremonitor import publish_telemetry                    
+                        app_config = await load(
+                            endpoint=app_config_endpoint,
+                            credential=DefaultAzureCredential(),
+                            feature_flag_enabled=True,
+                            feature_flag_refresh_enabled=True,
+                            refresh_interval=300 # no refresh within 5 mins to avoid throttling
+                        )
+                        feature_manager = FeatureManager(app_config, on_feature_evaluated=publish_telemetry)
+                        app.state.app_config = app_config
+                        app.state.feature_manager = feature_manager
+                        logger.info("Configured App Configuration with feature flag support.")
+                    except ModuleNotFoundError:
+                        logger.warning("Required libraries for App Configuration not installed.")
+                        logger.warning("Please make sure azure-appconfiguration-provider and FeatureManagement are installed.")
+                    except Exception as e:
+                        logger.warning("Failed to setup App Configuration", exc_info=True)
 
         if os.environ.get("AZURE_AI_AGENT_ID"):
             try: 
