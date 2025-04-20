@@ -24,8 +24,13 @@ from azure.ai.projects.models import (
     MessageTextContent,
     MessageTextFileCitationAnnotation,
     MessageTextUrlCitationAnnotation,
-    RunStep
+    RunStep,
+    SubmitToolOutputsAction,
+    RequiredFunctionToolCall,
+    ToolOutput,
+    AsyncFunctionTool
 )
+from user_functions import fns
 
 # Create a logger for this module
 logger = logging.getLogger("azureaiapp")
@@ -78,6 +83,7 @@ class MyEventHandler(AsyncAgentEventHandler[str]):
     def __init__(self, ai_client: AIProjectClient):
         super().__init__()
         self.ai_client = ai_client
+        self.functions = AsyncFunctionTool(fns)
 
     async def on_message_delta(self, delta: MessageDeltaChunk) -> Optional[str]:
         stream_data = {'content': delta.text, 'type': "message"}
@@ -102,7 +108,32 @@ class MyEventHandler(AsyncAgentEventHandler[str]):
         logger.info("MyEventHandler: on_thread_run event received")
         run_information = f"ThreadRun status: {run.status}, thread ID: {run.thread_id}"
         stream_data = {'content': run_information, 'type': 'thread_run'}
-        if run.status == "failed":
+        if run.status == "requires_action" and isinstance(run.required_action, SubmitToolOutputsAction):
+            tool_calls = run.required_action.submit_tool_outputs.tool_calls
+
+            tool_outputs = []
+            for tool_call in tool_calls:
+                if isinstance(tool_call, RequiredFunctionToolCall):
+                    try:
+                        output = await self.functions.execute(tool_call)
+                        tool_outputs.append(
+                            ToolOutput(
+                                tool_call_id=tool_call.id,
+                                output=output,
+                            )
+                        )
+                    except Exception as e:
+                        print(f"Error executing tool_call {tool_call.id}: {e}")
+
+            print(f"Tool outputs: {tool_outputs}")
+            if tool_outputs:
+                # Once we receive 'requires_action' status, the next event will be DONE.
+                # Here we associate our existing event handler to the next stream.
+                await self.ai_client.agents.submit_tool_outputs_to_stream(
+                    thread_id=run.thread_id, run_id=run.id, tool_outputs=tool_outputs, event_handler=self
+                )
+
+        elif run.status == "failed":
             stream_data['error'] = run.last_error.as_dict()
         return serialize_sse_event(stream_data)
 
