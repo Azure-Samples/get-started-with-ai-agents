@@ -1,0 +1,14 @@
+[
+    {
+        "query": "What features do the SmartView Glasses have?",
+        "ground-truth": "The SmartView Glasses (product item 1) feature Augmented Reality interface, Voice-controlled AI assistant, HD video recording with 3D audio, UV protection and blue light filtering, and Wireless charging with extended battery life."
+    },
+    {
+        "query": "How long is the warranty on the SmartView Glasses?",
+        "ground-truth": "The SmartView Glasses come with a two-year limited warranty on all electronic components."
+    },
+    {
+        "query": "How do I clean the BaseCamp Folding Table?",
+        "ground-truth": "To clean the BaseCamp Folding Table, simply wipe the aluminum surface with a damp cloth and mild detergent, then air dry. Avoid using abrasive cleaners or solvents that may damage the table."
+    }
+]

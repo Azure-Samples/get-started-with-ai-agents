@@ -1,0 +1,33 @@
+name: "AI Agent Evaluation"
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  run-action:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Azure login using Federated Credentials
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Run Evaluation
+        uses: microsoft/ai-agent-evals@v1-beta
+        with:
+          azure-aiproject-connection-string: ${{ vars.AZURE_EXISTING_AIPROJECT_CONNECTION_STRING || vars.AZURE_AIPROJECT_CONNECTION_STRING }}
+          deployment-name: ${{ vars.AZURE_AI_AGENT_DEPLOYMENT_NAME }}
+          agent-ids: ${{ vars.AZURE_EXISTING_AGENT_ID || vars.AZURE_AI_AGENT_ID }}
+          data-path: ${{ github.workspace }}/evals/test-data-workflow.json
