@@ -12,6 +12,16 @@ from fastapi import Request, Depends, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
 
+from opentelemetry import trace
+tracer = trace.get_tracer(__name__)
+
+from azure.ai.projects.models import (
+   AgentEvaluationRequest,
+   AgentEvaluationSamplingConfiguration,
+   AgentEvaluationRedactionConfiguration,
+   EvaluatorIds
+)        
+
 from azure.ai.agents.aio import AgentsClient
 from fastapi.responses import JSONResponse
 from azure.ai.agents.models import (
@@ -44,7 +54,42 @@ def get_agent_client(request: Request) -> AgentsClient:
 def get_agent(request: Request) -> Agent:
     return request.app.state.agent
 
+def run_agent_evaluation(request: Request, thread_id, run_id):
+    app_insights_connection_string = request.app.state.application_insights_connection_string
+    agent_evaluation_request = AgentEvaluationRequest(
+        run_id=run_id,
+        thread_id=thread_id,
+        evaluators={
+            "Relevance": {"Id": EvaluatorIds.RELEVANCE.value},
+            #"ResponseCompleteness": {"Id": EvaluatorIds.RESPONSE_COMPLETENESS.value},
+            "TaskAdherence": {"Id": EvaluatorIds.TASK_ADHERENCE.value},
+            "ToolCallAccuracy": {"Id": EvaluatorIds.TOOL_CALL_ACCURACY.value},
+        },
+        sampling_configuration=AgentEvaluationSamplingConfiguration(
+            name="default",
+            sampling_percent=100,
+        ),
+        redaction_configuration=AgentEvaluationRedactionConfiguration(
+            redact_score_properties=False,
+        ),
+        app_insights_connection_string=app_insights_connection_string,
+    )
+    
+    async def run_evaluation():
+        try:        
+            project = request.app.state.project
+            logger.info(f"Running agent evaluation on thread ID {thread_id} and run ID {run_id}")
+            agent_evaluation_response = await project.evaluations.create_agent_evaluation(
+                evaluation=agent_evaluation_request
+            )
+            logger.info(f"Evaluation response: {agent_evaluation_response}")
+        except Exception as e:
+            logger.error(f"Error creating agent evaluation: {e}")
 
+    # Create a new task to run the evaluation asynchronously
+    asyncio.create_task(run_evaluation())
+
+    
 def get_react_bundle_path() -> str:
     """Get the path to the latest React bundle from the Vite manifest file."""
     manifest_path = os.path.join(os.path.dirname(__file__), "static", "react", ".vite", "manifest.json")
@@ -93,9 +138,10 @@ async def get_message_and_annotations(agent_client : AgentsClient, message: Thre
                 'annotations': annotations
             }
 class MyEventHandler(AsyncAgentEventHandler[str]):
-    def __init__(self, agent_client: Agent):
+    def __init__(self, request : Request, agent_client: Agent):
         super().__init__()
         self.agent_client = agent_client
+        self.request = request
 
     async def on_message_delta(self, delta: MessageDeltaChunk) -> Optional[str]:
         stream_data = {'content': delta.text, 'type': "message"}
@@ -122,6 +168,10 @@ class MyEventHandler(AsyncAgentEventHandler[str]):
         stream_data = {'content': run_information, 'type': 'thread_run'}
         if run.status == "failed":
             stream_data['error'] = run.last_error.as_dict()
+        
+        # automatically run agent evaluation when the run is completed
+        if run.status == "completed":
+            run_agent_evaluation(self.request, run.thread_id, run.id)
         return serialize_sse_event(stream_data)
 
     async def on_error(self, data: str) -> Optional[str]:
@@ -164,13 +214,13 @@ async def index(request: Request):
     )
 
 
-async def get_result(thread_id: str, agent_id: str, agent_client : AgentsClient) -> AsyncGenerator[str, None]:
+async def get_result(request : Request, thread_id: str, agent_id: str, agent_client : AgentsClient) -> AsyncGenerator[str, None]:
     logger.info(f"get_result invoked for thread_id={thread_id} and agent_id={agent_id}")
     try:
         async with await agent_client.runs.stream(
             thread_id=thread_id, 
             agent_id=agent_id,
-            event_handler=MyEventHandler(agent_client)
+            event_handler=MyEventHandler(request, agent_client)
         ) as stream:
             logger.info("Successfully created stream; starting to process events")
             async for event in stream:
@@ -241,61 +291,62 @@ async def chat(
     agent_client : AgentsClient = Depends(get_agent_client),
     agent : Agent = Depends(get_agent),
 ):
-    # Retrieve the thread ID from the cookies (if available).
-    thread_id = request.cookies.get('thread_id')
-    agent_id = request.cookies.get('agent_id')
+    with tracer.start_as_current_span("chat_request"):
+        # Retrieve the thread ID from the cookies (if available).
+        thread_id = request.cookies.get('thread_id')
+        agent_id = request.cookies.get('agent_id')
 
-    # Attempt to get an existing thread. If not found, create a new one.
-    try:
-        if thread_id and agent_id == agent.id:
-            logger.info(f"Retrieving thread with ID {thread_id}")
-            thread = await agent_client.threads.get(thread_id)
-        else:
-            logger.info("Creating a new thread")
-            thread = await agent_client.threads.create()
-    except Exception as e:
-        logger.error(f"Error handling thread: {e}")
-        raise HTTPException(status_code=400, detail=f"Error handling thread: {e}")
+        # Attempt to get an existing thread. If not found, create a new one.
+        try:
+            if thread_id and agent_id == agent.id:
+                logger.info(f"Retrieving thread with ID {thread_id}")
+                thread = await agent_client.threads.get(thread_id)
+            else:
+                logger.info("Creating a new thread")
+                thread = await agent_client.threads.create()
+        except Exception as e:
+            logger.error(f"Error handling thread: {e}")
+            raise HTTPException(status_code=400, detail=f"Error handling thread: {e}")
 
-    thread_id = thread.id
-    agent_id = agent.id
+        thread_id = thread.id
+        agent_id = agent.id
 
-    # Parse the JSON from the request.
-    try:
-        user_message = await request.json()
-    except Exception as e:
-        logger.error(f"Invalid JSON in request: {e}")
-        raise HTTPException(status_code=400, detail=f"Invalid JSON in request: {e}")
+        # Parse the JSON from the request.
+        try:
+            user_message = await request.json()
+        except Exception as e:
+            logger.error(f"Invalid JSON in request: {e}")
+            raise HTTPException(status_code=400, detail=f"Invalid JSON in request: {e}")
 
-    logger.info(f"user_message: {user_message}")
+        logger.info(f"user_message: {user_message}")
 
-    # Create a new message from the user's input.
-    try:
-        message = await agent_client.messages.create(
-            thread_id=thread_id,
-            role="user",
-            content=user_message.get('message', '')
-        )
-        logger.info(f"Created message, message ID: {message.id}")
-    except Exception as e:
-        logger.error(f"Error creating message: {e}")
-        raise HTTPException(status_code=500, detail=f"Error creating message: {e}")
+        # Create a new message from the user's input.
+        try:
+            message = await agent_client.messages.create(
+                thread_id=thread_id,
+                role="user",
+                content=user_message.get('message', '')
+            )
+            logger.info(f"Created message, message ID: {message.id}")
+        except Exception as e:
+            logger.error(f"Error creating message: {e}")
+            raise HTTPException(status_code=500, detail=f"Error creating message: {e}")
 
-    # Set the Server-Sent Events (SSE) response headers.
-    headers = {
-        "Cache-Control": "no-cache",
-        "Connection": "keep-alive",
-        "Content-Type": "text/event-stream"
-    }
-    logger.info(f"Starting streaming response for thread ID {thread_id}")
+        # Set the Server-Sent Events (SSE) response headers.
+        headers = {
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "Content-Type": "text/event-stream"
+        }
+        logger.info(f"Starting streaming response for thread ID {thread_id}")
 
-    # Create the streaming response using the generator.
-    response = StreamingResponse(get_result(thread_id, agent_id, agent_client), headers=headers)
+        # Create the streaming response using the generator.
+        response = StreamingResponse(get_result(request, thread_id, agent_id, agent_client), headers=headers)
 
-    # Update cookies to persist the thread and agent IDs.
-    response.set_cookie("thread_id", thread_id)
-    response.set_cookie("agent_id", agent_id)
-    return response
+        # Update cookies to persist the thread and agent IDs.
+        response.set_cookie("thread_id", thread_id)
+        response.set_cookie("agent_id", agent_id)
+        return response
 
 
 @router.get("/fetch-document")

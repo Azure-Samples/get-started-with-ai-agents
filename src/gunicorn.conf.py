@@ -40,6 +40,39 @@ ai_project_resource_id = os.environ.get("AZURE_EXISTING_AIPROJECT_RESOURCE_ID")
 parts = ai_project_resource_id.split("/")    
 proj_endpoint = f'https://{parts[8]}.services.ai.azure.com/api/projects/{parts[10]}'
 
+def set_dotenv(key: str, value: str) -> None:
+    """
+    Add or update an environment variable in the .env file.
+    
+    :param key: The environment variable name
+    :param value: The value to set
+    """
+    env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env')
+    
+    if not os.path.exists(env_path):
+        return
+
+    # Read original file to preserve order
+    new_value = f"\n{key}={value}"
+
+    found = False
+    output_lines = []    
+    with open(env_path, 'r') as file:
+        for line in file.readlines():
+            if line.split('=', 0) == key:
+                output_lines.append(new_value)
+                found = True
+            else:
+                output_lines.append(line)
+    if not found:
+        output_lines.append(new_value)
+
+    # Write back to .env file preserving order
+    with open(env_path, 'w') as file:
+        file.writelines(output_lines)
+
+    logger.info(f"Environment variable {key} has been set in the .env file.")
+
 def list_files_in_files_directory() -> List[str]:    
     # Get the absolute path of the 'files' directory
     files_directory = os.path.abspath(os.path.join(os.path.dirname(__file__), 'files'))
@@ -209,23 +242,11 @@ async def initialize_resources():
                         logger.warning(
                             "Could not retrieve agent by AZURE_EXISTING_AGENT_ID = "
                             f"{agentID}, error: {e}")
-
-                # Check if an agent with the same name already exists
-                agent_list = ai_client.agents.list_agents()
-                if agent_list:
-                    async for agent_object in agent_list:
-                        if agent_object.name == os.environ[
-                                "AZURE_AI_AGENT_NAME"]:
-                            logger.info(
-                                "Found existing agent named "
-                                f"'{agent_object.name}'"
-                                f", ID: {agent_object.id}")
-                            os.environ["AZURE_EXISTING_AGENT_ID"] = agent_object.id
-                            return
-                        
+                       
                 # Create a new agent
                 agent = await create_agent(ai_client, creds)
                 os.environ["AZURE_EXISTING_AGENT_ID"] = agent.id
+                set_dotenv("AZURE_EXISTING_AGENT_ID", agent.id)
                 logger.info(f"Created agent, agent ID: {agent.id}")
 
     except Exception as e:

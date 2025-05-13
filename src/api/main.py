@@ -2,14 +2,9 @@
 # Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 
 import contextlib
-import logging
 import os
-import sys
-import json
-from typing import Dict, Optional
 
 from azure.ai.projects.aio import AIProjectClient
-from azure.ai.agents.models import FilePurpose, FileSearchTool, AsyncToolSet, FileSearchToolResource
 from azure.identity import DefaultAzureCredential
 
 import fastapi
@@ -35,7 +30,7 @@ async def lifespan(app: fastapi.FastAPI):
         ai_project = AIProjectClient(
             credential=DefaultAzureCredential(exclude_shared_token_cache_credential=True),
             endpoint=proj_endpoint,
-            api_version = "2025-05-01"            
+            api_version = "2025-05-15-preview" # Evaluations yet not supported on stable (api_version="2025-05-01")
         )
         logger.info("Created AIProjectClient")
 
@@ -51,10 +46,14 @@ async def lifespan(app: fastapi.FastAPI):
                 logger.error("Enable it via the 'Tracing' tab in your AI Foundry project page.")
                 exit()
             else:
+                logger.info("Application is enabled for this project.")
+                app.state.application_insights_connection_string = application_insights_connection_string
+
+                from azure.ai.agents.telemetry import enable_telemetry
+                enable_telemetry()
+
                 from azure.monitor.opentelemetry import configure_azure_monitor
                 configure_azure_monitor(connection_string=application_insights_connection_string)
-                # Do not instrument the code yet, before trace fix is available.
-                #ai_project.telemetry.enable()
 
         if agent_id:
             try: 
@@ -66,19 +65,9 @@ async def lifespan(app: fastapi.FastAPI):
                 logger.error(f"Error fetching agent: {e}", exc_info=True)
 
         if not agent:
-            # Fallback to searching by name
-            agent_name = os.environ["AZURE_AI_AGENT_NAME"]
-            agent_list = ai_project.agents.list_agents()
-            if agent_list:
-                async for agent_object in agent_list:
-                    if agent_object.name == agent_name:
-                        agent = agent_object
-                        logger.info(f"Found agent by name '{agent_name}', ID={agent_object.id}")
-                        break
+            raise RuntimeError("No agent found. Ensure gunicorn.conf.py created one or set AZURE_EXISTING_AGENT_ID.")
 
-        if not agent:
-            raise RuntimeError("No agent found. Ensure qunicorn.py created one or set AZURE_EXISTING_AGENT_ID.")
-
+        app.state.project = ai_project
         app.state.agent_client = ai_project.agents
         app.state.agent = agent
         
