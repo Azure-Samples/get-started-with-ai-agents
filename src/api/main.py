@@ -2,14 +2,9 @@
 # Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 
 import contextlib
-import logging
 import os
-import sys
-import json
-from typing import Dict, Optional
 
 from azure.ai.projects.aio import AIProjectClient
-from azure.ai.projects.models import FilePurpose, FileSearchTool, AsyncToolSet, FileSearchToolResource
 from azure.identity import DefaultAzureCredential
 
 import fastapi
@@ -27,19 +22,20 @@ logger = None
 async def lifespan(app: fastapi.FastAPI):
     agent = None
 
-    connection_string = os.environ.get("AZURE_EXISTING_AIPROJECT_CONNECTION_STRING") if os.environ.get("AZURE_EXISTING_AIPROJECT_CONNECTION_STRING") else os.environ.get("AZURE_AIPROJECT_CONNECTION_STRING")
-    agent_id = os.environ.get("AZURE_EXISTING_AGENT_ID") if os.environ.get("AZURE_EXISTING_AGENT_ID") else os.environ.get("AZURE_AI_AGENT_ID")
+    proj_endpoint = os.environ.get("AZURE_EXISTING_AIPROJECT_ENDPOINT")
+    agent_id = os.environ.get("AZURE_EXISTING_AGENT_ID")
     try:
-        ai_client = AIProjectClient.from_connection_string(
+        ai_project = AIProjectClient(
             credential=DefaultAzureCredential(exclude_shared_token_cache_credential=True),
-            conn_str=connection_string,
+            endpoint=proj_endpoint,
+            api_version = "2025-05-15-preview" # Evaluations yet not supported on stable (api_version="2025-05-01")
         )
         logger.info("Created AIProjectClient")
 
         if enable_trace:
             application_insights_connection_string = ""
             try:
-                application_insights_connection_string = await ai_client.telemetry.get_connection_string()
+                application_insights_connection_string = await ai_project.telemetry.get_connection_string()
             except Exception as e:
                 e_string = str(e)
                 logger.error("Failed to get Application Insights connection string, error: %s", e_string)
@@ -50,12 +46,17 @@ async def lifespan(app: fastapi.FastAPI):
             else:
                 from azure.monitor.opentelemetry import configure_azure_monitor
                 configure_azure_monitor(connection_string=application_insights_connection_string)
-                # Do not instrument the code yet, before trace fix is available.
-                #ai_client.telemetry.enable()
+                app.state.application_insights_connection_string = application_insights_connection_string
+                
+                from azure.ai.agents.telemetry import AIAgentsInstrumentor
+                agents_instrumentor = AIAgentsInstrumentor()
+                if not agents_instrumentor.is_instrumented():
+                    agents_instrumentor.instrument()
+                    logger.info("Configured Application Insights for tracing.")
 
         if agent_id:
             try: 
-                agent = await ai_client.agents.get_agent(agent_id)
+                agent = await ai_project.agents.get_agent(agent_id)
                 logger.info("Agent already exists, skipping creation")
                 logger.info(f"Fetched agent, agent ID: {agent.id}")
                 logger.info(f"Fetched agent, model name: {agent.model}")
@@ -65,9 +66,9 @@ async def lifespan(app: fastapi.FastAPI):
         if not agent:
             # Fallback to searching by name
             agent_name = os.environ["AZURE_AI_AGENT_NAME"]
-            agent_list = await ai_client.agents.list_agents()
-            if agent_list.data:
-                for agent_object in agent_list.data:
+            agent_list = ai_project.agents.list_agents()
+            if agent_list:
+                async for agent_object in agent_list:
                     if agent_object.name == agent_name:
                         agent = agent_object
                         logger.info(f"Found agent by name '{agent_name}', ID={agent_object.id}")
@@ -76,7 +77,7 @@ async def lifespan(app: fastapi.FastAPI):
         if not agent:
             raise RuntimeError("No agent found. Ensure qunicorn.py created one or set AZURE_EXISTING_AGENT_ID.")
 
-        app.state.ai_client = ai_client
+        app.state.ai_project = ai_project
         app.state.agent = agent
         
         yield
@@ -87,7 +88,7 @@ async def lifespan(app: fastapi.FastAPI):
 
     finally:
         try:
-            await ai_client.close()
+            await ai_project.close()
             logger.info("Closed AIProjectClient")
         except Exception as e:
             logger.error("Error closing AIProjectClient", exc_info=True)

@@ -2,7 +2,8 @@ metadata description = 'Creates an Azure AI Search instance.'
 param name string
 param location string = resourceGroup().location
 param tags object = {}
-
+param projectName string
+param serviceName string
 param sku object = {
   name: 'standard'
 }
@@ -40,29 +41,66 @@ var searchIdentityProvider = (sku.name == 'free') ? null : {
   type: 'SystemAssigned'
 }
 
-resource search 'Microsoft.Search/searchServices@2021-04-01-preview' = {
+
+
+
+resource search 'Microsoft.Search/searchServices@2024-06-01-preview' = {
   name: name
   location: location
-  tags: tags
-  // The free tier does not support managed identity
-  identity: searchIdentityProvider
-  properties: {
-    authOptions: authOptions
-    disableLocalAuth: disableLocalAuth
-    disabledDataExfiltrationOptions: disabledDataExfiltrationOptions
-    encryptionWithCmk: encryptionWithCmk
-    hostingMode: hostingMode
-    networkRuleSet: networkRuleSet
-    partitionCount: partitionCount
-    publicNetworkAccess: publicNetworkAccess
-    replicaCount: replicaCount
-    semanticSearch: semanticSearch
+  tags: tags  
+  sku: {
+    name: 'basic'
   }
-  sku: sku
+  identity: searchIdentityProvider  
+  properties: {
+    replicaCount: 1
+    partitionCount: 1
+    hostingMode: 'default'
+    publicNetworkAccess: 'enabled'
+    networkRuleSet: {
+      ipRules: []
+    }
+    encryptionWithCmk: {
+      enforcement: 'Unspecified'
+    }
+    disableLocalAuth: false
+    authOptions: {
+      apiKeyOnly: {}
+    }
+    semanticSearch: 'free'
+  }
 }
+
+resource aiServices 'Microsoft.CognitiveServices/accounts@2025-04-01-preview' existing = {
+  name: serviceName
+
+  resource project 'projects' existing = {
+    name: projectName
+
+    // AI Project Search Connection
+    resource searchConnection 'connections' = {
+      name: 'searchConnection'
+      // dependsOn: [project] is implicitly handled by 'parent: project'
+      properties: {
+        category: 'CognitiveSearch'
+        authType: 'ApiKey'
+        isSharedToAll: true
+        target: 'https://${search.name}.search.windows.net/' // search.name will resolve to searchServiceName
+        credentials: {
+          // This is valid because if this resource is deployed, 'search' is also deployed
+          // and 'search.name' (which is 'searchServiceName') is known.
+          key: search.listAdminKeys().primaryKey
+        }
+      }      
+    }
+
+  }
+}
+
 
 output id string = search.id
 output endpoint string = 'https://${name}.search.windows.net/'
 output name string = search.name
 output principalId string = !empty(searchIdentityProvider) ? search.identity.principalId : ''
+output searchConnectionId string = ''
 

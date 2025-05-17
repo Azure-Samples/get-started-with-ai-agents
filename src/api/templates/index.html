@@ -4,101 +4,12 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="">
-    <title>Azure AI Agents Demo</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css"
-        integrity="sha384-KK94CHFLLe+nY2dmCWGMq91rCGa5gtU4mk92HdvYe+M/SXH301p5ILy+dN9+nJOZ" crossorigin="anonymous">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.css"
-        integrity="sha256-4RctOgogjPAdwGbwq+rxfwAmSpZhWaafcZR9btzUk18=" crossorigin="anonymous">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootswatch@5.2.3/dist/cosmo/bootstrap.min.css"
-        integrity="sha256-axRDISYf7Hht1KhcMnfDV2nq7hD/8Q9Rxa0YlW/o3NU=" crossorigin="anonymous">
-    <link href="/static/styles.css" rel="stylesheet" type="text/css">
-    <style>
-        #messages {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            text-align: center;
-        }
-        #placeholder-wrapper {
-            display: flex;
-            flex-grow: 1;
-            justify-content: center;
-            align-items: center;
-            width: 100%;
-        }
-        #placeholder-message {
-            color: #6c757d;
-        }
-        .header {
-            font-size: 2em;
-            font-weight: bold;
-            margin-bottom: 10px;
-        }
-        .message-content {
-            text-align: left;
-        }
-    </style>
+    <title>Azure AI Agents Demo (React Version)</title>
+    <link href="/static/react/assets/main-react-app.css " rel="stylesheet" type="text/css">
 </head>
-<body>
-    <div class="container-fluid h-100 d-flex flex-row">
-        <div class="row flex-grow-1 h-100">
-            <!-- Chat Section -->
-            <div class="col-full d-flex flex-column h-100" id="chat-container"> <!-- Full width initially -->
-                <div id="messages" class="px-4 pb-4 pt-2 flex-grow-1 overflow-y-auto align-items-stretch">
-                    <div id="placeholder-wrapper">
-                        <div id="placeholder-message" class="text-center text-muted my-3">
-                            <div class="header">Getting Started with Agents Using Azure AI Foundry</div>
-                            Type your message below. You can start casually with something fun like "Tell me a joke," or ask specifically about the Azure Search files, such as "What is Contoso Galaxy Innovations product?"                        </div>
-                    </div>
-                </div>
-                
-                <text id="generating-message" style="display:none">Generating response...</text>
-                <div id="chat-area" class="text-light px-4 py-2 rounded-top text-dark d-flex flex-column justify-content-center background-user">
-                    <form id="chat-form" onsubmit="event.preventDefault();">
-                        <div class="input-group">
-                            <button type="button" class="btn btn-outline-dark" onclick="chatUI.clearChat()" aria-label="Start a new chat">
-                                <i class="bi bi-arrow-repeat" aria-hidden="true"></i>
-                            </button>
-                            <i class="bi bi-body-text input-group-text dark-border" aria-hidden="true"></i>
-                            <input id="message" name="message" class="form-control form-control-sm dark-border" type="text" placeholder="Your Message" aria-label="Ask ChatGPT" />
-                            <button type="submit" class="btn btn-outline-dark" style="border-left-width: 0" aria-label="Submit">
-                                Send <i class="bi bi-send-fill" aria-hidden="true"></i>
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-
-            <!-- Document Viewer Section -->
-            <div class="col-6 d-flex flex-column h-100 p-3 bg-light border-left" id="document-viewer-section" style="display: none !important;"> <!-- Hidden and no space initially -->
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <h5 class="mb-0">Document Viewer</h5>
-                    <button id="close-button" class="btn bi-x"></button>
-                </div>
-                <iframe id="document-viewer" class="flex-grow-1 border-0 rounded" style="background-color: white;"></iframe>
-            </div>
-        </div>
-    </div>
-
-    <template id="message-template-user">
-        <div class="toast-container position-static w-100 d-flex flex-column align-items-stretch user">
-            <div class="toast fade show w-75 rounded-3 align-self-end">
-                <div class="toast-body message-content"></div>
-            </div>
-        </div>
-    </template>
-
-    <template id="message-template-assistant">
-        <div class="toast-container position-static w-100 d-flex flex-column align-items-stretch">
-            <div class="toast fade show w-75 rounded-3 align-self-start">
-                <div class="toast-body message-content">
-                </div>
-            </div>
-        </div>
-    </template>
-    
-    <script src="https://cdn.jsdelivr.net/npm/showdown@2.1.0/dist/showdown.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/markdown-it/dist/markdown-it.min.js"></script>
-    <script type="module" src="/static/main.js"></script>
+<body style="margin: 0;">
+    <div id="react-root"></div>
+    <!-- Load React app with fixed filename -->
+    <script type="module" src="/static/react/assets/main-react-app.js"></script>
 </body>
 </html>

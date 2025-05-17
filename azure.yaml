@@ -4,7 +4,7 @@
 
 name: azd-get-started-with-ai-agents
 metadata:
-  template: azd-get-started-with-ai-agents@0.0.1-beta
+  template: azd-get-started-with-ai-agents@1.0.0
 
 hooks:
   postprovision:
@@ -50,4 +50,8 @@ pipeline:
     - AZURE_AI_EMBED_MODEL_VERSION
     - AZURE_AI_EMBED_DIMENSIONS
     - AZURE_AI_SEARCH_INDEX_NAME
-    - AZURE_EXISTING_AIPROJECT_CONNECTION_STRING
+    - AZURE_EXISTING_AIPROJECT_RESOURCE_ID
+    - AZURE_EXISTING_AIPROJECT_ENDPOINT
+    - AZURE_EXISTING_AGENT_ID
+    - ENABLE_AZURE_MONITOR_TRACING
+    - AZURE_TRACING_GENAI_CONTENT_RECORDING_ENABLED

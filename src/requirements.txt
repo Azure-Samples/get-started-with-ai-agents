@@ -3,8 +3,13 @@ uvicorn[standard]==0.29.0
 gunicorn==22.0.0
 azure-identity==1.19.0
 aiohttp==3.11.1
-azure-ai-projects==1.0.0b7
+
+azure_ai_agents==1.0.0
+azure_ai_projects==1.0.0b11
+
+azure-core==1.31.0  # other versions might not compatible
 azure-core-tracing-opentelemetry
 azure-monitor-opentelemetry
 azure-search-documents
 opentelemetry-sdk
+
