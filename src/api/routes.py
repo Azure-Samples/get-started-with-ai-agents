@@ -32,6 +32,7 @@ from azure.ai.projects.models import (
    EvaluatorIds
 )
 
+
 # Create a logger for this module
 logger = logging.getLogger("azureaiapp")
 
@@ -47,6 +48,36 @@ templates = Jinja2Templates(directory=directory)
 
 # Create a new FastAPI router
 router = fastapi.APIRouter()
+
+from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
+from typing import Optional
+import secrets
+
+security = HTTPBasic()
+
+
+def authenticate(credentials: HTTPBasicCredentials = Depends(security)) -> None: 
+    username = os.getenv("WEB_APP_USERNAME")
+    password = os.getenv("WEB_APP_PASSWORD")
+    
+    if not username or not password:
+        logger.error("Username or password environment variables not set.")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Authentication not configured.",
+        )
+    
+    correct_username = secrets.compare_digest(credentials.username, username)
+    correct_password = secrets.compare_digest(credentials.password, password)
+    if not (correct_username and correct_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid credentials",
+            headers={"WWW-Authenticate": "Basic"},
+        )
+    return
+
 
 def get_ai_project(request: Request) -> AIProjectClient:
     return request.app.state.ai_project
@@ -151,7 +182,7 @@ class MyEventHandler(AsyncAgentEventHandler[str]):
         return None
 
 @router.get("/", response_class=HTMLResponse)
-async def index(request: Request):
+async def index(request: Request, _ = Depends(authenticate)):
     return templates.TemplateResponse(
         "index.html", 
         {
@@ -197,6 +228,7 @@ async def history(
     request: Request,
     ai_project : AIProjectClient = Depends(get_ai_project),
     agent : Agent = Depends(get_agent),
+	_ = Depends(authenticate)
 ):
     with tracer.start_as_current_span("chat_history"):
         # Retrieve the thread ID from the cookies (if available).
@@ -254,7 +286,8 @@ async def chat(
     request: Request,
     agent : Agent = Depends(get_agent),
     ai_project: AIProjectClient = Depends(get_ai_project),
-    app_insights_conn_str : str = Depends(get_app_insights_conn_str)
+    app_insights_conn_str : str = Depends(get_app_insights_conn_str),
+	_ = Depends(authenticate)
 ):
     # Retrieve the thread ID from the cookies (if available).
     thread_id = request.cookies.get('thread_id')

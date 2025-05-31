@@ -19,6 +19,8 @@ $azureAISearchEndpoint = azd env get-value AZURE_AI_SEARCH_ENDPOINT
 $serviceAPIUri = azd env get-value SERVICE_API_URI
 $enableAzureMonitorTracing = azd env get-value ENABLE_AZURE_MONITOR_TRACING
 $azureTracingGenAIContentRecordingEnabled = azd env get-value AZURE_TRACING_GEN_AI_CONTENT_RECORDING_ENABLED
+$webAppUsername = azd env get-value WEB_APP_USERNAME
+$webAppPassword = azd env get-value WEB_APP_PASSWORD
 
 Add-Content -Path $envFilePath -Value "AZURE_EXISTING_AIPROJECT_RESOURCE_ID=$aiProjectResourceId"
 Add-Content -Path $envFilePath -Value "AZURE_EXISTING_AIPROJECT_ENDPOINT=$aiProjectEndpoint"
@@ -35,5 +37,8 @@ Add-Content -Path $envFilePath -Value "AZURE_TENANT_ID=$azureTenantId"
 Add-Content -Path $envFilePath -Value "ENABLE_AZURE_MONITOR_TRACING=$enableAzureMonitorTracing"
 Add-Content -Path $envFilePath -Value "AZURE_TRACING_GEN_AI_CONTENT_RECORDING_ENABLED=$azureTracingGenAIContentRecordingEnabled"
 
-Write-Host "Web app URL:"
+Write-Host "Please visit web app URL:"
 Write-Host $serviceAPIUri -ForegroundColor Cyan
+Write-Host "Your username is:"
+Write-Host $webAppUsername -ForegroundColor Cyan
+Write-Host "Your password can be found in ./.azure/$azureEnvName/.env" 

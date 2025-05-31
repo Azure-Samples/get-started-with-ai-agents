@@ -112,6 +112,12 @@
     },
     "azureTracingGenAIContentRecordingEnabled": {
       "value": "${AZURE_TRACING_GEN_AI_CONTENT_RECORDING_ENABLED=false}"
-    }
+    },
+    "webAppUsername" : {
+      "value": "${WEB_APP_USERNAME}"
+   },
+    "webAppPassword" : {
+      "value": "${WEB_APP_PASSWORD}"
+   }
   }
 }

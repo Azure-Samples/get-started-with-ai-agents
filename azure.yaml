@@ -7,6 +7,17 @@ metadata:
   template: azd-get-started-with-ai-agents@1.0.0
 
 hooks:
+  preup:
+    windows:
+      shell: pwsh
+      run: ./scripts/new_credential.ps1
+      continueOnError: true
+      interactive: true
+    posix:
+      shell: sh
+      run: chmod u+r+x ./scripts/new_credential.sh; ./scripts/new_credential.sh
+      continueOnError: true
+      interactive: true
   postprovision:
     windows:
       shell: pwsh
@@ -15,7 +26,7 @@ hooks:
       interactive: true
     posix:
       shell: sh
-      run: ./scripts/write_env.sh
+      run: chmod u+r+x ./scripts/write_env.sh; ./scripts/write_env.sh
       continueOnError: true
       interactive: true
 
