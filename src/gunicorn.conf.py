@@ -18,6 +18,7 @@ from azure.ai.agents.models import (
     AzureAISearchTool,
     FilePurpose,
     FileSearchTool,
+    Tool,
 )
 from azure.ai.projects.models import ConnectionType
 from azure.identity.aio import DefaultAzureCredential
@@ -120,9 +121,9 @@ def _get_file_path(file_name: str) -> str:
                      file_name))
 
 
-async def get_available_toolset(
+async def get_available_tool(
         project_client: AIProjectClient,
-        creds: AsyncTokenCredential) -> AsyncToolSet:
+        creds: AsyncTokenCredential) -> Tool:
     """
     Get the toolset and tool definition for the agent.
 
@@ -145,11 +146,9 @@ async def get_available_toolset(
     if conn_id:
         await create_index_maybe(project_client, creds)
 
-        ai_search = AzureAISearchTool(
+        return AzureAISearchTool(
             index_connection_id=conn_id,
             index_name=os.environ.get('AZURE_AI_SEARCH_INDEX_NAME'))
-
-        toolset.add(ai_search)
     else:
         logger.info(
             "agent: index was not initialized, falling back to file search.")
@@ -169,21 +168,22 @@ async def get_available_toolset(
         )
         logger.info("agent: file store and vector store success")
 
-        file_search_tool = FileSearchTool(vector_store_ids=[vector_store.id])
-        toolset.add(file_search_tool)
-
-    return toolset
+        return FileSearchTool(vector_store_ids=[vector_store.id])
 
 
 async def create_agent(ai_client: AIProjectClient,
                        creds: AsyncTokenCredential) -> Agent:
     logger.info("Creating new agent with resources")
-    toolset = await get_available_toolset(ai_client, creds)
-
+    tool = await get_available_tool(ai_client, creds)
+    toolset = AsyncToolSet()
+    toolset.add(tool)
+    
+    instructions = "Use AI Search always. Avoid to use base knowledge." if isinstance(tool, AzureAISearchTool) else "Use File Search always.  Avoid to use base knowledge."
+    
     agent = await ai_client.agents.create_agent(
         model=os.environ["AZURE_AI_AGENT_DEPLOYMENT_NAME"],
         name=os.environ["AZURE_AI_AGENT_NAME"],
-        instructions="You are helpful assistant",
+        instructions=instructions,
         toolset=toolset
     )
     return agent
