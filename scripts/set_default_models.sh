@@ -3,8 +3,8 @@
 set -e
 
 # --- Check Required Environment Variables ---
-SubscriptionId="${envVars[AZURE_SUBSCRIPTION_ID]}"
-Location="${envVars[AZURE_LOCATION]}"
+SubscriptionId="${AZURE_SUBSCRIPTION_ID}"
+Location="${AZURE_LOCATION}"
 
 Errors=0
 
