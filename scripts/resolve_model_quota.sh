@@ -47,6 +47,7 @@ MissingParams=()
 [[ -z "$Location" ]] && MissingParams+=("location")
 [[ -z "$Model" ]] && MissingParams+=("model")
 [[ -z "$Capacity" ]] && MissingParams+=("capacity")
+[[ -z "$Format" ]] && MissingParams+=("format")
 [[ -z "$DeploymentType" ]] && MissingParams+=("deployment-type")
 
 if [[ ${#MissingParams[@]} -gt 0 ]]; then

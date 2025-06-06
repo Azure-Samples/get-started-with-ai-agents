@@ -3,8 +3,8 @@
 set -e
 
 # --- Check Required Environment Variables ---
-SubscriptionId="${AZURE_SUBSCRIPTION_ID}"
-Location="${AZURE_LOCATION}"
+SubscriptionId="${envVars[AZURE_SUBSCRIPTION_ID]}"
+Location="${envVars[AZURE_LOCATION]}"
 
 Errors=0
 
@@ -57,12 +57,12 @@ if [ -n "$resourceId" ]; then
 fi
 
 # --- Build Chat Deployment ---
-chatDeployment_name="${AZURE_AI_AGENT_DEPLOYMENT_NAME}"
-chatDeployment_model_name="${AZURE_AI_AGENT_MODEL_NAME}"
-chatDeployment_model_version="${AZURE_AI_AGENT_MODEL_VERSION}"
-chatDeployment_model_format="${AZURE_AI_AGENT_MODEL_FORMAT}"
-chatDeployment_sku_name="${AZURE_AI_AGENT_DEPLOYMENT_SKU}"
-chatDeployment_capacity="${AZURE_AI_AGENT_DEPLOYMENT_CAPACITY}"
+chatDeployment_name="${envVars[AZURE_AI_AGENT_DEPLOYMENT_NAME]}"
+chatDeployment_model_name="${envVars[AZURE_AI_AGENT_MODEL_NAME]}"
+chatDeployment_model_version="${envVars[AZURE_AI_AGENT_MODEL_VERSION]}"
+chatDeployment_model_format="${envVars[AZURE_AI_AGENT_MODEL_FORMAT]}"
+chatDeployment_sku_name="${envVars[AZURE_AI_AGENT_DEPLOYMENT_SKU]}"
+chatDeployment_capacity="${envVars[AZURE_AI_AGENT_DEPLOYMENT_CAPACITY]}"
 chatDeployment_capacity_env="AZURE_AI_AGENT_DEPLOYMENT_CAPACITY"
 
 aiModelDeployments=(
@@ -71,12 +71,12 @@ aiModelDeployments=(
 
 # --- Optional Embed Deployment ---
 if [ "$USE_AZURE_AI_SEARCH_SERVICE" == "true" ]; then
-    embedDeployment_name="${AZURE_AI_EMBED_DEPLOYMENT_NAME}"
-    embedDeployment_model_name="${AZURE_AI_EMBED_MODEL_NAME}"
-    embedDeployment_model_version="${AZURE_AI_EMBED_MODEL_VERSION}"
-    embedDeployment_model_format="${AZURE_AI_EMBED_MODEL_FORMAT}"
-    embedDeployment_sku_name="${AZURE_AI_EMBED_DEPLOYMENT_SKU}"
-    embedDeployment_capacity="${AZURE_AI_EMBED_DEPLOYMENT_CAPACITY}"
+    embedDeployment_name="${envVars[AZURE_AI_EMBED_DEPLOYMENT_NAME]}"
+    embedDeployment_model_name="${envVars[AZURE_AI_EMBED_MODEL_NAME]}"
+    embedDeployment_model_version="${envVars[AZURE_AI_EMBED_MODEL_VERSION]}"
+    embedDeployment_model_format="${envVars[AZURE_AI_EMBED_MODEL_FORMAT]}"
+    embedDeployment_sku_name="${envVars[AZURE_AI_EMBED_DEPLOYMENT_SKU]}"
+    embedDeployment_capacity="${envVars[AZURE_AI_EMBED_DEPLOYMENT_CAPACITY]}"
     embedDeployment_capacity_env="AZURE_AI_EMBED_DEPLOYMENT_CAPACITY"
 
     aiModelDeployments+=(
