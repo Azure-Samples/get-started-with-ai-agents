@@ -280,6 +280,7 @@ Once you've opened the project in [Codespaces](#github-codespaces) or in [Dev Co
 1. Login to Azure:
 
     ```shell
+    az login
     azd auth login
     ```
 
