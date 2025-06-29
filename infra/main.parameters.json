@@ -60,42 +60,42 @@
       "value": "${AZURE_EXISTING_AGENT_ID}"
     },
     "agentDeploymentName": {
-      "value": "${AZURE_AI_AGENT_MODEL_NAME}"
+      "value": "${AZURE_AI_AGENT_MODEL_NAME=gpt-4o-mini}"
     },
     "agentModelFormat": {
-      "value": "${AZURE_AI_AGENT_MODEL_FORMAT}"
+      "value": "${AZURE_AI_AGENT_MODEL_FORMAT=OpenAI}"
     },
     "agentModelName": {
-      "value": "${AZURE_AI_AGENT_MODEL_NAME}"
+      "value": "${AZURE_AI_AGENT_MODEL_NAME=gpt-4o-mini}"
     },
     "agentModelVersion": {
-      "value": "${AZURE_AI_AGENT_MODEL_VERSION}"
+      "value": "${AZURE_AI_AGENT_MODEL_VERSION=2024-07-18}"
     },
     "agentDeploymentSku": {
-      "value": "${AZURE_AI_AGENT_DEPLOYMENT_SKU}"
+      "value": "${AZURE_AI_AGENT_DEPLOYMENT_SKU=GlobalStandard}"
     },
     "agentDeploymentCapacity": {
-      "value": "${AZURE_AI_AGENT_DEPLOYMENT_CAPACITY}"
+      "value": "${AZURE_AI_AGENT_DEPLOYMENT_CAPACITY=80}"
     },
     "embeddingDeploymentName": {
-      "value": "${AZURE_AI_EMBED_DEPLOYMENT_NAME}"
+      "value": "${AZURE_AI_EMBED_DEPLOYMENT_NAME=text-embedding-3-small}"
     },
     "embedModelFormat": {
-      "value": "${AZURE_AI_EMBED_MODEL_FORMAT}"
+      "value": "${AZURE_AI_EMBED_MODEL_FORMAT=OpenAI}"
     },
     "embedModelName": {
-      "value": "${AZURE_AI_EMBED_MODEL_NAME}"
+      "value": "${AZURE_AI_EMBED_MODEL_NAME=text-embedding-3-small}"
     },
     "embedModelVersion": {
-      "value": "${AZURE_AI_EMBED_MODEL_VERSION}"
+      "value": "${AZURE_AI_EMBED_MODEL_VERSION=1}"
     },
     "embedDeploymentSku": {
-      "value": "${AZURE_AI_EMBED_DEPLOYMENT_SKU}"
+      "value": "${AZURE_AI_EMBED_DEPLOYMENT_SKU=Standard}"
     },
     "embedDeploymentCapacity": {
-      "value": "${AZURE_AI_EMBED_DEPLOYMENT_CAPACITY}"
+      "value": "${AZURE_AI_EMBED_DEPLOYMENT_CAPACITY=50}"
     },
-    "embeddingDeploymentDimensions": {
+        "embeddingDeploymentDimensions": {
       "value": "${AZURE_AI_EMBED_DIMENSIONS=100}"
     },
     "apiAppExists": {

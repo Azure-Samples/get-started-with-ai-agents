@@ -18,17 +18,6 @@ hooks:
       run: ./scripts/validate_env_vars.ps1
       interactive: true
       continueOnError: false      
-  preprovision:
-    posix:
-      shell: sh
-      run: chmod u+r+x ./scripts/set_default_models.sh; chmod u+r+x ./scripts/resolve_model_quota.sh; ./scripts/set_default_models.sh
-      interactive: true
-      continueOnError: false
-    windows:
-      shell: pwsh
-      run: ./scripts/set_default_models.ps1
-      interactive: true
-      continueOnError: false      
   postprovision:
     windows:
       shell: pwsh

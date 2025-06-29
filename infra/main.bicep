@@ -20,10 +20,9 @@ param environmentName string
 @metadata({
   azd: {
     type: 'location'
-    // quota-validation for ai models: gpt-4o-mini & text-embedding-3-small
+    // quota-validation for ai models: gpt-4o-mini
     usageName: [
-      'OpenAI.GlobalStandard.gpt-4o-mini,30'
-      'OpenAI.GlobalStandard.text-embedding-3-small,30'
+      'OpenAI.GlobalStandard.gpt-4o-mini,80'
     ]
   }
 })
