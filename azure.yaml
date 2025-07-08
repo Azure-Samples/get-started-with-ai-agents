@@ -4,7 +4,7 @@
 
 name: azd-get-started-with-ai-agents
 metadata:
-  template: azd-get-started-with-ai-agents@1.0.0
+  template: azd-get-started-with-ai-agents@1.0.1
 
 hooks:
   preup:
