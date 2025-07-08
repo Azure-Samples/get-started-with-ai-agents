@@ -34,8 +34,3 @@ Add-Content -Path $envFilePath -Value "AZURE_AI_AGENT_NAME=$azureAiAgentName"
 Add-Content -Path $envFilePath -Value "AZURE_TENANT_ID=$azureTenantId"
 Add-Content -Path $envFilePath -Value "ENABLE_AZURE_MONITOR_TRACING=$enableAzureMonitorTracing"
 Add-Content -Path $envFilePath -Value "AZURE_TRACING_GEN_AI_CONTENT_RECORDING_ENABLED=$azureTracingGenAIContentRecordingEnabled"
-
-Write-Host "🌐 Please visit web app URL:"
-Write-Host $serviceAPIUri -ForegroundColor Cyan
-
-Write-Host "💡 (Optional) To setup username and password for the web application, run '.\scripts\setup_credential.ps1'."

@@ -2,6 +2,7 @@ param name string
 param location string = resourceGroup().location
 param tags object = {}
 
+param containerRegistryName string
 param identityName string
 param containerAppsEnvironmentName string
 param azureExistingAIProjectResourceId string
@@ -13,7 +14,6 @@ param embeddingDeploymentDimensions string
 param searchServiceEndpoint string
 param agentName string
 param agentID string
-param projectName string
 param enableAzureMonitorTracing bool
 param azureTracingGenAIContentRecordingEnabled bool
 param projectEndpoint string
@@ -89,12 +89,12 @@ module app 'core/host/container-app-upsert.bicep' = {
   params: {
     name: name
     location: location
-    tags: tags
+    tags: union(tags, { 'azd-service-name': 'api_and_frontend' })
     identityName: apiIdentity.name
+    containerRegistryName: containerRegistryName
     containerAppsEnvironmentName: containerAppsEnvironmentName
     targetPort: 50505
     env: env
-    projectName: projectName
   }
 }
 

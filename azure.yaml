@@ -29,7 +29,25 @@ hooks:
       run: chmod u+r+x ./scripts/write_env.sh; ./scripts/write_env.sh;
       continueOnError: true
       interactive: true
-
+  postdeploy:
+    windows:
+      shell: pwsh
+      run: ./scripts/postdeploy.ps1
+      continueOnError: true
+      interactive: true
+    posix:
+      shell: sh
+      run: chmod u+r+x ./scripts/postdeploy.sh; ./scripts/postdeploy.sh;
+      continueOnError: true
+      interactive: true
+services:
+  api_and_frontend:
+    project: ./src
+    language: py
+    host: containerapp
+    docker:
+      image: api_and_frontend
+      remoteBuild: true
 pipeline:
   variables:
     - AZURE_RESOURCE_GROUP
