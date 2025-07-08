@@ -323,7 +323,7 @@ Once you've opened the project in [Codespaces](#github-codespaces) or in [Dev Co
 
 7. (Optional) You can use a local development server to test app changes locally. To do so, follow the steps in [local deployment server](#local-development-server) after your app is deployed.
 
-8. (Optional) Follow this [tutorial](https://learn.microsoft.com/en-us/azure/container-registry/container-registry-tutorial-quick-task) to build your changes into a Docker image and deploy to Azure Container App.
+8. (Optional) To redeploy, run `azd deploy`.  This will cause new docker image rebuilt, push to Azure Container Registry, and a new revision in Azure Container App with a new docker image.
 
 ## Tracing and Monitoring
 
