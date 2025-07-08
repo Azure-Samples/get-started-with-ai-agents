@@ -9,7 +9,15 @@ This document describes how to customize the deployment of the Agents Chat with 
 * [Customizing model deployments](#customizing-model-deployments)
 
 ## Use existing resources
-Be default, this template provisions a new resource group along with other resources.   If you already have provisioned Azure AI Foundry and Azure AI Foundry Project, you might reuse these resources by setting:
+Be default, this template provisions a new resource group along with other resources.   If you already have provisioned Azure AI Foundry and Azure AI Foundry Project (not a hub based project), you might reuse these resources by setting:
+
+To find the value:
+
+1. Open the azure portal
+2. Navigate to the AI foundry resource
+3. Select projects in the sidebar and open the desired project
+4. Oo to 'Resource Management' -> 'Properties' in the sidebar
+5. Copy the value from 'Resource ID'
 
 ```shell
 azd env set AZURE_EXISTING_AIPROJECT_RESOURCE_ID "https://<your-ai-services-account-name>.services.ai.azure.com/api/projects/<your-project-name>"

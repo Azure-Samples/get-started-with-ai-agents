@@ -237,15 +237,17 @@ You can optionally use a local development server to test app changes locally. M
     ```
 
 4. Install [Node.js](https://nodejs.org/) (v20 or later).
+   
+5. Install [pnpm](https://pnpm.io/installation)
 
-5. Navigate to the frontend directory and setup for React UI:
+6. Navigate to the frontend directory and setup for React UI:
 
     ```shell
     cd src/frontend
     pnpm run setup
     ```
 
-6. Fill in the environment variables in `.env`.
+7. Fill in the environment variables in `.env`.
 
 (Optional) if you have changes in `src/frontend`, execute:
 
@@ -277,13 +279,7 @@ The build output will be placed in the `../api/static/react` directory, where th
 
 Once you've opened the project in [Codespaces](#github-codespaces) or in [Dev Containers](#vs-code-dev-containers) or [locally](#local-environment), you can deploy it to Azure following the following steps.
 
-1. Login to Azure:
-
-    ```shell
-    azd auth login
-    ```
-
-2. (Optional) If you would like to customize the deployment to [disable resources](docs/deploy_customization.md#disabling-resources), [customize resource names](docs/deploy_customization.md#customizing-resource-names), [customize the models](docs/deploy_customization.md#customizing-model-deployments) or [increase quota](docs/deploy_customization.md#setting-capacity-and-deployment-sku), you can follow those steps now.
+1. (Optional) If you would like to customize the deployment to [disable resources](docs/deploy_customization.md#disabling-resources), [customize resource names](docs/deploy_customization.md#customizing-resource-names), [customize the models](docs/deploy_customization.md#customizing-model-deployments) or [increase quota](docs/deploy_customization.md#setting-capacity-and-deployment-sku), you can follow those steps now.
 
     ⚠️ **NOTE!** For optimal performance, the recommended quota is 100k tokens per minute. If you have the capacity, we recommend increasing the quota by running the following command:
 
@@ -293,13 +289,13 @@ Once you've opened the project in [Codespaces](#github-codespaces) or in [Dev Co
 
     ⚠️ If you do not increase your quota, you may encounter rate limit issues. If needed, you can increase the quota after deployment by editing your model in the Models and Endpoints tab of the [Azure AI Foundry Portal](https://ai.azure.com/).
 
-3. Provision and deploy all the resources with public docker image `azdtemplate.azurecr.io/get-start-with-ai-agents:latest` by running the following in get-started-with-ai-agents directory:
+2. Provision and deploy all the resources with public docker image `azdtemplate.azurecr.io/get-start-with-ai-agents:latest` by running the following in get-started-with-ai-agents directory:
 
     ```shell
     azd up
     ```
 
-4. You will be prompted to provide an `azd` environment name (like "azureaiapp"), select a subscription from your Azure account, and select a location which has quota for all the resources. Then, it will provision the resources in your account and deploy the latest code.
+3. You will be prompted to provide an `azd` environment name (like "azureaiapp"), select a subscription from your Azure account, and select a location which has quota for all the resources. Then, it will provision the resources in your account and deploy the latest code.
 
     - For guidance on selecting a region with quota and model availability, follow the instructions in the [quota recommendations](#quota-recommendations-optional) section and ensure that your model is available in your selected region by checking the [list of models supported by Azure AI Agent Service](https://learn.microsoft.com/azure/ai-services/agents/concepts/model-region-support)
     - This deployment will take 7-10 minutes to provision the resources in your account and set up the solution with sample data.
@@ -307,7 +303,7 @@ Once you've opened the project in [Codespaces](#github-codespaces) or in [Dev Co
 
     **NOTE!** If you get authorization failed and/or permission related errors during the deployment, please refer to the Azure account requirements in the [Prerequisites](#prerequisites) section. If you were recently granted these permissions, it may take a few minutes for the authorization to apply.
 
-5. When `azd` has finished deploying, you'll see an endpoint URI in the command output. Visit that URI, and you should see the app! 🎉
+4. When `azd` has finished deploying, you'll see an endpoint URI in the command output. Visit that URI, and you should see the app! 🎉
 
     - From here, you can interact with the agent. Try chatting with the agent by asking for a joke, or you could try a more specific query to see the agent's citation capabilities. By default, this solution uploads two documents from the `src/files` folder. To see the agent use this information, try asking about Contoso's products.
 
@@ -317,13 +313,13 @@ Once you've opened the project in [Codespaces](#github-codespaces) or in [Dev Co
         azd show
         ```
 
-6. (Optional) Now that your app has deployed, you can view your resources in the Azure Portal and your deployments in Azure AI Foundry.
+5. (Optional) Now that your app has deployed, you can view your resources in the Azure Portal and your deployments in Azure AI Foundry.
     - In the [Azure Portal](https://portal.azure.com/), navigate to your environment's resource group. The name will be `rg-[your environment name]`. Here, you should see your container app, storage account, and all of the other [resources](#resources) that are created in the deployment.
     - In the [Azure AI Foundry Portal](https://ai.azure.com/), select your project. If you navigate to the Agents tab, you should be able to view your new agent, named `agent-template-assistant`. If you navigate to the Models and Endpoints tab, you should see your AI Services connection with your model deployments.
 
-7. (Optional) You can use a local development server to test app changes locally. To do so, follow the steps in [local deployment server](#local-development-server) after your app is deployed.
+6. (Optional) You can use a local development server to test app changes locally. To do so, follow the steps in [local deployment server](#local-development-server) after your app is deployed.
 
-8. (Optional) To redeploy, run `azd deploy`.  This will cause new docker image rebuilt, push to Azure Container Registry, and a new revision in Azure Container App with a new docker image.
+7. (Optional) To redeploy, run `azd deploy`.  This will cause new docker image rebuilt, push to Azure Container Registry, and a new revision in Azure Container App with a new docker image.
 
 ## Tracing and Monitoring
 
