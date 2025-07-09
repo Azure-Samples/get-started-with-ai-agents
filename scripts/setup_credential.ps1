@@ -1,3 +1,23 @@
+# Check Azure login status
+$azAccount = az account show 2>$null
+
+if (-not $azAccount) {
+    
+    Write-Host "🔐 Not logged in to Azure. Attempting to login..." -ForegroundColor Yellow
+    $azureTenantId = azd env get-value AZURE_TENANT_ID
+    az login --tenant $azureTenantId | Out-Null
+
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "❌ Azure login failed. Exiting script." -ForegroundColor Red
+        exit 1
+    }
+
+    Write-Host "✅ Logged in to Azure successfully." -ForegroundColor Green
+} else {
+    $accountInfo = $azAccount | ConvertFrom-Json
+    Write-Host "✅ Already logged in as: $($accountInfo.user.name)" -ForegroundColor Green
+}
+
 # Prompt for username with validation
 do {
     $username = Read-Host -Prompt '👤 Create a new username for the web app (no spaces, at least 1 character)'
