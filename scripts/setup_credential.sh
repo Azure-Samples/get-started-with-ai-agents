@@ -1,5 +1,29 @@
 #!/bin/bash
 
+set -e
+
+# Check if already logged in
+if ! az account show &>/dev/null; then
+    echo -e "🔐 Not logged in to Azure. Attempting to login..."
+
+    azureTenantId=$(azd env get-value AZURE_TENANT_ID)
+    if [[ -z "$azureTenantId" ]]; then
+        echo "❌ AZURE_TENANT_ID is not set in the environment. Exiting."
+        exit 1
+    fi
+
+    az login --tenant "$azureTenantId" > /dev/null
+    if [[ $? -ne 0 ]]; then
+        echo "❌ Azure login failed. Exiting script."
+        exit 1
+    fi
+
+    echo "✅ Logged in to Azure successfully."
+else
+    user=$(az account show --query user.name -o tsv)
+    echo "✅ Already logged in as: $user"
+fi
+
 templateValidationMode="${TEMPLATE_VALIDATION_MODE}"
 
 if [[ "$templateValidationMode" == true ]]; then
