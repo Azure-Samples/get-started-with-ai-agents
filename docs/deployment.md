@@ -10,7 +10,7 @@ To deploy this Azure environment successfully, your Azure account (the account y
   _(typically included if you have [Role Based Access Control Administrator](https://learn.microsoft.com/azure/role-based-access-control/built-in-roles#role-based-access-control-administrator-preview), [User Access Administrator](https://learn.microsoft.com/azure/role-based-access-control/built-in-roles#user-access-administrator), or [Owner](https://learn.microsoft.com/azure/role-based-access-control/built-in-roles#owner) role)_
 - **Microsoft.Resources/deployments/write** permissions at the subscription scope.
 
-You can view the permissions for your account and subscription by going to Azure portal, clicking 'Subscriptions' under 'Navigation' and then choosing your subscription from the list. If you try to search for your subscription and it does not come up, make sure no filters are selected. After selecting your subscription, select 'Access control (IAM)' and you can see the roles that are assigned to your account for this subscription. If you want to see more information about the roles, you can go to the 'Role assignments' tab and search by your account name and then click the role you want to view more information about.
+You can view the permissions for your account and subscription by going to Azure portal, clicking 'Subscriptions' under 'Navigation' and then choosing your subscription from the list. If cannot find the subscription, make sure no filters are selected. After selecting your subscription, select 'Access control (IAM)' and you can see the roles that are assigned to your account for this subscription. To get more information about the roles, go to the 'Role assignments' tab, search by your account name and click the role you want to view more information about.
 
 Check the [Azure Products by Region](https://azure.microsoft.com/en-us/explore/global-infrastructure/products-by-region/?products=all&regions=all) page and select a **region** where the following services are available:
 
@@ -20,7 +20,7 @@ Check the [Azure Products by Region](https://azure.microsoft.com/en-us/explore/g
 - [Azure AI Search](https://learn.microsoft.com/en-us/azure/search/)
 - [GPT Model Capacity](https://learn.microsoft.com/en-us/azure/ai-services/openai/concepts/models)
 
-Here are some example regions where the services are available: East US, East US2, Japan East, UK South, Sweden Central.
+Here are some examples of the regions where the services are available: East US, East US2, Japan East, UK South, Sweden Central.
 
 ### **Important Note for PowerShell Users**
 
@@ -86,7 +86,7 @@ If you're not using one of the above options for opening the project, then you'l
    - [Azure Developer CLI (azd)](https://aka.ms/install-azd) Install or update to the latest version. Instructions can be found on the linked page.
    - [Python 3.9+](https://www.python.org/downloads/)
    - [Git](https://git-scm.com/downloads)
-   - \[Windows Only\] [PowerShell](https://learn.microsoft.com/powershell/scripting/install/installing-powershell-on-windows) of the latest version, needed only for local application development on Windows operation system. Please make sure that power shell executable `pwsh.exe` is added to the `PATH` variable.
+   - \[Windows Only\] [PowerShell](https://learn.microsoft.com/powershell/scripting/install/installing-powershell-on-windows) of the latest version, needed only for local application development on Windows operation system. Please make sure that path to power shell executable `pwsh.exe` is added to the `PATH` variable.
 
 2. Clone the repository or download the project code via command-line:
 
@@ -175,7 +175,7 @@ You can optionally use a local development server to test app changes locally. M
 
 <br/>
 
-Consider the following settings during your deployment to modify specific settings:
+Consider the following settings during deployment:
 
 <details>
   <summary><b>Configurable Deployment Settings</b></summary>
@@ -191,7 +191,7 @@ When you start a deployment, most parameters will have default values. You can c
 | **Model Deployment Capacity** | Configure capacity for your model. | 80k |
 | **Embedding Model** | Choose from text-embedding-3-large, text-embedding-3-small, and text-embedding-ada-002. This may only be deployed if Azure AI Search is enabled. |  text-embedding-3-small |
 | **Embedding Model Capacity** | Configure capacity for your embedding model. |  50k |
-| **Knowledge Retrieval** | Choose from OpenAI's file search or including Azure AI Search Index. |  OpenAI's file search |
+| **Knowledge Retrieval** | Choose OpenAI's file search or Azure AI Search Index. |  OpenAI's file search |
 
 For a detailed description of customizable fields and instructions, view the [deployment customization guide](deploy_customization.md).
 

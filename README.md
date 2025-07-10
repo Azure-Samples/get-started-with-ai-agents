@@ -189,14 +189,16 @@ For a more comprehensive list of best practices and security recommendations for
 
 This template creates everything you need to get started with Azure AI Foundry:
 
-- [AI Project](https://learn.microsoft.com/azure/ai-studio/how-to/create-projects)
-- [Azure AI Service](https://learn.microsoft.com/azure/ai-services): Default models deployed are gpt-4o-mini, but any Azure AI models can be specified per the [documentation](docs/deploy_customization.md#customizing-model-deployments).
-* [AI Search Service](https://learn.microsoft.com/azure/search/) *(Optional, disabled by default)*
-* 
-The template also includes dependent resources:
-
-- [Storage Account](https://learn.microsoft.com/azure/storage/blobs/)
-- [Application Insights](https://learn.microsoft.com/azure/azure-monitor/app/app-insights-overview) _(Optional, enabled by default)_
+| Resource | Description |
+|----------|-------------|
+| [Azure AI Project](https://learn.microsoft.com/azure/ai-studio/how-to/create-projects) | Provides a collaborative workspace for AI development with access to models, data, and compute resources |
+| [Azure OpenAI Service](https://learn.microsoft.com/azure/ai-services/openai/) | Powers the AI agents for conversational AI and intelligent search capabilities. Default models deployed are gpt-4o-mini, but any Azure AI models can be specified per the [documentation](docs/deploy_customization.md#customizing-model-deployments) |
+| [Azure Container Apps](https://learn.microsoft.com/azure/container-apps/) | Hosts and scales the web application with serverless containers |
+| [Azure Container Registry](https://learn.microsoft.com/azure/container-registry/) | Stores and manages container images for secure deployment |
+| [Storage Account](https://learn.microsoft.com/azure/storage/blobs/) | Provides blob storage for application data and file uploads |
+| [AI Search Service](https://learn.microsoft.com/azure/search/) | *Optional* - Enables hybrid search capabilities combining semantic and vector search |
+| [Application Insights](https://learn.microsoft.com/azure/azure-monitor/app/app-insights-overview) | *Optional* - Provides application performance monitoring, logging, and telemetry for debugging and optimization |
+| [Log Analytics Workspace](https://learn.microsoft.com/azure/azure-monitor/logs/log-analytics-workspace-overview) | *Optional* - Collects and analyzes telemetry data for monitoring and troubleshooting |
 
 ## Troubleshooting
 
