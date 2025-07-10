@@ -59,6 +59,7 @@ Here is a screenshot showing the chatting web application with requests and resp
 
 Github Codespaces and Dev Containers both allow you to download and deploy the code for development. You can also continue with local development. Once you have selected your environment, [click here to launch the development and deployment guide](./docs/deployment.md)
 
+**After deployment, try these [sample questions](./docs/sample_questions.md) to test your agent.**
 
 
 ## Tracing and Monitoring
