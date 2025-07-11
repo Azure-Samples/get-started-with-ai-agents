@@ -37,7 +37,7 @@ AI Foundry offers a number of [built-in evaluators](https://learn.microsoft.com/
   ```
 
 - **Monitoring**: When tracing is enabled, the [application code](./src/api/routes.py) sends an asynchronous evaluation request after processing a thread run, allowing continuous monitoring of your agent. You can view results from the AI Foundry Tracing tab.
-    ![Tracing](/images/tracing_eval_screenshot.png)
+    ![Tracing](./images/tracing_eval_screenshot.png)
     Alternatively, you can go to your Application Insights logs for an interactive experience. Here is an example query to see logs on thread runs and related events.
 
     ```kql
