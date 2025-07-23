@@ -1,0 +1,24 @@
+name: Make Shell Scripts Executable on Merge to Main
+
+on:
+  push:
+
+jobs:
+  make-executable:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Make all .sh files executable
+        run: |
+          find . -type f -name "*.sh" -exec chmod +x {} \;
+      - name: Commit and push permission changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .
+          git diff --cached --quiet || git commit -m "Set execute permission on .sh files"
+          git push
+
+          
