@@ -13,7 +13,9 @@
                 "ms-azuretools.vscode-bicep",
                 "ms-python.python",
                 "ms-toolsai.jupyter",
-                "GitHub.vscode-github-actions"
+                "GitHub.vscode-github-actions",
+                "ms-azuretools.vscode-azure-mcp-server",
+                "ms-azuretools.vscode-azure-github-copilot"
             ]
         }
     },
