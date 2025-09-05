@@ -368,7 +368,7 @@ def run_agent_evaluation(
             evaluators={
                 "Relevance": {"Id": EvaluatorIds.RELEVANCE.value},
                 "TaskAdherence": {"Id": EvaluatorIds.TASK_ADHERENCE.value},
-                "ToolCallAccuracy": {"Id": EvaluatorIds.TOOL_CALL_ACCURACY.value},
+                #"ToolCallAccuracy": {"Id": EvaluatorIds.TOOL_CALL_ACCURACY.value},
             },
             sampling_configuration=AgentEvaluationSamplingConfiguration(
                 name="default",
