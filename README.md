@@ -4,7 +4,7 @@ The agent leverages the Azure AI Agent service and utilizes file search for know
 
 <div style="text-align:center;">
 
-[**SOLUTION OVERVIEW**](#solution-overview) \| [**GETTING STARTED**](#getting-started) \| [**LOCAL DEVELOPMENT**](#local-development) \| [**OTHER FEATURES**](#other-features) \| [**RESOURCE CLEAN-UP**](#resource-clean-up) \| [**GUIDANCE**](#guidance) \| [**TROUBLESHOOTING**](./docs/troubleshooting.md)
+[**SOLUTION OVERVIEW**](#solution-overview) \| [**GETTING STARTED**](#getting-started) \| [**LOCAL DEVELOPMENT**](#local-development) \| [**RESOURCE CLEAN-UP**](#resource-clean-up) \| [**GUIDANCE**](#guidance) \| [**TROUBLESHOOTING**](./docs/troubleshooting.md)
 
 </div>
 
@@ -26,22 +26,22 @@ The app code runs in Azure Container App to process the user input and generate 
 
 ### Key Features
 
-- **Knowledge Retrieval**<br/>
-The AI agent uses file search to retrieve knowledge from uploaded files.
+- **[Knowledge Retrieval](./docs/deploy_customization.md#enabling-and-disabling-resources-provision)**<br/>
+The AI agent uses file search or Azure AI Search to retrieve knowledge from uploaded files.
 
-- **Customizable AI Model Deployment**<br/>
+- **[Customizable AI Model Deployment](./docs/deploy_customization.md#customizing-model-deployments)**<br/>
 The solution allows users to configure and deploy AI models, such as gpt-4o-mini, with options to adjust model capacity, and knowledge retrieval methods.
 
-- **Built-in Monitoring and Tracing**<br/>
+- **[Built-in Monitoring and Tracing](./docs/other_features.md#tracing-and-monitoring)**<br/>
 Integrated monitoring capabilities, including Azure Monitor and Application Insights, enable tracing and logging for easier troubleshooting and performance optimization.
 
-- **Flexible Deployment Options**<br/>
+- **[Flexible Deployment Options](./docs/deployment.md)**<br/>
 The solution supports deployment through GitHub Codespaces, VS Code Dev Containers, or local environments, providing flexibility for different development workflows.
 
-- **Agent Evaluation**<br/>
+- **[Agent Evaluation](./docs/other_features.md#agent-evaluation)**<br/>
 This solution demonstrates how you can evaluate your agent's performance and quality during local development and incorporate it into monitoring and CI/CD workflow.
 
-- **AI Red Teaming Agent**<br/>
+- **[AI Red Teaming Agent](./docs/other_features.md#ai-red-teaming-agent)**<br/>
 Facilitates the creation of an AI Red Teaming Agent that can run batch automated scans for safety and security scans on your Agent solution to check your risk posture before deploying it into production.
 
 <br/>
@@ -81,14 +81,6 @@ This guide covers:
 - File management and agent recreation
 - Using agent evaluation for code improvement
 
-## Other Features
-Once you have the agents and the web app working, you are encouraged to try one of the following:
-
-- **[Tracing and Monitoring](./docs/other_features.md#tracing-and-monitoring)** - View console logs in Azure portal and App Insights tracing in Azure AI Foundry for debugging and performance monitoring.
-
-- **[Agent Evaluation](./docs/other_features.md#agent-evaluation)** - Evaluate your agent's performance and quality using built-in evaluators for local development, continuous monitoring, and CI/CD integration.
-
-- **[AI Red Teaming Agent](./docs/other_features.md#ai-red-teaming-agent)** - Run automated security and safety scans on your agent solution to check your risk posture before production deployment.
 
 ## Resource Clean-up
 
