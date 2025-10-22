@@ -46,34 +46,34 @@ interface IAgentPreviewProps {
 }
 
 interface IAnnotation {
-  file_name?: string;
-  text: string;
-  start_index: number;
-  end_index: number;
+  file_name: string;
+  index: number;
 }
 
 const preprocessContent = (
   content: string,
   annotations?: IAnnotation[]
 ): string => {
-  if (annotations) {
-    // Process annotations in reverse order so that the indexes remain valid
-    annotations
-      .slice()
-      .reverse()
-      .forEach((annotation) => {
-        // If there's a file_name, show it (wrapped in brackets), otherwise fall back to annotation.text.
-        const linkText = annotation.file_name
-          ? `[${annotation.file_name}]`
-          : annotation.text;
-
-        content =
-          content.slice(0, annotation.start_index) +
-          linkText +
-          content.slice(annotation.end_index);
-      });
+  if (!annotations || annotations.length === 0) {
+    return content;
   }
-  return content;
+  
+  // Process annotations in reverse order so that the indexes remain valid
+  let processedContent = content;
+  annotations
+    .slice()
+    .sort((a, b) => b.index - a.index)
+    .forEach((annotation) => {
+      // Only process if the index is valid and within bounds
+      if (annotation.index >= 0 && annotation.index <= processedContent.length) {
+        // If there's a file_name, show it (wrapped in brackets), inserting after the index
+        processedContent =
+          processedContent.slice(0, annotation.index + 1) +
+          ` [${annotation.file_name}]` +
+          processedContent.slice(annotation.index + 1);
+      }
+    });
+  return processedContent;
 };
 
 export function AgentPreview({ agentDetails }: IAgentPreviewProps): ReactNode {
@@ -125,22 +125,26 @@ export function AgentPreview({ agentDetails }: IAgentPreviewProps): ReactNode {
         }
         setMessageList((prev) => [...historyMessages, ...prev]); // Prepend history
       } else {
-        const errorChatItem = createAssistantMessageDiv(); // This will add an empty message first
-        appendAssistantMessage(
-          errorChatItem,
-          "Error occurs while loading chat history!",
-          false
-        );
+        // For error messages, add directly to messageList without preprocessing
+        const errorMessage: IChatItem = {
+          id: crypto.randomUUID(),
+          content: "Error occurs while loading chat history!",
+          isAnswer: true,
+          more: { time: new Date().toISOString() },
+        };
+        setMessageList(prev => [...prev, errorMessage]);
       }
       setIsLoadingChatHistory(false);
     } catch (error) {
       console.error("Failed to load chat history:", error);
-      const errorChatItem = createAssistantMessageDiv();
-      appendAssistantMessage(
-        errorChatItem,
-        "Error occurs while loading chat history!",
-        false
-      );
+      // For error messages, add directly to messageList without preprocessing
+      const errorMessage: IChatItem = {
+        id: crypto.randomUUID(),
+        content: "Error occurs while loading chat history!",
+        isAnswer: true,
+        more: { time: new Date().toISOString() },
+      };
+      setMessageList(prev => [...prev, errorMessage]);
       setIsLoadingChatHistory(false);
     }
   };
