@@ -1,7 +1,7 @@
 # Copyright (c) Microsoft. All rights reserved.
 # Licensed under the MIT license.
 # See LICENSE file in the project root for full license information.
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import asyncio
 import csv
@@ -12,18 +12,19 @@ import os
 import sys
 
 from azure.ai.projects.aio import AIProjectClient
-from azure.ai.agents.models import (
-    Agent,
-    AsyncToolSet,
-    AzureAISearchTool,
-    FilePurpose,
-    FileSearchTool,
-    Tool,
-)
-from azure.ai.projects.models import ConnectionType, ApiKeyCredentials
+# from azure.ai.agents.models import (
+#     Agent,
+#     AsyncToolSet,
+#     AzureAISearchTool,
+#     FilePurpose,
+#     Tool,
+# )
+from azure.ai.projects.models import ConnectionType, ApiKeyCredentials, AgentVersionObject
 from azure.identity.aio import DefaultAzureCredential
 from azure.core.credentials_async import AsyncTokenCredential
-
+from azure.ai.projects.models import AgentReference, PromptAgentDefinition
+from azure.ai.projects.models import FileSearchTool, AzureAISearchAgentTool, Tool, AgentVersionObject
+from openai import AsyncOpenAI
 from dotenv import load_dotenv
 
 from logging_config import configure_logging
@@ -32,12 +33,6 @@ load_dotenv()
 
 logger = configure_logging(os.getenv("APP_LOG_FILE", ""))
 
-
-agentID = os.environ.get("AZURE_EXISTING_AGENT_ID") if os.environ.get(
-    "AZURE_EXISTING_AGENT_ID") else os.environ.get(
-        "AZURE_AI_AGENT_ID")
-    
-proj_endpoint = os.environ.get("AZURE_EXISTING_AIPROJECT_ENDPOINT")
 
 def list_files_in_files_directory() -> List[str]:    
     # Get the absolute path of the 'files' directory
@@ -116,6 +111,7 @@ def _get_file_path(file_name: str) -> str:
 
 async def get_available_tool(
         project_client: AIProjectClient,
+        openai_client: AsyncOpenAI,
         creds: AsyncTokenCredential) -> Tool:
     """
     Get the toolset and tool definition for the agent.
@@ -128,98 +124,107 @@ async def get_available_tool(
     file_ids: List[str] = []
     # First try to get an index search.
     conn_id = ""
-    if os.environ.get('AZURE_AI_SEARCH_INDEX_NAME'):
-        conn_list = project_client.connections.list()
-        async for conn in conn_list:
-            if conn.type == ConnectionType.AZURE_AI_SEARCH:
-                conn_id = conn.id
-                break
+    # if os.environ.get('AZURE_AI_SEARCH_INDEX_NAME'):
+    #     conn_list = project_client.connections.list()
+    #     async for conn in conn_list:
+    #         if conn.type == ConnectionType.AZURE_AI_SEARCH:
+    #             conn_id = conn.id
+    #             break
 
-    toolset = AsyncToolSet()
-    if conn_id:
-        await create_index_maybe(project_client, creds)
+    # if conn_id:
+    #     await create_index_maybe(project_client, creds)
 
-        return AzureAISearchTool(
-            index_connection_id=conn_id,
-            index_name=os.environ.get('AZURE_AI_SEARCH_INDEX_NAME'))
-    else:
+    #     return AzureAISearchTool(
+    #         index_connection_id=conn_id,
+    #         index_name=os.environ.get('AZURE_AI_SEARCH_INDEX_NAME'))
+    # else:
+    if True:
         logger.info(
             "agent: index was not initialized, falling back to file search.")
         
         # Upload files for file search
-        for file_name in FILES_NAMES:
-            file_path = _get_file_path(file_name)
-            file = await project_client.agents.files.upload_and_poll(
-                file_path=file_path, purpose=FilePurpose.AGENTS)
-            # Store both file id and the file path using the file name as key.
-            file_ids.append(file.id)
+        file_streams = [open(_get_file_path(file_name), "rb") for file_name in FILES_NAMES]
 
-        # Create the vector store using the file IDs.
-        vector_store = await project_client.agents.vector_stores.create_and_poll(
-            file_ids=file_ids,
-            name="sample_store"
-        )
+        try:
+            vector_store = await openai_client.vector_stores.create()
+            await openai_client.vector_stores.file_batches.upload_and_poll(
+                vector_store_id=vector_store.id, files=file_streams
+            )
+            print(f"File uploaded to vector store (id: {vector_store.id})")
+        except FileNotFoundError:
+            print(f"Warning: Asset file not found.")
+            print("Creating vector store without file for demonstration...")
+
+
         logger.info("agent: file store and vector store success")
 
         return FileSearchTool(vector_store_ids=[vector_store.id])
 
 
-async def create_agent(ai_client: AIProjectClient,
-                       creds: AsyncTokenCredential) -> Agent:
+async def create_agent(ai_project: AIProjectClient,
+                       creds: AsyncTokenCredential) -> AgentVersionObject:
     logger.info("Creating new agent with resources")
-    tool = await get_available_tool(ai_client, creds)
-    toolset = AsyncToolSet()
-    toolset.add(tool)
+    tool = await get_available_tool(ai_project, await ai_project.get_openai_client(), creds)
     
-    instructions = "Use AI Search always. Avoid to use base knowledge." if isinstance(tool, AzureAISearchTool) else "Use File Search always.  Avoid to use base knowledge."
-    
-    agent = await ai_client.agents.create_agent(
-        model=os.environ["AZURE_AI_AGENT_DEPLOYMENT_NAME"],
-        name=os.environ["AZURE_AI_AGENT_NAME"],
-        instructions=instructions,
-        toolset=toolset
+    instructions = "Use AI Search always. Avoid to use base knowledge." if isinstance(tool, AzureAISearchAgentTool) else "Use File Search always.  Avoid to use base knowledge."
+
+    agent = await ai_project.agents.create_version(
+        agent_name=os.environ["AZURE_AI_AGENT_NAME"],
+        definition=PromptAgentDefinition(
+            model=os.environ["AZURE_AI_AGENT_DEPLOYMENT_NAME"],
+            instructions=instructions,
+            tools=[tool],
+        ),
     )
     return agent
 
 
 async def initialize_resources():
     try:
-        async with DefaultAzureCredential(
-                exclude_shared_token_cache_credential=True) as creds:
-            async with AIProjectClient(
-                credential=creds,
-                endpoint=proj_endpoint
-            ) as ai_client:
-                # If the environment already has AZURE_AI_AGENT_ID or AZURE_EXISTING_AGENT_ID, try
-                # fetching that agent
-                if agentID is not None:
-                    try:
-                        agent = await ai_client.agents.get_agent(
-                            agentID)
-                        logger.info(f"Found agent by ID: {agent.id}")
-                        return
-                    except Exception as e:
-                        logger.warning(
-                            "Could not retrieve agent by AZURE_EXISTING_AGENT_ID = "
-                            f"{agentID}, error: {e}")
+        creds = DefaultAzureCredential(
+                exclude_shared_token_cache_credential=True)
 
-                # Check if an agent with the same name already exists
-                agent_list = ai_client.agents.list_agents()
-                if agent_list:
-                    async for agent_object in agent_list:
-                        if agent_object.name == os.environ[
-                                "AZURE_AI_AGENT_NAME"]:
-                            logger.info(
-                                "Found existing agent named "
-                                f"'{agent_object.name}'"
-                                f", ID: {agent_object.id}")
-                            os.environ["AZURE_EXISTING_AGENT_ID"] = agent_object.id
-                            return
-                        
-                # Create a new agent
-                agent = await create_agent(ai_client, creds)
-                os.environ["AZURE_EXISTING_AGENT_ID"] = agent.id
-                logger.info(f"Created agent, agent ID: {agent.id}")
+        proj_endpoint = os.environ.get("AZURE_EXISTING_AIPROJECT_ENDPOINT")
+        async with AIProjectClient(
+            credential=creds,
+            endpoint=proj_endpoint
+        ) as ai_project:
+            # If the environment already has AZURE_AI_AGENT_ID or AZURE_EXISTING_AGENT_ID, try
+            # fetching that agent
+            agent_obj: Optional[AgentVersionObject] = None
+
+            agentID = os.environ.get("AZURE_EXISTING_AGENT_ID")
+            if agentID:
+                try:
+                    agent_name = agentID.split(":")[0]
+                    agent_version = agentID.split(":")[1]
+                    agent_obj = await ai_project.agents.retrieve_version(agent_name, agent_version)
+                    logger.info(f"Found agent by ID: {agent_obj.id}")
+                    return
+                except Exception as e:
+                    logger.warning(
+                        "Could not retrieve agent by AZURE_EXISTING_AGENT_ID = "
+                        f"{agentID}, error: {e}")
+            else:
+                logger.info("No existing agent ID found.")
+
+            # Check if an agent with the same name already exists
+            if not agent_obj:
+                try:
+                    agent_name = os.environ["AZURE_AI_AGENT_NAME"]
+                    logger.info(f"Retrieving agent by name: {agent_name}")
+                    agents = await ai_project.agents.retrieve(agent_name)
+                    agent_obj = agents.versions.latest
+                    logger.info(f"Agent with agent id, {agent_obj.id} retrieved.")
+                except Exception as e:
+                    logger.info(f"Agent name, {agent_name} not found.")
+                    
+            # Create a new agent
+            if not agent_obj:
+                agent_obj = await create_agent(ai_project, creds)
+                logger.info(f"Created agent, agent ID: {agent_obj.id}")
+
+            os.environ["AZURE_EXISTING_AGENT_ID"] = agent_obj.id
 
     except Exception as e:
         logger.info("Error creating agent: {e}", exc_info=True)
