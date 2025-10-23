@@ -109,6 +109,39 @@ def get_app_insights_conn_str(request: Request) -> str:
 def serialize_sse_event(data: Dict) -> str:
     return f"data: {json.dumps(data)}\n\n"
 
+async def get_or_create_conversation(
+    openai_client: AsyncOpenAI,
+    conversation_id: Optional[str],
+    agent_id: Optional[str],
+    current_agent_id: str
+) -> str:
+    """
+    Get an existing conversation or create a new one.
+    Returns the conversation_id.
+    """
+    conversation: Optional[Conversation] = None
+    
+    # Attempt to get an existing conversation if we have matching agent and conversation IDs
+    if conversation_id and agent_id == current_agent_id:
+        try:
+            logger.info(f"Using existing conversation with ID {conversation_id}")
+            conversation = await openai_client.conversations.retrieve(conversation_id=conversation_id)
+            logger.info(f"Retrieved conversation: {conversation.id}")
+        except Exception as e:
+            logger.error(f"Error retrieving conversation: {e}")
+
+    # Create a new conversation if we don't have one
+    if not conversation:
+        try:
+            logger.info("Creating a new conversation")
+            conversation = await openai_client.conversations.create()
+            logger.info(f"Generated new conversation ID: {conversation.id}")
+        except Exception as e:
+            logger.error(f"Error creating conversation: {e}")
+            raise HTTPException(status_code=400, detail=f"Error handling conversation: {e}")
+    
+    return conversation.id
+
 async def get_message_and_annotations(event: Message | ResponseOutputMessage) -> Dict:
     annotations = []
     # Get file annotations for the file search.
@@ -259,32 +292,14 @@ async def history(
     openai_client : AsyncOpenAI = Depends(get_openai_client),
 	_ = auth_dependency
 ):
-    conversation: Optional[Conversation] = None
     with tracer.start_as_current_span("chat_history"):
         conversation_id = request.cookies.get('conversation_id')
         agent_id = request.cookies.get('agent_id')
 
-# Attempt to get an existing conversation. If not found, create a new one.
-        if conversation_id and agent_id == agent.id:
-            try:
-                logger.info(f"Using existing conversation with ID {conversation_id}")
-                conversation = await openai_client.conversations.retrieve(conversation_id=conversation_id)
-                logger.info(f"Retrieved conversation: {conversation.id}")
-                # For the responses API, we just use the conversation_id directly
-            except Exception as e:
-                logger.error(f"Error retrieving conversation: {e}")
-
-        if not conversation:
-            try:
-                logger.info("Creating a new conversation")
-                # Generate a unique conversation ID since we're using the responses API
-                import uuid
-                conversation = await openai_client.conversations.create()
-                logger.info(f"Generated new conversation ID: {conversation.id}")
-            except Exception as e:
-                logger.error(f"Error creating conversation: {e}")
-                raise HTTPException(status_code=400, detail=f"Error handling conversation: {e}")
-        conversation_id = conversation.id
+        # Get or create conversation using the reusable function
+        conversation_id = await get_or_create_conversation(
+            openai_client, conversation_id, agent_id, agent.id
+        )
         agent_id = agent.id
     # Create a new message from the user's input.
     try:
@@ -319,7 +334,7 @@ async def get_chat_agent(
 @router.post("/chat")
 async def chat(
     request: Request,
-    openAI : AsyncOpenAI = Depends(get_openai_client),
+    openai_client : AsyncOpenAI = Depends(get_openai_client),
     agent: AgentVersionObject = Depends(get_agent_version_obj),
     
     app_insights_conn_str : str = Depends(get_app_insights_conn_str),
@@ -333,30 +348,18 @@ async def chat(
         carrier = {}        
         TraceContextTextMapPropagator().inject(carrier)
         
-        # Attempt to get an existing conversation. If not found, create a new one.
-        try:                
-            if conversation_id and agent_id == agent.id:
-                logger.info(f"Retrieving conversation with ID {conversation_id}")
-                conversation = await openAI.conversations.retrieve(conversation_id=conversation_id)
-        except Exception as e:
-            logger.error(f"Error handling conversation: {e}")
-
-        if not conversation:
-            try:
-                logger.info("Creating a new conversation")
-                conversation = await openAI.conversations.create()
-                logger.info(f"Generated new conversation ID: {conversation.id}")
-            except Exception as e:
-                logger.error(f"Error creating conversation: {e}")
-                raise HTTPException(status_code=400, detail=f"Error creating conversation: {e}")
+        # Get or create conversation using the reusable function
+        conversation_id = await get_or_create_conversation(
+            openai_client, conversation_id, agent_id, agent.id
+        )
+        agent_id = agent.id
+        
         # Parse the JSON from the request.
         try:
             user_message = await request.json()
         except Exception as e:
             logger.error(f"Invalid JSON in request: {e}")
             raise HTTPException(status_code=400, detail=f"Invalid JSON in request: {e}")
-
-        conversation_id = conversation.id
         # Create a new message from the user's input.
 
         # Set the Server-Sent Events (SSE) response headers.
@@ -368,7 +371,7 @@ async def chat(
         logger.info(f"Starting streaming response for conversation ID {conversation_id}")
 
         # Create the streaming response using the generator.
-        response = StreamingResponse(get_result(agent.name, conversation_id, user_message.get('message', ''), openAI, carrier), headers=headers)
+        response = StreamingResponse(get_result(agent.name, conversation_id, user_message.get('message', ''), openai_client, carrier), headers=headers)
 
         # Update cookies to persist the conversation and agent IDs.
         response.set_cookie("conversation_id", conversation_id)
