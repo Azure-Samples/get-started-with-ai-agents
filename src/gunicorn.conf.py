@@ -124,21 +124,20 @@ async def get_available_tool(
     file_ids: List[str] = []
     # First try to get an index search.
     conn_id = ""
-    # if os.environ.get('AZURE_AI_SEARCH_INDEX_NAME'):
-    #     conn_list = project_client.connections.list()
-    #     async for conn in conn_list:
-    #         if conn.type == ConnectionType.AZURE_AI_SEARCH:
-    #             conn_id = conn.id
-    #             break
+    if os.environ.get('AZURE_AI_SEARCH_INDEX_NAME'):
+        conn_list = project_client.connections.list()
+        async for conn in conn_list:
+            if conn.type == ConnectionType.AZURE_AI_SEARCH:
+                conn_id = conn.id
+                break
 
-    # if conn_id:
-    #     await create_index_maybe(project_client, creds)
+    if conn_id:
+        await create_index_maybe(project_client, creds)
 
-    #     return AzureAISearchTool(
-    #         index_connection_id=conn_id,
-    #         index_name=os.environ.get('AZURE_AI_SEARCH_INDEX_NAME'))
-    # else:
-    if True:
+        return AzureAISearchAgentTool(
+            index_connection_id=conn_id,
+            index_name=os.environ.get('AZURE_AI_SEARCH_INDEX_NAME'))
+    else:
         logger.info(
             "agent: index was not initialized, falling back to file search.")
         
@@ -181,8 +180,7 @@ async def create_agent(ai_project: AIProjectClient,
 
 async def initialize_resources():
     try:
-        creds = DefaultAzureCredential(
-                exclude_shared_token_cache_credential=True)
+        creds = DefaultAzureCredential()
 
         proj_endpoint = os.environ.get("AZURE_EXISTING_AIPROJECT_ENDPOINT")
         async with AIProjectClient(
