@@ -4,7 +4,9 @@
 import asyncio
 import json
 import os
+from datetime import datetime, timezone
 from typing import AsyncGenerator, Optional, Dict
+
 
 import fastapi
 from fastapi import Request, Depends, HTTPException
@@ -16,7 +18,7 @@ import logging
 from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
 from azure.ai.projects.models import AgentVersionObject, AgentReference
 from openai.types.conversations.message import Message
-from openai.types.responses import ResponseOutputText, ResponseOutputMessage, ResponseInputText
+from openai.types.responses import Response, ResponseOutputText, ResponseOutputMessage, ResponseInputText, ResponseInputMessageItem
 from openai.types.conversations import Conversation
 from openai.types.responses.response_output_text import AnnotationFileCitation
 
@@ -44,6 +46,8 @@ from azure.identity.aio import DefaultAzureCredential, get_bearer_token_provider
 from openai import AsyncOpenAI
 from openai.resources.responses import Responses
 from sample_helpers import AsyncOpenAILoggingTransport
+
+created_at: Dict[str, str] = {}
 
 # Create a logger for this module
 logger = logging.getLogger("azureaiapp")
@@ -114,7 +118,7 @@ async def get_or_create_conversation(
     conversation_id: Optional[str],
     agent_id: Optional[str],
     current_agent_id: str
-) -> str:
+) -> Conversation:
     """
     Get an existing conversation or create a new one.
     Returns the conversation_id.
@@ -140,7 +144,7 @@ async def get_or_create_conversation(
             logger.error(f"Error creating conversation: {e}")
             raise HTTPException(status_code=400, detail=f"Error handling conversation: {e}")
     
-    return conversation.id
+    return conversation
 
 async def get_message_and_annotations(event: Message | ResponseOutputMessage) -> Dict:
     annotations = []
@@ -240,20 +244,48 @@ async def index(request: Request, _ = auth_dependency):
         }
     )
 
+async def save_created_at(openai_client: AsyncOpenAI, response: Response,  input_created_at: int, output_message_id):
+    # Note: OpenAI doesn't support retrieving created_at by message ID, so we save it by local dictionary
+    # TODO:  Need to retest
+    max_retries = 5
+    retry_delay = 3  # seconds
+    
+    for attempt in range(max_retries):
+        try:
+            logger.info(f"Saving created_at for response {response.id} (attempt {attempt + 1}/{max_retries})")
+            input_items = await openai_client.responses.input_items.list(response_id=response.id, order="desc")
+            async for input_item in input_items:
+                if isinstance(input_item, ResponseInputMessageItem):
+                    created_at[input_item.id] = datetime.fromtimestamp(input_created_at, timezone.utc).astimezone().strftime("%m/%d/%y, %I:%M %p")
+                    created_at[output_message_id] = datetime.fromtimestamp(response.created_at, timezone.utc).astimezone().strftime("%m/%d/%y, %I:%M %p")
+                    return
+            
+            logger.info(f"Successfully saved created_at for response {response.id}")
+            return  # Success, exit the retry loop
+            
+        except Exception as e:
+            logger.error(f"Error updating message created_at (attempt {attempt + 1}/{max_retries}): {e}")
+            
+            if attempt < max_retries - 1:  # Don't wait after the last attempt
+                logger.info(f"Retrying in {retry_delay} seconds...")
+                await asyncio.sleep(retry_delay)
+            else:
+                logger.error(f"Failed to save created_at after {max_retries} attempts")
+
 
 async def get_result(
     agent_name: str,
-    conversation_id: str,
+    conversation: Conversation,
     user_message: str, 
     openAI: AsyncOpenAI,
     carrier: Dict[str, str]
 ) -> AsyncGenerator[str, None]:
     ctx = TraceContextTextMapPropagator().extract(carrier=carrier)
     with tracer.start_as_current_span('get_result', context=ctx):
-        logger.info(f"get_result invoked for conversation={conversation_id}")
+        logger.info(f"get_result invoked for conversation={conversation.id}")
         try:
             response = await openAI.responses.create(
-                conversation=conversation_id,
+                conversation=conversation.id,
                 input=[
                     {"role": "user", "content": user_message},
                 ],
@@ -261,12 +293,12 @@ async def get_result(
                 stream=True
             )
             logger.info("Successfully created stream; starting to process events")
-            response_id = ""
+            output_message_id = ""
+            input_created_at = datetime.now(timezone.utc).timestamp()
             async for event in response:
                 print(event)
                 if isinstance(event, ResponseCreatedEvent):
-                    response_id = event.response.id
-                    print(f"Stream response created with ID: {response_id}")
+                    print(f"Stream response created with ID: {event.response.id}")
                 elif isinstance(event, ResponseTextDeltaEvent):
                     print(f"Delta: {event.delta}")
                     stream_data = {'content': event.delta, 'type': "message"}
@@ -274,11 +306,16 @@ async def get_result(
                 elif isinstance(event, ResponseOutputItemDoneEvent) and event.item.type == "message":
                     stream_data = await get_message_and_annotations(event.item)
                     stream_data['type'] = "completed_message"
+                    output_message_id = event.item.id
                     yield serialize_sse_event(stream_data)                    
                 elif isinstance(event, ResponseCompletedEvent):
                     print(f"Response completed with full message: {event.response.output_text}")
                     stream_data = {'type': "stream_end"}
-                    yield serialize_sse_event(stream_data)                        
+                    yield serialize_sse_event(stream_data)           
+                    
+            # Save created_at timestamps in the background (non-blocking)
+            asyncio.create_task(save_created_at(openAI, event.response, input_created_at, output_message_id))
+                                 
 
         except Exception as e:
             logger.exception(f"Exception in get_result: {e}")
@@ -297,19 +334,19 @@ async def history(
         agent_id = request.cookies.get('agent_id')
 
         # Get or create conversation using the reusable function
-        conversation_id = await get_or_create_conversation(
+        conversation = await get_or_create_conversation(
             openai_client, conversation_id, agent_id, agent.id
         )
         agent_id = agent.id
     # Create a new message from the user's input.
     try:
         content = []
-        messages = await openai_client.conversations.items.list(conversation_id=conversation_id)
+        messages = await openai_client.conversations.items.list(conversation_id=conversation.id, order="desc")
         async for message in messages:
             if isinstance(message, Message):
                 formatteded_message = await get_message_and_annotations(message)
                 formatteded_message['role'] = message.role
-                formatteded_message['created_at'] = "" # message.created_at.astimezone().strftime("%m/%d/%y, %I:%M %p")
+                formatteded_message['created_at'] = created_at.get(message.id, "")
                 content.append(formatteded_message)
 
 
@@ -347,11 +384,12 @@ async def chat(
     with tracer.start_as_current_span("chat_request"):
         carrier = {}        
         TraceContextTextMapPropagator().inject(carrier)
-        
-        # Get or create conversation using the reusable function
-        conversation_id = await get_or_create_conversation(
+
+        # if the connection no longer exist or agent is changed, create a new one
+        conversation = await get_or_create_conversation(
             openai_client, conversation_id, agent_id, agent.id
         )
+        conversation_id = conversation.id
         agent_id = agent.id
         
         # Parse the JSON from the request.
@@ -371,11 +409,11 @@ async def chat(
         logger.info(f"Starting streaming response for conversation ID {conversation_id}")
 
         # Create the streaming response using the generator.
-        response = StreamingResponse(get_result(agent.name, conversation_id, user_message.get('message', ''), openai_client, carrier), headers=headers)
+        response = StreamingResponse(get_result(agent.name, conversation, user_message.get('message', ''), openai_client, carrier), headers=headers)
 
         # Update cookies to persist the conversation and agent IDs.
         response.set_cookie("conversation_id", conversation_id)
-        response.set_cookie("agent_id", agent.id)
+        response.set_cookie("agent_id", agent_id)
         return response
 
 def read_file(path: str) -> str:
