@@ -12,18 +12,11 @@ import os
 import sys
 
 from azure.ai.projects.aio import AIProjectClient
-# from azure.ai.agents.models import (
-#     Agent,
-#     AsyncToolSet,
-#     AzureAISearchTool,
-#     FilePurpose,
-#     Tool,
-# )
 from azure.ai.projects.models import ConnectionType, ApiKeyCredentials, AgentVersionObject
 from azure.identity.aio import DefaultAzureCredential
 from azure.core.credentials_async import AsyncTokenCredential
 from azure.ai.projects.models import AgentReference, PromptAgentDefinition
-from azure.ai.projects.models import FileSearchTool, AzureAISearchAgentTool, Tool, AgentVersionObject
+from azure.ai.projects.models import FileSearchTool, AzureAISearchAgentTool, Tool, AgentVersionObject, AzureAISearchToolResource, AISearchIndexResource
 from openai import AsyncOpenAI
 from dotenv import load_dotenv
 
@@ -135,8 +128,11 @@ async def get_available_tool(
         await create_index_maybe(project_client, creds)
 
         return AzureAISearchAgentTool(
-            index_connection_id=conn_id,
-            index_name=os.environ.get('AZURE_AI_SEARCH_INDEX_NAME'))
+            azure_ai_search=AzureAISearchToolResource(index_list=[AISearchIndexResource( 
+                project_connection_id=conn_id,
+                index_name=os.environ.get('AZURE_AI_SEARCH_INDEX_NAME')
+            )])
+        )
     else:
         logger.info(
             "agent: index was not initialized, falling back to file search.")
@@ -185,7 +181,8 @@ async def initialize_resources():
         proj_endpoint = os.environ.get("AZURE_EXISTING_AIPROJECT_ENDPOINT")
         async with AIProjectClient(
             credential=creds,
-            endpoint=proj_endpoint
+            endpoint=proj_endpoint,
+            api_version="2025-11-15-preview",
         ) as ai_project:
             # If the environment already has AZURE_AI_AGENT_ID or AZURE_EXISTING_AGENT_ID, try
             # fetching that agent
