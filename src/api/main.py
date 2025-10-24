@@ -59,7 +59,7 @@ async def lifespan(app: fastapi.FastAPI):
                 logger.error(f"Error fetching agent: {e}", exc_info=True)
 
         if not agent_version_obj:
-            raise RuntimeError("No agent found. Ensure qunicorn.py created one or set AZURE_EXISTING_AGENT_NAME and AZURE_EXISTING_AGENT_VERSION.")
+            raise RuntimeError("No agent found. Ensure qunicorn.py created one or set AZURE_EXISTING_AGENT_ID.")
 
         app.state.ai_project = ai_project
         app.state.agent_version_obj = agent_version_obj
