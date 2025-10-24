@@ -5,7 +5,7 @@ import asyncio
 import json
 import os
 from datetime import datetime, timezone
-from typing import AsyncGenerator, Optional, Dict
+from typing import AsyncGenerator, Mapping, Optional, Dict
 
 
 import fastapi
@@ -46,8 +46,6 @@ from azure.identity.aio import DefaultAzureCredential, get_bearer_token_provider
 from openai import AsyncOpenAI
 from openai.resources.responses import Responses
 from sample_helpers import AsyncOpenAILoggingTransport
-
-created_at: Dict[str, str] = {}
 
 # Create a logger for this module
 logger = logging.getLogger("azureaiapp")
@@ -94,6 +92,18 @@ def authenticate(credentials: Optional[HTTPBasicCredentials] = Depends(security)
 
 auth_dependency = Depends(authenticate) if basic_auth else None
 
+def cleanup_created_at_metadata(metadata: Mapping[str, str]) -> None:
+    """Remove oldest created_at timestamp entries to keep metadata under 16 items limit."""
+    if not metadata:
+        return
+
+    # metadata go to be up to 16 items.  If there is more than that, remove the one ended with _created_at key with smallest value
+    while len(metadata) > 16:
+        created_at_keys = [k for k in metadata if k.endswith("_created_at")]
+        if not created_at_keys:
+            break  # No more _created_at keys to remove
+        min_key = min(created_at_keys, key=metadata.get)
+        del metadata[min_key]
 
 def get_ai_project(request: Request) -> AIProjectClient:
     return request.app.state.ai_project
@@ -109,6 +119,9 @@ def get_app_insights_conn_str(request: Request) -> str:
         return request.app.state.application_insights_connection_string
     else:
         return None
+    
+def get_created_at_label(message_id: str) -> str:
+    return f"{message_id}_created_at"
 
 def serialize_sse_event(data: Dict) -> str:
     return f"data: {json.dumps(data)}\n\n"
@@ -244,7 +257,7 @@ async def index(request: Request, _ = auth_dependency):
         }
     )
 
-async def save_created_at(openai_client: AsyncOpenAI, response: Response,  input_created_at: int, output_message_id):
+async def save_created_at(openai_client: AsyncOpenAI, response: Response, conversation: Conversation,  input_created_at: int, output_message_id):
     # Note: OpenAI doesn't support retrieving created_at by message ID, so we save it by local dictionary
     # TODO:  Need to retest
     max_retries = 5
@@ -253,16 +266,22 @@ async def save_created_at(openai_client: AsyncOpenAI, response: Response,  input
     for attempt in range(max_retries):
         try:
             logger.info(f"Saving created_at for response {response.id} (attempt {attempt + 1}/{max_retries})")
-            input_items = await openai_client.responses.input_items.list(response_id=response.id, order="desc")
-            async for input_item in input_items:
-                if isinstance(input_item, ResponseInputMessageItem):
-                    created_at[input_item.id] = datetime.fromtimestamp(input_created_at, timezone.utc).astimezone().strftime("%m/%d/%y, %I:%M %p")
-                    created_at[output_message_id] = datetime.fromtimestamp(response.created_at, timezone.utc).astimezone().strftime("%m/%d/%y, %I:%M %p")
-                    return
+            messages = await openai_client.conversations.items.list(conversation_id=conversation.id, order="desc")
+            last_input_message = None
+            async for message in messages:
+                if isinstance(message, Message) and message.role == "user":
+                    last_input_message = message
+                    break
+            if last_input_message:
+                conversation.metadata[get_created_at_label(last_input_message.id)] = datetime.fromtimestamp(input_created_at, timezone.utc).astimezone().strftime("%m/%d/%y, %I:%M %p")
+            conversation.metadata[get_created_at_label(output_message_id)] = datetime.fromtimestamp(response.created_at, timezone.utc).astimezone().strftime("%m/%d/%y, %I:%M %p")
+            cleanup_created_at_metadata(conversation.metadata)
+
+            await openai_client.conversations.update(conversation.id, metadata=conversation.metadata)
             
             logger.info(f"Successfully saved created_at for response {response.id}")
             return  # Success, exit the retry loop
-            
+
         except Exception as e:
             logger.error(f"Error updating message created_at (attempt {attempt + 1}/{max_retries}): {e}")
             
@@ -311,10 +330,10 @@ async def get_result(
                 elif isinstance(event, ResponseCompletedEvent):
                     print(f"Response completed with full message: {event.response.output_text}")
                     stream_data = {'type': "stream_end"}
+                    # Save created_at timestamps in the background (non-blocking)
+                    asyncio.create_task(save_created_at(openAI, event.response, conversation, input_created_at, output_message_id))
                     yield serialize_sse_event(stream_data)           
                     
-            # Save created_at timestamps in the background (non-blocking)
-            asyncio.create_task(save_created_at(openAI, event.response, input_created_at, output_message_id))
                                  
 
         except Exception as e:
@@ -341,12 +360,12 @@ async def history(
     # Create a new message from the user's input.
     try:
         content = []
-        messages = await openai_client.conversations.items.list(conversation_id=conversation.id, order="desc")
+        messages = await openai_client.conversations.items.list(conversation_id=conversation.id, order="desc", limit=16)
         async for message in messages:
             if isinstance(message, Message):
                 formatteded_message = await get_message_and_annotations(message)
                 formatteded_message['role'] = message.role
-                formatteded_message['created_at'] = created_at.get(message.id, "")
+                formatteded_message['created_at'] = conversation.metadata.get(get_created_at_label(message.id), "")
                 content.append(formatteded_message)
 
 
