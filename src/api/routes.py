@@ -259,37 +259,28 @@ async def index(request: Request, _ = auth_dependency):
 
 async def save_created_at(openai_client: AsyncOpenAI, response: Response, conversation: Conversation,  input_created_at: int, output_message_id):
     # Note: OpenAI doesn't support retrieving created_at by message ID, so we save it by local dictionary
-    # TODO:  Need to retest
-    max_retries = 5
-    retry_delay = 3  # seconds
-    
-    for attempt in range(max_retries):
-        try:
-            logger.info(f"Saving created_at for response {response.id} (attempt {attempt + 1}/{max_retries})")
-            messages = await openai_client.conversations.items.list(conversation_id=conversation.id, order="desc")
-            last_input_message = None
-            async for message in messages:
-                if isinstance(message, Message) and message.role == "user":
-                    last_input_message = message
-                    break
-            if last_input_message:
-                conversation.metadata[get_created_at_label(last_input_message.id)] = datetime.fromtimestamp(input_created_at, timezone.utc).astimezone().strftime("%m/%d/%y, %I:%M %p")
-            conversation.metadata[get_created_at_label(output_message_id)] = datetime.fromtimestamp(response.created_at, timezone.utc).astimezone().strftime("%m/%d/%y, %I:%M %p")
-            cleanup_created_at_metadata(conversation.metadata)
+    conversation.metadata = conversation.metadata  or {}
+    try:
+        logger.info(f"Saving created_at.")
+        messages = await openai_client.conversations.items.list(conversation_id=conversation.id, order="desc")
+        last_input_message = None
+        async for message in messages:
+            if isinstance(message, Message) and message.role == "user":
+                last_input_message = message
+                break
+        if last_input_message:
+            conversation.metadata[get_created_at_label(last_input_message.id)] = datetime.fromtimestamp(input_created_at, timezone.utc).astimezone().strftime("%m/%d/%y, %I:%M %p")
+        conversation.metadata[get_created_at_label(output_message_id)] = datetime.fromtimestamp(response.created_at, timezone.utc).astimezone().strftime("%m/%d/%y, %I:%M %p")
+        cleanup_created_at_metadata(conversation.metadata)
 
-            await openai_client.conversations.update(conversation.id, metadata=conversation.metadata)
-            
-            logger.info(f"Successfully saved created_at for response {response.id}")
-            return  # Success, exit the retry loop
+        await openai_client.conversations.update(conversation.id, metadata=conversation.metadata)
+        
+        logger.info(f"Successfully saved created_at for response {response.id}")
+        return  # Success, exit the retry loop
 
-        except Exception as e:
-            logger.error(f"Error updating message created_at (attempt {attempt + 1}/{max_retries}): {e}")
-            
-            if attempt < max_retries - 1:  # Don't wait after the last attempt
-                logger.info(f"Retrying in {retry_delay} seconds...")
-                await asyncio.sleep(retry_delay)
-            else:
-                logger.error(f"Failed to save created_at after {max_retries} attempts")
+    except Exception as e:
+        logger.error(f"Error updating message created_at.")
+        
 
 
 async def get_result(
