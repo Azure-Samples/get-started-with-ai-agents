@@ -6,7 +6,6 @@ WORKDIR /code
 
 COPY . .
 
-
 RUN pip install --no-cache-dir --upgrade -r requirements.txt
 
 # Install Node.js and pnpm with specific versions
