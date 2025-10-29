@@ -15,7 +15,6 @@ import { AgentPreviewChatBot } from "./AgentPreviewChatBot";
 import { MenuButton } from "../core/MenuButton/MenuButton";
 import { IChatItem } from "./chatbot/types";
 import { Waves } from "./Waves";
-import { BuiltWithBadge } from "./BuiltWithBadge";
 
 import styles from "./AgentPreview.module.css";
 
@@ -542,8 +541,6 @@ export function AgentPreview({ agentDetails }: IAgentPreviewProps): ReactNode {
             </>
           )}
         </div>
-
-        <BuiltWithBadge className={styles.builtWithBadge} />
       </div>
 
       {/* Settings Panel */}
