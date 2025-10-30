@@ -8,11 +8,11 @@ const App: React.FC = () => {
     id: "loading",
     object: "agent",
     created_at: Date.now(),
-    name: "Lizenzberater",
+    name: "Concat AG",
     description: "Loading agent details...",
     model: "default",
     metadata: {
-      logo: "LizenzberaterIcon.png",
+      logo: "ConcatAG_Logo_Black.svg",
     },
   });
 
@@ -43,10 +43,10 @@ const App: React.FC = () => {
             name:
               data?.name && data.name !== "agent-template-assistant"
                 ? data.name
-                : "Lizenzberater",
+                : "Concat AG",
             metadata: {
               ...data?.metadata,
-              logo: "LizenzberaterIcon.png",
+              logo: "ConcatAG_Logo_Black.svg",
             },
           };
           setAgentDetails(updatedData);
@@ -57,11 +57,11 @@ const App: React.FC = () => {
             id: "fallback",
             object: "agent",
             created_at: Date.now(),
-            name: "Lizenzberater",
+            name: "Concat AG",
             description: "Could not load agent details",
             model: "default",
             metadata: {
-              logo: "LizenzberaterIcon.png",
+              logo: "ConcatAG_Logo_Black.svg",
             },
           });
         }
@@ -72,11 +72,11 @@ const App: React.FC = () => {
           id: "error",
           object: "agent",
           created_at: Date.now(),
-          name: "Lizenzberater",
+          name: "Concat AG",
           description: "Error loading agent details",
           model: "default",
           metadata: {
-            logo: "LizenzberaterIcon.png",
+            logo: "ConcatAG_Logo_Black.svg",
           },
         });
       }

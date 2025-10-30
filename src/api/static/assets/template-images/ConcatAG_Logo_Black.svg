@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 48" role="img" aria-labelledby="title desc">
+  <title id="title">Concat AG Logo</title>
+  <desc id="desc">Wordmark logo for Concat AG with abstract connector symbol</desc>
+  <defs>
+    <linearGradient id="connectorGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#0F0F0F" />
+      <stop offset="100%" stop-color="#1F1F1F" />
+    </linearGradient>
+  </defs>
+  <g fill="none" fill-rule="evenodd">
+    <path
+      d="M26 6c-11.046 0-20 8.954-20 20s8.954 20 20 20c5.698 0 10.862-2.364 14.57-6.178l-4.52-4.52C33.933 38.246 30.2 40 26 40c-7.732 0-14-6.268-14-14s6.268-14 14-14c4.2 0 7.933 1.754 10.05 4.698l4.52-4.52C36.862 8.364 31.698 6 26 6z"
+      fill="url(#connectorGradient)"
+    />
+    <path
+      d="M45 12a4 4 0 1 1 8 0v28a4 4 0 1 1-8 0V12z"
+      fill="#0F0F0F"
+    />
+    <g fill="#0F0F0F" font-family="'Inter', 'Helvetica Neue', Arial, sans-serif" font-size="24" font-weight="600">
+      <text x="62" y="30">Concat</text>
+      <text x="148" y="30">AG</text>
+    </g>
+  </g>
+</svg>
