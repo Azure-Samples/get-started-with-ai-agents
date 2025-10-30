@@ -50,7 +50,7 @@ export function AssistantMessage({
           )}
         </span>
       }
-      avatar={<AgentIcon alt="" iconName={agentLogo} />}
+      avatar={<AgentIcon alt={agentName ?? "Concat AG"} iconName={agentLogo} />}
       className={styles.copilotChatMessage}
       disclaimer={<span>AI-generated content may be incorrect</span>}
       footnote={
