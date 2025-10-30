@@ -1,8 +1,7 @@
 services:
   app:
     build:
-      context: .
-      dockerfile: ./src/Dockerfile
+      context: ./src
     env_file:
       - .env
     ports:
