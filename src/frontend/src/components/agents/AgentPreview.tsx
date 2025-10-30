@@ -1,13 +1,6 @@
 import { ReactNode, useState, useMemo, useEffect } from "react";
-import {
-  Body1,
-  Button,
-  Caption1,
-  Spinner,
-  Title3,
-} from "@fluentui/react-components";
+import { Button, Caption1, Spinner, Title3 } from "@fluentui/react-components";
 import { ChatRegular, MoreHorizontalRegular } from "@fluentui/react-icons";
-import clsx from "clsx";
 
 import { AgentIcon } from "./AgentIcon";
 import { SettingsPanel } from "../core/SettingsPanel";
@@ -81,21 +74,28 @@ export function AgentPreview({ agentDetails }: IAgentPreviewProps): ReactNode {
   const [isResponding, setIsResponding] = useState(false);
   const [isLoadingChatHistory, setIsLoadingChatHistory] = useState(true);
 
+  const DEFAULT_AGENT_NAME = "Lizenzberater";
+  const DEFAULT_AGENT_LOGO = "LizenzberaterIcon.png";
+  const HEADER_LOGO = "ConcatAG_Logo_Black.svg";
+
   const normalizedName =
     typeof agentDetails.name === "string"
       ? agentDetails.name.trim()
       : "";
-  const displayName =
-    normalizedName && normalizedName !== "agent-template-assistant"
-      ? normalizedName
-      : "Concat AG";
+  const isTemplateName =
+    !normalizedName ||
+    normalizedName === "agent-template-assistant" ||
+    normalizedName === "Concat AG";
+  const displayName = isTemplateName ? DEFAULT_AGENT_NAME : normalizedName;
 
   const rawLogo = agentDetails.metadata?.logo;
   const logoString =
     typeof rawLogo === "string" && rawLogo.trim().length > 0
       ? rawLogo.trim()
       : undefined;
-  const displayLogo = logoString ?? "ConcatAG_Logo_Black.svg";
+  const sanitizedLogo =
+    logoString && logoString !== HEADER_LOGO ? logoString : undefined;
+  const displayLogo = sanitizedLogo ?? DEFAULT_AGENT_LOGO;
 
   const loadChatHistory = async () => {
     try {
@@ -481,34 +481,12 @@ export function AgentPreview({ agentDetails }: IAgentPreviewProps): ReactNode {
       </div>
       <div className={styles.topBar}>
         <div className={styles.leftSection}>
-          {displayName ? (
-            <div className={styles.agentIconContainer}>
-              <AgentIcon
-                alt={displayName || "Concat AG"}
-                iconClassName={styles.agentIcon}
-                iconName={displayLogo}
-              />
-              <Body1 as="h1" className={styles.agentName}>
-                {displayName}
-              </Body1>
-            </div>
-          ) : (
-            <div className={styles.agentIconContainer}>
-              <div
-                className={clsx(styles.agentIcon, {
-                  [styles.newAgent]: true,
-                })}
-              />
-              <Body1
-                as="h1"
-                className={clsx(styles.agentName, {
-                  [styles.newAgent]: true,
-                })}
-              >
-                Agent Name
-              </Body1>
-            </div>
-          )}
+          <AgentIcon
+            alt="Concat AG"
+            iconClassName={styles.topBarLogo}
+            containerClassName={styles.topBarLogoContainer}
+            iconName={HEADER_LOGO}
+          />
         </div>
         <div className={styles.rightSection}>
           <Button

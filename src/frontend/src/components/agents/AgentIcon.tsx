@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import clsx from "clsx";
 
 import styles from "./AgentIcon.module.css";
 
@@ -18,15 +19,20 @@ export interface IAgentIconProps {
    * Optional class name for the icon
    */
   iconClassName?: string;
+  /**
+   * Optional class name for the wrapping container
+   */
+  containerClassName?: string;
 }
 
 export function AgentIcon({
   iconName = "Avatar_Default.svg",
   iconClassName,
+  containerClassName,
   alt = "",
 }: IAgentIconProps): ReactNode {
   return (
-    <div className={styles.iconContainer}>
+    <div className={clsx(styles.iconContainer, containerClassName)}>
       <img
         alt={alt}
         className={iconClassName ?? styles.icon}
