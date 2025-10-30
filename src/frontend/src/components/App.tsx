@@ -8,11 +8,11 @@ const App: React.FC = () => {
     id: "loading",
     object: "agent",
     created_at: Date.now(),
-    name: "Loading...",
+    name: "Lizenzberater",
     description: "Loading agent details...",
     model: "default",
     metadata: {
-      logo: "robot",
+      logo: "LizenzberaterIcon.png",
     },
   });
 
@@ -38,7 +38,18 @@ const App: React.FC = () => {
             "Agent details fetched successfully 2:",
             JSON.stringify(response)
           );
-          setAgentDetails(data);
+          const updatedData = {
+            ...data,
+            name:
+              data?.name && data.name !== "agent-template-assistant"
+                ? data.name
+                : "Lizenzberater",
+            metadata: {
+              ...data?.metadata,
+              logo: "LizenzberaterIcon.png",
+            },
+          };
+          setAgentDetails(updatedData);
         } else {
           console.error("Failed to fetch agent details");
           // Set fallback data if fetch fails
@@ -46,11 +57,11 @@ const App: React.FC = () => {
             id: "fallback",
             object: "agent",
             created_at: Date.now(),
-            name: "AI Agent",
+            name: "Lizenzberater",
             description: "Could not load agent details",
             model: "default",
             metadata: {
-              logo: "robot",
+              logo: "LizenzberaterIcon.png",
             },
           });
         }
@@ -61,11 +72,11 @@ const App: React.FC = () => {
           id: "error",
           object: "agent",
           created_at: Date.now(),
-          name: "AI Agent",
+          name: "Lizenzberater",
           description: "Error loading agent details",
           model: "default",
           metadata: {
-            logo: "robot",
+            logo: "LizenzberaterIcon.png",
           },
         });
       }

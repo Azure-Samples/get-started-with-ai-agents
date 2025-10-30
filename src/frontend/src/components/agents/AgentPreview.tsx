@@ -81,6 +81,22 @@ export function AgentPreview({ agentDetails }: IAgentPreviewProps): ReactNode {
   const [isResponding, setIsResponding] = useState(false);
   const [isLoadingChatHistory, setIsLoadingChatHistory] = useState(true);
 
+  const normalizedName =
+    typeof agentDetails.name === "string"
+      ? agentDetails.name.trim()
+      : "";
+  const displayName =
+    normalizedName && normalizedName !== "agent-template-assistant"
+      ? normalizedName
+      : "Lizenzberater";
+
+  const rawLogo = agentDetails.metadata?.logo;
+  const logoString =
+    typeof rawLogo === "string" && rawLogo.trim().length > 0
+      ? rawLogo.trim()
+      : undefined;
+  const displayLogo = logoString ?? "LizenzberaterIcon.png";
+
   const loadChatHistory = async () => {
     try {
       const response = await fetch("/chat/history", {
@@ -465,15 +481,15 @@ export function AgentPreview({ agentDetails }: IAgentPreviewProps): ReactNode {
       </div>
       <div className={styles.topBar}>
         <div className={styles.leftSection}>
-          {agentDetails.name ? (
+          {displayName ? (
             <div className={styles.agentIconContainer}>
               <AgentIcon
                 alt=""
                 iconClassName={styles.agentIcon}
-                iconName={agentDetails.metadata?.logo}
+                iconName={displayLogo}
               />
               <Body1 as="h1" className={styles.agentName}>
-                {agentDetails.name}
+                {displayName}
               </Body1>
             </div>
           ) : (
@@ -525,17 +541,17 @@ export function AgentPreview({ agentDetails }: IAgentPreviewProps): ReactNode {
                   <AgentIcon
                     alt=""
                     iconClassName={styles.emptyStateAgentIcon}
-                    iconName={agentDetails.metadata?.logo}
+                    iconName={displayLogo}
                   />
                   <Caption1 className={styles.agentName}>
-                    {agentDetails.name}
+                    {displayName}
                   </Caption1>
                   <Title3>How can I help you today?</Title3>
                 </div>
               )}
               <AgentPreviewChatBot
-                agentName={agentDetails.name}
-                agentLogo={agentDetails.metadata?.logo}
+                agentName={displayName}
+                agentLogo={displayLogo}
                 chatContext={chatContext}
               />
             </>
