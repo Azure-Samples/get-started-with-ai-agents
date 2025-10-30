@@ -23,7 +23,7 @@
 }
 
 .leftSection {
-  overflow: hidden;
+  overflow: visible;
   display: flex;
   flex: 1;
   gap: 16px;
@@ -49,6 +49,23 @@
   flex-shrink: 0;
   width: 32px;
   height: 32px;
+}
+
+.topBarLogo {
+  width: 128px;
+  height: 128px;
+  border-radius: 0;
+  object-fit: contain;
+  margin-top: -48px;
+}
+
+.topBarLogoContainer {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  overflow: visible;
 }
 
 .agentIcon.newAgent {
