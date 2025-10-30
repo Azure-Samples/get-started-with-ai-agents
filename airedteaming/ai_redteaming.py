@@ -3,18 +3,17 @@
 # Licensed under the MIT License.
 # ------------------------------------
 
-from typing import Optional, Dict, Any
+from typing import cast
 import os
 import time
 from pathlib import Path
 from dotenv import load_dotenv
 
-# Azure imports
-from azure.identity import DefaultAzureCredential, get_bearer_token_provider
+from azure.identity import DefaultAzureCredential
 from azure.ai.evaluation.red_team import RedTeam, RiskCategory, AttackStrategy
 from azure.ai.projects import AIProjectClient
-import azure.ai.agents
-from azure.ai.agents.models import ListSortOrder
+from azure.ai.projects.models import AgentVersionObject
+from openai.types.responses import Response
 
 async def run_red_team():
     # Load environment variables from .env file
@@ -22,69 +21,47 @@ async def run_red_team():
     env_path = current_dir / "../src/.env"
     load_dotenv(dotenv_path=env_path)
     
-    # Initialize Azure credentials
     credential = DefaultAzureCredential()
 
-    # Get AI project parameters from environment variables (matching evaluate.py)
     project_endpoint = os.environ.get("AZURE_EXISTING_AIPROJECT_ENDPOINT")
-    deployment_name = os.getenv("AZURE_AI_AGENT_DEPLOYMENT_NAME")  # Using getenv for consistency with evaluate.py
-    agent_id = os.environ.get("AZURE_EXISTING_AGENT_ID")
-    agent_name = os.environ.get("AZURE_AI_AGENT_NAME")
-    
+        
     # Validate required environment variables
     if not project_endpoint:
         raise ValueError("Please set the AZURE_EXISTING_AIPROJECT_ENDPOINT environment variable.")
         
-    if not agent_id and not agent_name:
-        raise ValueError("Please set either AZURE_EXISTING_AGENT_ID or AZURE_AI_AGENT_NAME environment variable.")
-
     with DefaultAzureCredential(exclude_interactive_browser_credential=False) as credential:
         with AIProjectClient(endpoint=project_endpoint, credential=credential) as project_client:
-            # Look up the agent by name if agent ID is not provided (matching evaluate.py)
-            if not agent_id and agent_name:
-                for agent in project_client.agents.list_agents():
-                    if agent.name == agent_name:
-                        agent_id = agent.id
-                        break
-                        
-            if not agent_id:
-                raise ValueError("Agent ID not found. Please provide a valid agent ID or name.")
-                
-            agent = project_client.agents.get_agent(agent_id)
-            
-            # Use model from agent if not provided - matching evaluate.py
-            if not deployment_name:
-                deployment_name = agent.model
-                
-            thread = project_client.agents.threads.create()
+
+            # Deterime agent name and version
+            agent_id = os.environ.get("AZURE_EXISTING_AGENT_ID")
+            agent_name = os.environ.get("AZURE_AI_AGENT_NAME", "")
+            agent_version = ""
+            if agent_id:
+                if len(agent_id.strip(":")) != 2:
+                    raise ValueError("AZURE_EXISTING_AGENT_ID should be in the format 'agent_name:agent_version' if provided.")
+                agent_version_obj = cast(AgentVersionObject, project_client.agents.retrieve_version(agent_name=agent_id.split(":")[0], version=agent_id.split(":")[1]))
+                agent_version = agent_version_obj.version
+            elif agent_name:
+                agent_version_obj = project_client.agents.retrieve(agent_name=agent_name).versions.latest
+                agent_version = agent_version_obj.version
+            else:
+                raise ValueError("Please set either AZURE_EXISTING_AGENT_ID or AZURE_AI_AGENT_NAME environment variable.")
+        
+            openai_client = project_client.get_openai_client()
+
+
+            conversation = openai_client.conversations.create()
 
             def agent_callback(query: str) -> str:
-                message = project_client.agents.messages.create(thread_id=thread.id, role="user", content=query)
-                run = project_client.agents.runs.create(thread_id=thread.id, agent_id=agent.id)
-
-                # Poll the run as long as run status is queued or in progress
-                while run.status in ["queued", "in_progress", "requires_action"]:
-                    # Wait for a second
-                    time.sleep(1)
-                    run = project_client.agents.runs.get(thread_id=thread.id, run_id=run.id)
-                    # [END create_run]
-                    print(f"Run status: {run.status}")
-
-                if run.status == "failed":
-                    print(f"Run error: {run.last_error}")
-                    return "Error: Agent run failed."
-                messages = project_client.agents.messages.list(thread_id=thread.id, order=ListSortOrder.DESCENDING)
-                for msg in messages:
-                    if msg.text_messages:
-                        return msg.text_messages[0].text.value
-                return "Could not get a response from the agent."
-        
+                response: Response = openai_client.responses.create(input=query, conversation_id=conversation.id, extra_body={"agent": {"name": agent_name, "version": agent_version, "type": "agent_reference"}},)
+                return response.output_text
 
             # Print agent details to verify correct targeting
             print(f"Running Red Team evaluation against agent:")
-            print(f"  - Agent ID: {agent.id}")
-            print(f"  - Agent Name: {agent.name}")
-            print(f"  - Using Model: {deployment_name}")
+            print(f"  - Agent ID: {agent_name}:{agent_version}")
+            print(f"  - Agent Name: {agent_name}")
+            print(f"  - Agent Version: {agent_version}")
+            print(f"  - Using Model: {getattr(agent_version_obj.definition, 'model', '')}")
             
             red_team = RedTeam(
                 azure_ai_project=project_endpoint,
@@ -95,7 +72,7 @@ async def run_red_team():
             )
 
             print("Starting Red Team scan...")
-            result = await red_team.scan(
+            await red_team.scan(
                 target=agent_callback,
                 scan_name="Agent-Scan",
                 attack_strategies=[AttackStrategy.Flip],
