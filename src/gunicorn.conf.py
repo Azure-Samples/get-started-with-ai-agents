@@ -124,16 +124,17 @@ async def get_available_tool(
                 conn_id = conn.id
                 break
 
-    if conn_id:
-        await create_index_maybe(project_client, creds)
+    # if conn_id:
+    #     await create_index_maybe(project_client, creds)
 
-        return AzureAISearchAgentTool(
-            azure_ai_search=AzureAISearchToolResource(index_list=[AISearchIndexResource( 
-                project_connection_id=conn_id,
-                index_name=os.environ.get('AZURE_AI_SEARCH_INDEX_NAME')
-            )])
-        )
-    else:
+    #     return AzureAISearchAgentTool(
+    #         azure_ai_search=AzureAISearchToolResource(index_list=[AISearchIndexResource( 
+    #             project_connection_id=conn_id,
+    #             index_name=os.environ.get('AZURE_AI_SEARCH_INDEX_NAME')
+    #         )])
+    #     )
+    # else:
+    if True:
         logger.info(
             "agent: index was not initialized, falling back to file search.")
         

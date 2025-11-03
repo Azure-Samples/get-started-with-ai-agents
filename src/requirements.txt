@@ -2,14 +2,14 @@ fastapi==0.115.13
 uvicorn[standard]==0.29.0
 gunicorn==23.0.0
 azure-identity==1.19.0
-aiohttp==3.13.0
+aiohttp==3.13.1
 openai
-./packages/azure_ai_projects-2.0.0b1-py3-none-any.whl
-azure-core==1.35.0  # other versions might not compatible
-azure-core-tracing-opentelemetry
-azure-monitor-opentelemetry==1.6.9 # version such as 1.6.11 isn't compatible
+./packages/azure_ai_projects-2.0.0a20251103001-py3-none-any.whl
+azure-core==1.36.0  # other versions might not compatible
+azure-core-tracing-opentelemetry==1.0.0b12
+azure-monitor-opentelemetry-exporter==1.0.0b44
+azure-monitor-opentelemetry==1.8.1 # version such as 1.6.11 isn't compatible
 azure-search-documents
-opentelemetry-sdk
 setuptools==80.9.0
 starlette>=0.40.0 # fix vulnerability
 jinja2 # new dependent of fastapi

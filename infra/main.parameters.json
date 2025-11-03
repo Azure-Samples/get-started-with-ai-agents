@@ -110,8 +110,8 @@
     "enableAzureMonitorTracing": {
       "value": "${ENABLE_AZURE_MONITOR_TRACING=false}"
     },
-    "azureTracingGenAIContentRecordingEnabled": {
-      "value": "${AZURE_TRACING_GEN_AI_CONTENT_RECORDING_ENABLED=false}"
+    "otelInstrumentationGenAICaptureMessageContent": {
+      "value": "${OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT=false}"
     },
     "templateValidationMode": {
       "value": "${TEMPLATE_VALIDATION_MODE=false}"

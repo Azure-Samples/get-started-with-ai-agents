@@ -22,30 +22,12 @@ from openai.types.responses import Response, ResponseOutputText, ResponseOutputM
 from openai.types.conversations import Conversation
 from openai.types.responses.response_output_text import AnnotationFileCitation
 
-# from azure.ai.agents.aio import AgentsClient
-# from azure.ai.agents.models import (
-#     Agent,
-#     MessageDeltaChunk,
-#     ThreadMessage,
-#     ThreadRun,
-#     AsyncAgentEventHandler,
-#     RunStep
-# )
-# from azure.ai.projects.models import (
-#    AgentEvaluationRequest,
-#    AgentEvaluationSamplingConfiguration,
-#    AgentEvaluationRedactionConfiguration,
-#    EvaluatorIds
-# )
 from azure.ai.projects.aio import AIProjectClient
 
-import httpx
 from openai.types.responses import ResponseTextDeltaEvent, ResponseCompletedEvent, ResponseTextDoneEvent, ResponseCreatedEvent, ResponseOutputItemDoneEvent
 
-from azure.identity.aio import DefaultAzureCredential, get_bearer_token_provider
 from openai import AsyncOpenAI
 from openai.resources.responses import Responses
-from sample_helpers import AsyncOpenAILoggingTransport
 
 # Create a logger for this module
 logger = logging.getLogger("azureaiapp")
@@ -54,6 +36,7 @@ logger = logging.getLogger("azureaiapp")
 logging.getLogger("azure.core.pipeline.policies.http_logging_policy").setLevel(logging.WARNING)
 
 from opentelemetry import trace
+
 tracer = trace.get_tracer(__name__)
 
 # Define the directory for your templates.
@@ -284,7 +267,7 @@ async def save_created_at(openai_client: AsyncOpenAI, response: Response, conver
 
 
 async def get_result(
-    agent_name: str,
+    agent: AgentVersionObject,
     conversation: Conversation,
     user_message: str, 
     openAI: AsyncOpenAI,
@@ -299,7 +282,7 @@ async def get_result(
                 input=[
                     {"role": "user", "content": user_message},
                 ],
-                extra_body={"agent": AgentReference(name=agent_name).as_dict()},
+                extra_body={"agent": AgentReference(name=agent.name, version=agent.version).as_dict()},
                 stream=True
             )
             logger.info("Successfully created stream; starting to process events")
@@ -322,7 +305,7 @@ async def get_result(
                     print(f"Response completed with full message: {event.response.output_text}")
                     stream_data = {'type': "stream_end"}
                     # Save created_at timestamps in the background (non-blocking)
-                    asyncio.create_task(save_created_at(openAI, event.response, conversation, input_created_at, output_message_id))
+                    await save_created_at(openAI, event.response, conversation, input_created_at, output_message_id)
                     yield serialize_sse_event(stream_data)           
                     
                                  
@@ -348,28 +331,28 @@ async def history(
             openai_client, conversation_id, agent_id, agent.id
         )
         agent_id = agent.id
-    # Create a new message from the user's input.
-    try:
-        content = []
-        messages = await openai_client.conversations.items.list(conversation_id=conversation.id, order="desc", limit=16)
-        async for message in messages:
-            if isinstance(message, Message):
-                formatteded_message = await get_message_and_annotations(message)
-                formatteded_message['role'] = message.role
-                formatteded_message['created_at'] = conversation.metadata.get(get_created_at_label(message.id), "")
-                content.append(formatteded_message)
+        # Create a new message from the user's input.
+        try:
+            content = []
+            messages = await openai_client.conversations.items.list(conversation_id=conversation.id, order="desc", limit=16)
+            async for message in messages:
+                if isinstance(message, Message):
+                    formatteded_message = await get_message_and_annotations(message)
+                    formatteded_message['role'] = message.role
+                    formatteded_message['created_at'] = conversation.metadata.get(get_created_at_label(message.id), "")
+                    content.append(formatteded_message)
 
 
-        logger.info(f"List message, conversation ID: {conversation_id}")
-        response = JSONResponse(content=content)
-    
-        # Update cookies to persist the conversation IDs.
-        response.set_cookie("conversation_id", conversation_id)
-        response.set_cookie("agent_id", agent_id)
-        return response
-    except Exception as e:
-        logger.error(f"Error listing message: {e}")
-        raise HTTPException(status_code=500, detail=f"Error list message: {e}")
+            logger.info(f"List message, conversation ID: {conversation_id}")
+            response = JSONResponse(content=content)
+        
+            # Update cookies to persist the conversation IDs.
+            response.set_cookie("conversation_id", conversation_id)
+            response.set_cookie("agent_id", agent_id)
+            return response
+        except Exception as e:
+            logger.error(f"Error listing message: {e}")
+            raise HTTPException(status_code=500, detail=f"Error list message: {e}")
 
 @router.get("/agent")
 async def get_chat_agent(
@@ -419,7 +402,7 @@ async def chat(
         logger.info(f"Starting streaming response for conversation ID {conversation_id}")
 
         # Create the streaming response using the generator.
-        response = StreamingResponse(get_result(agent.name, conversation, user_message.get('message', ''), openai_client, carrier), headers=headers)
+        response = StreamingResponse(get_result(agent, conversation, user_message.get('message', ''), openai_client, carrier), headers=headers)
 
         # Update cookies to persist the conversation and agent IDs.
         response.set_cookie("conversation_id", conversation_id)
