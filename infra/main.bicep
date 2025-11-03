@@ -105,7 +105,7 @@ param useSearchService bool = false
 param enableAzureMonitorTracing bool = false
 
 @description('Do we want to use the Azure Monitor tracing for GenAI content recording')
-param azureTracingGenAIContentRecordingEnabled bool = false
+param otelInstrumentationGenAICaptureMessageContent bool = false
 
 param templateValidationMode bool = false
 
@@ -287,7 +287,7 @@ module api 'api.bicep' = {
     agentName: agentName
     agentID: agentID
     enableAzureMonitorTracing: enableAzureMonitorTracing
-    azureTracingGenAIContentRecordingEnabled: azureTracingGenAIContentRecordingEnabled
+    otelInstrumentationGenAICaptureMessageContent: otelInstrumentationGenAICaptureMessageContent
     projectEndpoint: projectEndpoint
   }
 }
@@ -430,7 +430,7 @@ output AZURE_AI_AGENT_NAME string = agentName
 output AZURE_EXISTING_AGENT_ID string = agentID
 output AZURE_EXISTING_AIPROJECT_ENDPOINT string = projectEndpoint
 output ENABLE_AZURE_MONITOR_TRACING bool = enableAzureMonitorTracing
-output AZURE_TRACING_GEN_AI_CONTENT_RECORDING_ENABLED bool = azureTracingGenAIContentRecordingEnabled
+output OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT bool = otelInstrumentationGenAICaptureMessageContent
 
 // Outputs required by azd for ACA
 output AZURE_CONTAINER_ENVIRONMENT_NAME string = containerApps.outputs.environmentName

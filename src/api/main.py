@@ -5,7 +5,8 @@ import contextlib
 import os
 
 from azure.ai.projects.aio import AIProjectClient
-from azure.identity import DefaultAzureCredential
+from azure.identity.aio import DefaultAzureCredential
+from azure.ai.projects.telemetry import AIProjectInstrumentor
 
 import fastapi
 from fastapi.staticfiles import StaticFiles
@@ -24,58 +25,55 @@ async def lifespan(app: fastapi.FastAPI):
     proj_endpoint = os.environ.get("AZURE_EXISTING_AIPROJECT_ENDPOINT")
     agent_id = os.environ.get("AZURE_EXISTING_AGENT_ID")    
     try:
-        ai_project = AIProjectClient(
-            credential=DefaultAzureCredential(),
-            endpoint=proj_endpoint,
-            api_version="2025-11-15-preview",
-        )
-        logger.info("Created AIProjectClient")
+        async with DefaultAzureCredential() as credential:
+            async with AIProjectClient(
+                credential=credential,
+                endpoint=proj_endpoint
+            ) as ai_project:
+                logger.info("Created AIProjectClient")
 
-        if enable_trace:
-            application_insights_connection_string = ""
-            try:
-                application_insights_connection_string = await ai_project.telemetry.get_application_insights_connection_string()
-            except Exception as e:
-                e_string = str(e)
-                logger.error("Failed to get Application Insights connection string, error: %s", e_string)
-            if not application_insights_connection_string:
-                logger.error("Application Insights was not enabled for this project.")
-                logger.error("Enable it via the 'Tracing' tab in your AI Foundry project page.")
-                exit()
-            else:
-                from azure.monitor.opentelemetry import configure_azure_monitor
-                configure_azure_monitor(connection_string=application_insights_connection_string)
-                app.state.application_insights_connection_string = application_insights_connection_string
-                logger.info("Configured Application Insights for tracing.")
+                if enable_trace:
+                    application_insights_connection_string = ""
+                    try:
+                        application_insights_connection_string = await ai_project.telemetry.get_application_insights_connection_string()
+                    except Exception as e:
+                        e_string = str(e)
+                        logger.error("Failed to get Application Insights connection string, error: %s", e_string)
+                    if not application_insights_connection_string:
+                        logger.error("Application Insights was not enabled for this project.")
+                        logger.error("Enable it via the 'Tracing' tab in your AI Foundry project page.")
+                        exit()
+                    else:
+                        from azure.monitor.opentelemetry import configure_azure_monitor
+                        configure_azure_monitor(connection_string=application_insights_connection_string)
+                        AIProjectInstrumentor().instrument(True)
+                        app.state.application_insights_connection_string = application_insights_connection_string
+                        logger.info("Configured Application Insights for tracing.")                        
 
-        if agent_id:
-            try: 
-                agent_name = agent_id.split(":")[0]
-                agent_version = agent_id.split(":")[1]
-                agent_version_obj = await ai_project.agents.retrieve_version(agent_name, agent_version)
-                logger.info("Agent already exists, skipping creation")
-                logger.info(f"Fetched agent, agent ID: {agent_version_obj.id}")
-            except Exception as e:
-                logger.error(f"Error fetching agent: {e}", exc_info=True)
+                if agent_id:
+                    try: 
+                        agent_name = agent_id.split(":")[0]
+                        agent_version = agent_id.split(":")[1]
+                        agent_version_obj = await ai_project.agents.retrieve_version(agent_name, agent_version)
+                        logger.info("Agent already exists, skipping creation")
+                        logger.info(f"Fetched agent, agent ID: {agent_version_obj.id}")
+                    except Exception as e:
+                        logger.error(f"Error fetching agent: {e}", exc_info=True)
 
-        if not agent_version_obj:
-            raise RuntimeError("No agent found. Ensure qunicorn.py created one or set AZURE_EXISTING_AGENT_ID.")
+                if not agent_version_obj:
+                    raise RuntimeError("No agent found. Ensure qunicorn.py created one or set AZURE_EXISTING_AGENT_ID.")
 
-        app.state.ai_project = ai_project
-        app.state.agent_version_obj = agent_version_obj
+                app.state.ai_project = ai_project
+                app.state.agent_version_obj = agent_version_obj
 
-        yield
+                yield
 
     except Exception as e:
         logger.error(f"Error during startup: {e}", exc_info=True)
         raise RuntimeError(f"Error during startup: {e}")
 
     finally:
-        try:
-            await ai_project.close()
-            logger.info("Closed AIProjectClient")
-        except Exception as e:
-            logger.error("Error closing AIProjectClient", exc_info=True)
+        logger.info("Closed AIProjectClient")
 
 
 def create_app():

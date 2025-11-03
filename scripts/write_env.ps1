@@ -18,7 +18,7 @@ $azureAISearchIndexName = azd env get-value AZURE_AI_SEARCH_INDEX_NAME 2>$null
 $azureAISearchEndpoint = azd env get-value AZURE_AI_SEARCH_ENDPOINT 2>$null
 $serviceAPIUri = azd env get-value SERVICE_API_URI 2>$null
 $enableAzureMonitorTracing = azd env get-value ENABLE_AZURE_MONITOR_TRACING 2>$null
-$azureTracingGenAIContentRecordingEnabled = azd env get-value AZURE_TRACING_GEN_AI_CONTENT_RECORDING_ENABLED 2>$null
+$otelInstrumentationGenAICaptureMessageContent = azd env get-value OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT 2>$null
 
 Add-Content -Path $envFilePath -Value "AZURE_EXISTING_AIPROJECT_RESOURCE_ID=$aiProjectResourceId"
 Add-Content -Path $envFilePath -Value "AZURE_EXISTING_AIPROJECT_ENDPOINT=$aiProjectEndpoint"
@@ -33,4 +33,4 @@ Add-Content -Path $envFilePath -Value "AZURE_AI_SEARCH_ENDPOINT=$azureAISearchEn
 Add-Content -Path $envFilePath -Value "AZURE_AI_AGENT_NAME=$azureAiAgentName"
 Add-Content -Path $envFilePath -Value "AZURE_TENANT_ID=$azureTenantId"
 Add-Content -Path $envFilePath -Value "ENABLE_AZURE_MONITOR_TRACING=$enableAzureMonitorTracing"
-Add-Content -Path $envFilePath -Value "AZURE_TRACING_GEN_AI_CONTENT_RECORDING_ENABLED=$azureTracingGenAIContentRecordingEnabled"
+Add-Content -Path $envFilePath -Value "OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT=$otelInstrumentationGenAICaptureMessageContent"
