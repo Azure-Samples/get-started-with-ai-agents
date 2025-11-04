@@ -92,6 +92,7 @@ module cognitiveServices '../ai/cognitiveservices.bicep' = {
     appInsightConnectionString: applicationInsights.outputs.connectionString
     storageAccountId: storageAccount.outputs.id
     storageAccountConnectionName: storageAccount.outputs.name
+    storageAccountBlobEndpoint: storageAccount.outputs.primaryEndpoints.blob
     aoaiConnectionName: aoaiConnectionName
   }
 }
