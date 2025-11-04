@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "setup": "npm install -g pnpm@10.4.1 && pnpm install && pnpm build",
+    "setup": "pnpm install && pnpm build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit"
   },
@@ -27,6 +27,7 @@
     "@vitejs/plugin-react": "4.4.1",
     "clsx": "2.1.1",
     "copy-to-clipboard": "^3.3.3",
+    "prismjs": "1.30.0",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-markdown": "10.1.0",
@@ -40,8 +41,8 @@
     "remark-math": "^6.0.0",
     "remark-parse": "^11.0.0",
     "remark-supersub": "^1.0.0",
-    "vite": "6.3.4",
-    "prismjs": "1.30.0"
+    "setup": "^0.0.3",
+    "vite": "6.3.4"
   },
   "devDependencies": {
     "@types/node": "22.14.1",

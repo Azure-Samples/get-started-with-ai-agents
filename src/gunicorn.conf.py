@@ -23,6 +23,7 @@ from azure.ai.agents.models import (
 from azure.ai.projects.models import ConnectionType, ApiKeyCredentials
 from azure.identity.aio import DefaultAzureCredential
 from azure.core.credentials_async import AsyncTokenCredential
+from azure.core.credentials import AzureKeyCredential
 
 from dotenv import load_dotenv
 
@@ -66,22 +67,24 @@ async def create_index_maybe(
     """
     from api.search_index_manager import SearchIndexManager
     endpoint = os.environ.get('AZURE_AI_SEARCH_ENDPOINT')
-    embedding = os.getenv('AZURE_AI_EMBED_DEPLOYMENT_NAME')    
-    if endpoint and embedding:
+    embedding = os.getenv('AZURE_AI_EMBED_DEPLOYMENT_NAME')
+    search_api_key = os.getenv('AZURE_AI_SEARCH_API_KEY')  # <-- Add this line
+
+    if endpoint and embedding and search_api_key:
         try:
             aoai_connection = await ai_client.connections.get_default(
                 connection_type=ConnectionType.AZURE_OPEN_AI, include_credentials=True)
         except ValueError as e:
-            logger.error("Error creating index: {e}")
+            logger.error(f"Error creating index: {e}")
             return
-        
+
         embed_api_key = None
         if aoai_connection.credentials and isinstance(aoai_connection.credentials, ApiKeyCredentials):
             embed_api_key = aoai_connection.credentials.api_key
 
         search_mgr = SearchIndexManager(
             endpoint=endpoint,
-            credential=creds,
+            credential=AzureKeyCredential(search_api_key),  # <-- Use API key here
             index_name=os.getenv('AZURE_AI_SEARCH_INDEX_NAME'),
             dimensions=None,
             model=embedding,
@@ -254,3 +257,7 @@ if __name__ == "__main__":
     print("Running initialize_resources directly...")
     asyncio.run(initialize_resources())
     print("initialize_resources finished.")
+
+
+
+
