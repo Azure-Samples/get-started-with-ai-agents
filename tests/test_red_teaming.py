@@ -40,13 +40,13 @@ def retrieve_agent(project_client: AIProjectClient) -> AgentVersionObject:
 
     print(f"Retrieving agent: {agent_name}")
     if agent_version:
-        agent = project_client.agents.retrieve_version(
+        agent = project_client.agents.get_version(
             agent_name=agent_name, agent_version=agent_version
         )
         print(f"Retrieved agent: {agent_name}, version: {agent_version}")
         return agent
     else:
-        agent_versions = project_client.agents.retrieve(agent_name=agent_name)
+        agent_versions = project_client.agents.get(agent_name=agent_name)
         agent_version = agent_versions.versions.latest
         print(f"Retrieved agent: {agent_name}, with latest version: {agent_version}")
         return agent_versions.versions.latest

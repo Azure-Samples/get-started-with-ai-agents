@@ -295,7 +295,7 @@ async def initialize_resources():
                 try:
                     agent_name = agentID.split(":")[0]
                     agent_version = agentID.split(":")[1]
-                    agent_obj = await ai_project.agents.retrieve_version(agent_name, agent_version)
+                    agent_obj = await ai_project.agents.get_version(agent_name, agent_version)
                     logger.info(f"Found agent by ID: {agent_obj.id}")
                 except Exception as e:
                     logger.warning(
@@ -309,7 +309,7 @@ async def initialize_resources():
                 try:
                     agent_name = os.environ["AZURE_AI_AGENT_NAME"]
                     logger.info(f"Retrieving agent by name: {agent_name}")
-                    agents = await ai_project.agents.retrieve(agent_name)
+                    agents = await ai_project.agents.get(agent_name)
                     agent_obj = agents.versions.latest
                     logger.info(f"Agent with agent id, {agent_obj.id} retrieved.")
                 except Exception as e:
