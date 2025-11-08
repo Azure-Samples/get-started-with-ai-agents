@@ -54,7 +54,7 @@ async def lifespan(app: fastapi.FastAPI):
                     try: 
                         agent_name = agent_id.split(":")[0]
                         agent_version = agent_id.split(":")[1]
-                        agent_version_obj = await ai_project.agents.retrieve_version(agent_name, agent_version)
+                        agent_version_obj = await ai_project.agents.get_version(agent_name, agent_version)
                         logger.info("Agent already exists, skipping creation")
                         logger.info(f"Fetched agent, agent ID: {agent_version_obj.id}")
                     except Exception as e:

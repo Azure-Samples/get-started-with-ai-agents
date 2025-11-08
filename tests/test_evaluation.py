@@ -36,7 +36,7 @@ def test_evaluation():
 
         openai_client = project_client.get_openai_client()
 
-        agent = project_client.agents.retrieve_version(
+        agent = project_client.agents.get_version(
             agent_name=agent_name, agent_version=agent_version
         )
         print(f"Agent retrieved (id: {agent.id}, name: {agent.name}, version: {agent.version})")
