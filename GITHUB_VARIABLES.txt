@@ -1,0 +1,130 @@
+GitHub Actions Variables for Ksenia-personal-agent
+==================================================
+
+COPY-PASTE THESE VALUES INTO GITHUB
+
+Go to: https://github.com/Skie-Art/Ksenia-personal-agent/settings/variables/actions
+Click "New repository variable" for each one below:
+
+
+=== AUTHENTICATION & ENVIRONMENT ===
+
+Name: AZURE_CLIENT_ID
+Value: db57485e-6284-434d-ba83-e8fb848cc01d
+
+Name: AZURE_TENANT_ID
+Value: b75007f5-364a-4c13-816e-74aacedc01a5
+
+Name: AZURE_SUBSCRIPTION_ID
+Value: 95a864d4-ff8f-4cfa-ae93-f3b9a1ba5ae6
+
+Name: AZURE_ENV_NAME
+Value: prod
+
+Name: AZURE_LOCATION
+Value: eastus
+
+Name: AZURE_RESOURCE_GROUP
+Value: rg-Ksenia-personal-agent
+
+
+=== AI RESOURCES ===
+
+Name: AZURE_AIPROJECT_NAME
+Value: proj-fpfde4hlibpgs
+
+Name: AZURE_AISERVICES_NAME
+Value: aoai-fpfde4hlibpgs
+
+Name: AZURE_AIHUB_NAME
+Value: aoai-fpfde4hlibpgs
+
+
+=== INFRASTRUCTURE ===
+
+Name: AZURE_CONTAINER_REGISTRY_NAME
+Value: crfpfde4hlibpgs
+
+Name: AZURE_STORAGE_ACCOUNT_NAME
+Value: stfpfde4hlibpgs
+
+
+=== CONFIGURATION FLAGS ===
+
+Name: USE_CONTAINER_REGISTRY
+Value: true
+
+Name: USE_APPLICATION_INSIGHTS
+Value: false
+
+Name: USE_AZURE_AI_SEARCH_SERVICE
+Value: false
+
+
+=== AGENT CONFIGURATION (GPT-5 MINI) ===
+
+Name: AZURE_AI_AGENT_NAME
+Value: agent-template-assistant
+
+Name: AZURE_EXISTING_AGENT_ID
+Value: asst_LwEiFvlTxOwrDx50QMTaJn2w
+
+Name: AZURE_AI_AGENT_DEPLOYMENT_NAME
+Value: gpt-5-mini
+
+Name: AZURE_AI_AGENT_MODEL_NAME
+Value: gpt-5-mini
+
+Name: AZURE_AI_AGENT_MODEL_FORMAT
+Value: OpenAI
+
+Name: AZURE_AI_AGENT_MODEL_VERSION
+Value: 2024-07-18
+
+Name: AZURE_AI_AGENT_DEPLOYMENT_SKU
+Value: GlobalStandard
+
+Name: AZURE_AI_AGENT_DEPLOYMENT_CAPACITY
+Value: 80
+
+
+=== EMBEDDING MODEL ===
+
+Name: AZURE_AI_EMBED_DEPLOYMENT_NAME
+Value: text-embedding-3-small
+
+Name: AZURE_AI_EMBED_MODEL_NAME
+Value: text-embedding-3-small
+
+Name: AZURE_AI_EMBED_MODEL_FORMAT
+Value: OpenAI
+
+Name: AZURE_AI_EMBED_MODEL_VERSION
+Value: 1
+
+Name: AZURE_AI_EMBED_DEPLOYMENT_SKU
+Value: Standard
+
+Name: AZURE_AI_EMBED_DEPLOYMENT_CAPACITY
+Value: 50
+
+
+=== EXISTING PROJECT ===
+
+Name: AZURE_EXISTING_AIPROJECT_RESOURCE_ID
+Value: /subscriptions/95a864d4-ff8f-4cfa-ae93-f3b9a1ba5ae6/resourceGroups/rg-Ksenia-personal-agent/providers/Microsoft.CognitiveServices/accounts/aoai-fpfde4hlibpgs/projects/proj-fpfde4hlibpgs
+
+Name: AZURE_EXISTING_AIPROJECT_ENDPOINT
+Value: https://aoai-fpfde4hlibpgs.services.ai.azure.com/api/projects/proj-fpfde4hlibpgs
+
+
+==================================================
+Total: 31 variables
+==================================================
+
+NEXT STEPS:
+1. Add all variables above to GitHub (link above)
+2. Enable Actions: https://github.com/Skie-Art/Ksenia-personal-agent/actions
+3. Run workflow: Actions → "Deploy to Azure" → "Run workflow"
+
+NOTE: KeyVault not needed - the workflow will create it if necessary
