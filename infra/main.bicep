@@ -62,9 +62,9 @@ param aiAgentID string = ''
 @description('ID of the existing agent')
 param azureExistingAgentId string = ''
 @description('Name of the chat model to deploy')
-param agentModelName string = 'gpt-4o-mini'
+param agentModelName string = 'gpt-5-mini'
 @description('Name of the model deployment')
-param agentDeploymentName string = 'gpt-4o-mini'
+param agentDeploymentName string = 'gpt-5-mini'
 
 @description('Version of the chat model to deploy')
 // See version availability in this table:
@@ -116,10 +116,14 @@ param azureTracingGenAIContentRecordingEnabled bool = false
 
 param templateValidationMode bool = false
 
+@description('Principal type for the deployment runner (User or ServicePrincipal)')
+@allowed(['User', 'ServicePrincipal'])
+param principalType string = 'User'
+
 @description('Random seed to be used during generation of new resources suffixes.')
 param seed string = newGuid()
 
-var runnerPrincipalType = templateValidationMode? 'ServicePrincipal' : 'User'
+var runnerPrincipalType = templateValidationMode ? 'ServicePrincipal' : principalType
 
 var abbrs = loadJsonContent('./abbreviations.json')
 
