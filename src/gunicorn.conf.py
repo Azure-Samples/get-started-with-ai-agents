@@ -277,52 +277,51 @@ async def initialize_eval(project_client: AIProjectClient, agent: AgentVersionOb
 
 
 async def initialize_resources():
+    proj_endpoint = os.environ.get("AZURE_EXISTING_AIPROJECT_ENDPOINT")
     try:
-        creds = DefaultAzureCredential()
+        async with DefaultAzureCredential() as credential:
+            async with AIProjectClient(
+                credential=credential,
+                endpoint=proj_endpoint,
+                api_version="2025-11-15-preview",
+            ) as ai_project:
+                # If the environment already has AZURE_AI_AGENT_ID or AZURE_EXISTING_AGENT_ID, try
+                # fetching that agent
+                agent_obj: Optional[AgentVersionObject] = None
 
-        proj_endpoint = os.environ.get("AZURE_EXISTING_AIPROJECT_ENDPOINT")
-        async with AIProjectClient(
-            credential=creds,
-            endpoint=proj_endpoint,
-            api_version="2025-11-15-preview",
-        ) as ai_project:
-            # If the environment already has AZURE_AI_AGENT_ID or AZURE_EXISTING_AGENT_ID, try
-            # fetching that agent
-            agent_obj: Optional[AgentVersionObject] = None
+                agentID = os.environ.get("AZURE_EXISTING_AGENT_ID")
+                if agentID:
+                    try:
+                        agent_name = agentID.split(":")[0]
+                        agent_version = agentID.split(":")[1]
+                        agent_obj = await ai_project.agents.get_version(agent_name, agent_version)
+                        logger.info(f"Found agent by ID: {agent_obj.id}")
+                    except Exception as e:
+                        logger.warning(
+                            "Could not retrieve agent by AZURE_EXISTING_AGENT_ID = "
+                            f"{agentID}, error: {e}")
+                else:
+                    logger.info("No existing agent ID found.")
 
-            agentID = os.environ.get("AZURE_EXISTING_AGENT_ID")
-            if agentID:
-                try:
-                    agent_name = agentID.split(":")[0]
-                    agent_version = agentID.split(":")[1]
-                    agent_obj = await ai_project.agents.get_version(agent_name, agent_version)
-                    logger.info(f"Found agent by ID: {agent_obj.id}")
-                except Exception as e:
-                    logger.warning(
-                        "Could not retrieve agent by AZURE_EXISTING_AGENT_ID = "
-                        f"{agentID}, error: {e}")
-            else:
-                logger.info("No existing agent ID found.")
+                # Check if an agent with the same name already exists
+                if not agent_obj:
+                    try:
+                        agent_name = os.environ["AZURE_AI_AGENT_NAME"]
+                        logger.info(f"Retrieving agent by name: {agent_name}")
+                        agents = await ai_project.agents.get(agent_name)
+                        agent_obj = agents.versions.latest
+                        logger.info(f"Agent with agent id, {agent_obj.id} retrieved.")
+                    except Exception as e:
+                        logger.info(f"Agent name, {agent_name} not found.")
+                        
+                # Create a new agent
+                if not agent_obj:
+                    agent_obj = await create_agent(ai_project, creds)
+                    logger.info(f"Created agent, agent ID: {agent_obj.id}")
 
-            # Check if an agent with the same name already exists
-            if not agent_obj:
-                try:
-                    agent_name = os.environ["AZURE_AI_AGENT_NAME"]
-                    logger.info(f"Retrieving agent by name: {agent_name}")
-                    agents = await ai_project.agents.get(agent_name)
-                    agent_obj = agents.versions.latest
-                    logger.info(f"Agent with agent id, {agent_obj.id} retrieved.")
-                except Exception as e:
-                    logger.info(f"Agent name, {agent_name} not found.")
-                    
-            # Create a new agent
-            if not agent_obj:
-                agent_obj = await create_agent(ai_project, creds)
-                logger.info(f"Created agent, agent ID: {agent_obj.id}")
+                os.environ["AZURE_EXISTING_AGENT_ID"] = agent_obj.id
 
-            os.environ["AZURE_EXISTING_AGENT_ID"] = agent_obj.id
-
-            await initialize_eval(ai_project, agent_obj)                
+                await initialize_eval(ai_project, agent_obj)                
 
     except Exception as e:
         logger.info("Error creating agent: {e}", exc_info=True)
