@@ -115,6 +115,9 @@
     },
     "templateValidationMode": {
       "value": "${TEMPLATE_VALIDATION_MODE=false}"
+    },
+    "principalType": {
+      "value": "${PRINCIPAL_TYPE=ServicePrincipal}"
     }
   }
 }

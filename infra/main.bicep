@@ -116,10 +116,14 @@ param azureTracingGenAIContentRecordingEnabled bool = false
 
 param templateValidationMode bool = false
 
+@description('Principal type for the deployment runner (User or ServicePrincipal)')
+@allowed(['User', 'ServicePrincipal'])
+param principalType string = 'User'
+
 @description('Random seed to be used during generation of new resources suffixes.')
 param seed string = newGuid()
 
-var runnerPrincipalType = templateValidationMode? 'ServicePrincipal' : 'User'
+var runnerPrincipalType = templateValidationMode ? 'ServicePrincipal' : principalType
 
 var abbrs = loadJsonContent('./abbreviations.json')
 

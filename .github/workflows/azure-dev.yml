@@ -53,6 +53,7 @@ jobs:
       AZURE_AI_EMBED_MODEL_FORMAT: ${{ vars.AZURE_AI_EMBED_MODEL_FORMAT }}
       AZURE_AI_EMBED_MODEL_VERSION: ${{ vars.AZURE_AI_EMBED_MODEL_VERSION }}
       AZURE_EXISTING_AIPROJECT_RESOURCE_ID: ${{ vars.AZURE_EXISTING_AIPROJECT_RESOURCE_ID }}
+      PRINCIPAL_TYPE: ServicePrincipal
     steps:
       - name: Checkout
         uses: actions/checkout@v4
