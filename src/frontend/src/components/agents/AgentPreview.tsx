@@ -58,11 +58,14 @@ const preprocessContent = (
     return content;
   }
   
-  // Process annotations in reverse order so that the indexes remain valid
+  // Process annotations in decending order index, acending file_name, remove duplicates
   let processedContent = content;
   annotations
     .slice()
     .sort((a, b) => b.index - a.index)
+    .sort((a, b) => a.file_name.localeCompare(b.file_name))
+    .filter((annotation, index, self) => 
+    index === self.findIndex(a => a.file_name == annotation.file_name && a.index === annotation.index && a.index !== index))
     .forEach((annotation) => {
       // Only process if the index is valid and within bounds
       if (annotation.index >= 0 && annotation.index <= processedContent.length) {
