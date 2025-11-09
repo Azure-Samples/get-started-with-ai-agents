@@ -60,13 +60,13 @@
       "value": "${AZURE_EXISTING_AGENT_ID}"
     },
     "agentDeploymentName": {
-      "value": "${AZURE_AI_AGENT_MODEL_NAME=gpt-4o-mini}"
+      "value": "${AZURE_AI_AGENT_MODEL_NAME=gpt-5-mini}"
     },
     "agentModelFormat": {
       "value": "${AZURE_AI_AGENT_MODEL_FORMAT=OpenAI}"
     },
     "agentModelName": {
-      "value": "${AZURE_AI_AGENT_MODEL_NAME=gpt-4o-mini}"
+      "value": "${AZURE_AI_AGENT_MODEL_NAME=gpt-5-mini}"
     },
     "agentModelVersion": {
       "value": "${AZURE_AI_AGENT_MODEL_VERSION=2024-07-18}"
