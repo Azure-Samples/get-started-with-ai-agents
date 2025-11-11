@@ -243,6 +243,7 @@ export function AgentPreview({ agentDetails }: IAgentPreviewProps): ReactNode {
     let isStreaming = true;
     let buffer = "";
     let annotations: IAnnotation[] = [];
+    let hasReceivedCompletedMessage = false;
 
     // Create a reader for the SSE stream
     const reader = stream.getReader();
@@ -320,18 +321,53 @@ export function AgentPreview({ agentDetails }: IAgentPreviewProps): ReactNode {
               }
 
               if (data.type === "completed_message") {
-                clearAssistantMessage(chatItem);
-                accumulatedContent = data.content;
-                annotations = data.annotations;
-                isStreaming = false;
+                // Each completed_message should get its own balloon
+                if (hasReceivedCompletedMessage) {
+                  // We've already processed a completed message, so create a new balloon for this one
+                  chatItem = createAssistantMessageDiv();
+                  console.log(
+                    "[ChatClient] Created new messageDiv for additional completed message."
+                  );
+                  
+                  // Reset for the new message
+                  accumulatedContent = data.content;
+                  annotations = data.annotations || [];
+                } else {
+                  // First completed message in this stream
+                  clearAssistantMessage(chatItem);
+                  accumulatedContent = data.content;
+                  annotations = data.annotations || [];
+                  hasReceivedCompletedMessage = true;
+                }
+                
                 console.log(
                   "[ChatClient] Received completed message:",
                   accumulatedContent
                 );
-
+                
+                isStreaming = false;
                 setIsResponding(false);
               } else {
-                accumulatedContent += data.content;
+                // Handle streaming content
+                if (hasReceivedCompletedMessage) {
+                  // We've had a completed message before, so this is new streaming content
+                  // Create a new balloon for the new streaming content
+                  chatItem = createAssistantMessageDiv();
+                  console.log(
+                    "[ChatClient] Created new messageDiv for streaming after completed message."
+                  );
+                  
+                  // Reset for new streaming content
+                  accumulatedContent = data.content;
+                  annotations = [];
+                  isStreaming = true;
+                  hasReceivedCompletedMessage = false; // Reset for this new cycle
+                } else {
+                  // Continue accumulating streaming content
+                  accumulatedContent += data.content;
+                  isStreaming = true;
+                }
+                
                 console.log(
                   "[ChatClient] Received streaming chunk:",
                   data.content

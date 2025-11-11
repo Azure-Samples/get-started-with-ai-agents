@@ -17,6 +17,7 @@ param agentID string
 param enableAzureMonitorTracing bool
 param otelInstrumentationGenAICaptureMessageContent bool
 param projectEndpoint string
+param searchConnectionId string
 
 resource apiIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
   name: identityName
@@ -79,6 +80,10 @@ var env = [
   {
     name: 'AZURE_EXISTING_AIPROJECT_ENDPOINT'
     value: projectEndpoint
+  }
+  {
+    name: 'SEARCH_CONNECTION_ID'
+    value: searchConnectionId
   }
 ]
 

@@ -1,6 +1,6 @@
 # Getting Started with Agents Using Azure AI Foundry
 
-The agent leverages the Azure AI Agent service and utilizes file search for knowledge retrieval from uploaded files, enabling it to generate responses with citations. The solution also includes built-in monitoring capabilities with tracing to ensure easier troubleshooting and optimized performance.
+The agent leverages Foundry Agent Service and utilizes file search for knowledge retrieval from uploaded files, enabling it to generate responses with citations. The solution also includes built-in monitoring capabilities with tracing to ensure easier troubleshooting and optimized performance.
 
 <div style="text-align:center;">
 
@@ -8,21 +8,23 @@ The agent leverages the Azure AI Agent service and utilizes file search for know
 
 </div>
 
+⚠️ **NOTE!** With any AI solutions you create using these templates, you are responsible for assessing all associated risks, and for complying with all applicable laws and safety standards. Learn more in the transparency documents for [Agent Service](https://nam06.safelinks.protection.outlook.com/?url=https%3A%2F%2Flearn.microsoft.com%2Fen-us%2Fazure%2Fai-foundry%2Fresponsible-ai%2Fagents%2Ftransparency-note&data=05%7C02%7Chowieleung%40microsoft.com%7C42645ec29da244bd920508de2095bcad%7C72f988bf86f141af91ab2d7cd011db47%7C1%7C0%7C638984024651276233%7CUnknown%7CTWFpbGZsb3d8eyJFbXB0eU1hcGkiOnRydWUsIlYiOiIwLjAuMDAwMCIsIlAiOiJXaW4zMiIsIkFOIjoiTWFpbCIsIldUIjoyfQ%3D%3D%7C0%7C%7C%7C&sdata=Un4HtoksTeodWPQMQp7zh8BNW6j%2BeIw4mcs6gbS4e6E%3D&reserved=0) and [Agent Framework](https://nam06.safelinks.protection.outlook.com/?url=https%3A%2F%2Fgithub.com%2Fmicrosoft%2Fagent-framework%2Fblob%2Fmain%2FTRANSPARENCY_FAQ.md&data=05%7C02%7Chowieleung%40microsoft.com%7C42645ec29da244bd920508de2095bcad%7C72f988bf86f141af91ab2d7cd011db47%7C1%7C0%7C638984024651325701%7CUnknown%7CTWFpbGZsb3d8eyJFbXB0eU1hcGkiOnRydWUsIlYiOiIwLjAuMDAwMCIsIlAiOiJXaW4zMiIsIkFOIjoiTWFpbCIsIldUIjoyfQ%3D%3D%7C0%7C%7C%7C&sdata=19nfzxn8ZN1qr7Hy77fn%2BgFXD1sc%2BXiuPuUi3H2NNz4%3D&reserved=0).
+
 ## Solution Overview
 
 This solution deploys a web-based chat application with an AI agent running in Azure Container App.
 
 The agent leverages the Azure AI Agent service and utilizes Azure AI Search for knowledge retrieval from uploaded files, enabling it to generate responses with citations. The solution also includes built-in monitoring capabilities with tracing to ensure easier troubleshooting and optimized performance.
 
-This solution creates an Azure AI Foundry project and Azure AI services. More details about the resources can be found in the [resources](#resources) documentation. There are options to enable logging, tracing, and monitoring.
+This solution creates an Azure AI Foundry project and Foundry Tools. More details about the resources can be found in the [resources](#resources) documentation. There are options to enable logging, tracing, and monitoring.
 
 Instructions are provided for deployment through GitHub Codespaces, VS Code Dev Containers, and your local development environment.
 
 ### Solution Architecture
 
-![Architecture diagram showing that user input is provided to the Azure Container App, which contains the app code. With user identity and resource access through managed identity, the input is used to form a response. The input and the Azure monitor are able to use the Azure resources deployed in the solution: Application Insights, Azure AI Foundry Project, Azure AI Services, Storage account, Azure Container App, and Log Analytics Workspace.](docs/images/architecture.png)
+![Architecture diagram showing that user input is provided to the Azure Container App, which contains the app code. With user identity and resource access through managed identity, the input is used to form a response. The input and the Azure monitor are able to use the Azure resources deployed in the solution: Application Insights, Azure AI Foundry Project, Foundry Tools, Storage account, Azure Container App, and Log Analytics Workspace.](docs/images/architecture.png)
 
-The app code runs in Azure Container App to process the user input and generate a response to the user. It leverages Azure AI projects and Azure AI services, including the model and agent.
+The app code runs in Azure Container App to process the user input and generate a response to the user. It leverages Azure AI projects and Foundry Tools, including the model and agent.
 
 ### Key Features
 
@@ -113,7 +115,7 @@ You can try the [Azure pricing calculator](https://azure.microsoft.com/pricing/c
 
 - **Azure AI Foundry**: Free tier. [Pricing](https://azure.microsoft.com/pricing/details/ai-studio/)  
 - **Azure Storage Account**: Standard tier, LRS. Pricing is based on storage and operations. [Pricing](https://azure.microsoft.com/pricing/details/storage/blobs/)  
-- **Azure AI Services**: S0 tier, defaults to gpt-4o-mini. Pricing is based on token count. [Pricing](https://azure.microsoft.com/pricing/details/cognitive-services/)  
+- **Foundry Tools**: S0 tier, defaults to gpt-4o-mini. Pricing is based on token count. [Pricing](https://azure.microsoft.com/pricing/details/cognitive-services/)  
 - **Azure Container App**: Consumption tier with 0.5 CPU, 1GiB memory/storage. Pricing is based on resource allocation, and each month allows for a certain amount of free usage. [Pricing](https://azure.microsoft.com/pricing/details/container-apps/)  
 - **Log analytics**: Pay-as-you-go tier. Costs based on data ingested. [Pricing](https://azure.microsoft.com/pricing/details/monitor/)  
 - **Agent Evaluations**: Incurs the cost of your provided model deployment used for local evaluations.  
