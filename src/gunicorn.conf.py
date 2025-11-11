@@ -125,28 +125,20 @@ async def get_available_tool(
     :param creds: The credentials, used for the index.
     :return: The tool set, available based on the environment.
     """
-    # File name -> {"id": file_id, "path": file_path}
-    file_ids: List[str] = []
     # First try to get an index search.
-    conn_id = ""
-    if os.environ.get('AZURE_AI_SEARCH_INDEX_NAME'):
-        conn_list = project_client.connections.list()
-        async for conn in conn_list:
-            if conn.type == ConnectionType.AZURE_AI_SEARCH:
-                conn_id = conn.id
-                break
+    conn_id = os.environ.get('SEARCH_CONNECTION_ID')
+    search_index_name = os.environ.get('AZURE_AI_SEARCH_INDEX_NAME')
+    if search_index_name and conn_id:
+        await create_index_maybe(project_client, creds)
 
-    # if conn_id:
-    #     await create_index_maybe(project_client, creds)
-
-    #     return AzureAISearchAgentTool(
-    #         azure_ai_search=AzureAISearchToolResource(index_list=[AISearchIndexResource( 
-    #             project_connection_id=conn_id,
-    #             index_name=os.environ.get('AZURE_AI_SEARCH_INDEX_NAME')
-    #         )])
-    #     )
-    # else:
-    if True:
+        return AzureAISearchAgentTool(
+            azure_ai_search=AzureAISearchToolResource(indexes=[AISearchIndexResource( 
+                project_connection_id=conn_id,
+                index_name=search_index_name,
+                query_type="simple"
+            )])
+        )
+    else:
         logger.info(
             "agent: index was not initialized, falling back to file search.")
         
@@ -290,6 +282,7 @@ async def initialize_resources():
                 agent_obj: Optional[AgentVersionObject] = None
 
                 agentID = os.environ.get("AZURE_EXISTING_AGENT_ID")
+
                 if agentID:
                     try:
                         agent_name = agentID.split(":")[0]
@@ -316,7 +309,7 @@ async def initialize_resources():
                         
                 # Create a new agent
                 if not agent_obj:
-                    agent_obj = await create_agent(ai_project, creds)
+                    agent_obj = await create_agent(ai_project, credential)
                     logger.info(f"Created agent, agent ID: {agent_obj.id}")
 
                 os.environ["AZURE_EXISTING_AGENT_ID"] = agent_obj.id

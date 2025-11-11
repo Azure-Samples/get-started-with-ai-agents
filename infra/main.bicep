@@ -55,9 +55,9 @@ param aiAgentID string = ''
 @description('ID of the existing agent')
 param azureExistingAgentId string = ''
 @description('Name of the chat model to deploy')
-param agentModelName string = 'gpt-4o-mini'
+param agentModelName string = 'gpt-4o'
 @description('Name of the model deployment')
-param agentDeploymentName string = 'gpt-4o-mini'
+param agentDeploymentName string = 'gpt-4o'
 
 @description('Version of the chat model to deploy')
 // See version availability in this table:
@@ -201,6 +201,11 @@ var searchServiceEndpoint = !useSearchService
   ? ''
   : empty(azureExistingAIProjectResourceId) ? ai!.outputs.searchServiceEndpoint : ''
 
+  var searchConnectionId = !useSearchService
+  ? ''
+  : empty(azureExistingAIProjectResourceId) ? ai!.outputs.searchConnectionId : ''
+
+
 // If bringing an existing AI project, set up the log analytics workspace here
 module logAnalytics 'core/monitor/loganalytics.bicep' = if (!empty(azureExistingAIProjectResourceId)) {
   name: 'logAnalytics'
@@ -289,6 +294,7 @@ module api 'api.bicep' = {
     enableAzureMonitorTracing: enableAzureMonitorTracing
     otelInstrumentationGenAICaptureMessageContent: otelInstrumentationGenAICaptureMessageContent
     projectEndpoint: projectEndpoint
+    searchConnectionId: searchConnectionId
   }
 }
 
@@ -418,7 +424,6 @@ module backendRoleAzureAIDeveloperRG 'core/security/role.bicep' = {
 output AZURE_RESOURCE_GROUP string = rg.name
 
 // Outputs required for local development server
-output AZURE_TENANT_ID string = tenant().tenantId
 output AZURE_EXISTING_AIPROJECT_RESOURCE_ID string = projectResourceId
 output AZURE_AI_AGENT_DEPLOYMENT_NAME string = agentDeploymentName
 output AZURE_AI_SEARCH_CONNECTION_NAME string = searchConnectionName
@@ -438,5 +443,5 @@ output SERVICE_API_IDENTITY_PRINCIPAL_ID string = api.outputs.SERVICE_API_IDENTI
 output SERVICE_API_NAME string = api.outputs.SERVICE_API_NAME
 output SERVICE_API_URI string = api.outputs.SERVICE_API_URI
 output SERVICE_API_ENDPOINTS array = ['${api.outputs.SERVICE_API_URI}']
-output SEARCH_CONNECTION_ID string = ''
+output SEARCH_CONNECTION_ID string = searchConnectionId
 output AZURE_CONTAINER_REGISTRY_ENDPOINT string = containerApps.outputs.registryLoginServer

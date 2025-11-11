@@ -97,5 +97,5 @@ output id string = search.id
 output endpoint string = 'https://${name}.search.windows.net/'
 output name string = search.name
 output principalId string = !empty(searchIdentityProvider) ? search.identity.principalId : ''
-output searchConnectionId string = ''
+output searchConnectionId string = !empty(searchIdentityProvider) ? aiServices::project::searchConnection.id : ''
 

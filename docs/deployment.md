@@ -184,7 +184,7 @@ When you start a deployment, most parameters will have default values. You can c
 
 | **Setting** | **Description** |  **Default value** |
 |------------|----------------|  ------------|
-| **Existing Project Resource ID** | Specify an existing project resource ID to be used instead of provisioning new Azure AI Foundry project and Azure AI services. |   |
+| **Existing Project Resource ID** | Specify an existing project resource ID to be used instead of provisioning new Azure AI Foundry project and Foundry Tools. |   |
 | **Azure Region** | Select a region with quota which supports your selected model. |   |
 | **Model** | Choose from the [list of models supported by Azure AI Agent Service](https://learn.microsoft.com/azure/ai-services/agents/concepts/model-region-support) for your selected region. | gpt-4o-mini |  
 | **Model Format** | Choose from OpenAI or Microsoft, depending on your model. | OpenAI |  
