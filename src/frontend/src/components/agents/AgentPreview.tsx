@@ -376,9 +376,10 @@ export function AgentPreview({ agentDetails }: IAgentPreviewProps): ReactNode {
                   
                   // Reset for new streaming content
                   annotations = [];
+                  accumulatedContent = "";
                   hasReceivedCompletedMessage = false; // Reset for this new cycle
                 }
-                accumulatedContent = data.content;
+                accumulatedContent += data.content;
                 isStreaming = true;
                 
                 console.log(

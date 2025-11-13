@@ -265,12 +265,12 @@ async def history(
         # Create a new message from the user's input.
         try:
             content = []
-            messages = await openai_client.conversations.items.list(conversation_id=conversation.id, order="desc", limit=16)
-            async for message in messages:
-                if isinstance(message, Message):
-                    formatteded_message = await get_message_and_annotations(message)
-                    formatteded_message['role'] = message.role
-                    formatteded_message['created_at'] = conversation.metadata.get(get_created_at_label(message.id), "")
+            items = await openai_client.conversations.items.list(conversation_id=conversation.id, order="desc", limit=16)
+            async for item in items:
+                if item.type == "message":
+                    formatteded_message = await get_message_and_annotations(item)
+                    formatteded_message['role'] = item.role
+                    formatteded_message['created_at'] = conversation.metadata.get(get_created_at_label(item.id), "")
                     content.append(formatteded_message)
 
 
