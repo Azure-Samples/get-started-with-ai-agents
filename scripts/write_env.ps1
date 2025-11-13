@@ -31,6 +31,5 @@ Add-Content -Path $envFilePath -Value "AZURE_AI_EMBED_DIMENSIONS=$azureAIEmbedDi
 Add-Content -Path $envFilePath -Value "AZURE_AI_SEARCH_INDEX_NAME=$azureAISearchIndexName"
 Add-Content -Path $envFilePath -Value "AZURE_AI_SEARCH_ENDPOINT=$azureAISearchEndpoint"
 Add-Content -Path $envFilePath -Value "AZURE_AI_AGENT_NAME=$azureAiAgentName"
-Add-Content -Path $envFilePath -Value "AZURE_TENANT_ID=$azureTenantId"
 Add-Content -Path $envFilePath -Value "ENABLE_AZURE_MONITOR_TRACING=$enableAzureMonitorTracing"
 Add-Content -Path $envFilePath -Value "OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT=$otelInstrumentationGenAICaptureMessageContent"

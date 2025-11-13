@@ -58,14 +58,20 @@ const preprocessContent = (
     return content;
   }
   
-  // Process annotations in decending order index, acending file_name, remove duplicates
+  // Process annotations in descending order index, ascending file_name, remove duplicates
   let processedContent = content;
   annotations
     .slice()
-    .sort((a, b) => b.index - a.index)
-    .sort((a, b) => a.file_name.localeCompare(b.file_name))
+    .sort((a, b) => {
+      // Primary sort: descending index
+      if (b.index !== a.index) {
+        return b.index - a.index;
+      }
+      // Secondary sort: descending file_name (as tiebreaker)
+      return b.file_name.localeCompare(a.file_name);
+    })
     .filter((annotation, index, self) => 
-    index === self.findIndex(a => a.file_name == annotation.file_name && a.index === annotation.index && a.index !== index))
+      index === self.findIndex(a => a.file_name === annotation.file_name && a.index === annotation.index))
     .forEach((annotation) => {
       // Only process if the index is valid and within bounds
       if (annotation.index >= 0 && annotation.index <= processedContent.length) {
@@ -313,23 +319,6 @@ export function AgentPreview({ agentDetails }: IAgentPreviewProps): ReactNode {
 
             console.log("[ChatClient] Parsed SSE event:", data);
 
-            if (data.error) {
-              if (!chatItem) {
-                chatItem = createAssistantMessageDiv();
-                console.log(
-                  "[ChatClient] Created new messageDiv for assistant."
-                );
-              }
-
-              setIsResponding(false);
-              appendAssistantMessage(
-                chatItem,
-                data.error.message || "An error occurred.",
-                false
-              );
-              return;
-            }
-
             // Check the data type to decide how to update the UI
             if (data.type === "stream_end") {
               // End of the stream
@@ -386,15 +375,11 @@ export function AgentPreview({ agentDetails }: IAgentPreviewProps): ReactNode {
                   );
                   
                   // Reset for new streaming content
-                  accumulatedContent = data.content;
                   annotations = [];
-                  isStreaming = true;
                   hasReceivedCompletedMessage = false; // Reset for this new cycle
-                } else {
-                  // Continue accumulating streaming content
-                  accumulatedContent += data.content;
-                  isStreaming = true;
                 }
+                accumulatedContent = data.content;
+                isStreaming = true;
                 
                 console.log(
                   "[ChatClient] Received streaming chunk:",

@@ -93,9 +93,9 @@ def get_ai_project(request: Request) -> AIProjectClient:
 def get_agent_version_obj(request: Request) -> AgentVersionObject:
     return request.app.state.agent_version_obj
 
-async def get_openai_client(request: Request) -> AsyncOpenAI:
-    return await get_ai_project(request).get_openai_client()
-    
+def get_openai_client(request: Request) -> AsyncOpenAI:
+    return request.app.state.openai_client
+
 def get_created_at_label(message_id: str) -> str:
     return f"{message_id}_created_at"
 
@@ -173,7 +173,7 @@ async def index(request: Request, _ = auth_dependency):
         }
     )
 
-async def save_user_message_created_at(openai_client: AsyncOpenAI, response: Response, conversation: Conversation,  input_created_at: float):
+async def save_user_message_created_at(openai_client: AsyncOpenAI, conversation: Conversation,  input_created_at: float):
     conversation.metadata = conversation.metadata  or {}
     try:
         logger.info(f"Saving created_at.")
@@ -189,7 +189,7 @@ async def save_user_message_created_at(openai_client: AsyncOpenAI, response: Res
 
         await openai_client.conversations.update(conversation.id, metadata=conversation.metadata)
         
-        logger.info(f"Successfully saved created_at for response {response.id}")
+        logger.info(f"Successfully saved created_at for user message")
         return  # Success, exit the retry loop
 
     except Exception as e:
@@ -207,40 +207,43 @@ async def get_result(
     ctx = TraceContextTextMapPropagator().extract(carrier=carrier)
     with tracer.start_as_current_span('get_result', context=ctx):
         logger.info(f"get_result invoked for conversation={conversation.id}")
+        input_created_at = datetime.now(timezone.utc).timestamp()
         try:
             response = await openAI.responses.create(
                 conversation=conversation.id,
-                input=[
-                    {"role": "user", "content": user_message},
-                ],
+                input=user_message,
                 extra_body={"agent": AgentReference(name=agent.name, version=agent.version).as_dict()},
                 stream=True
             )
             logger.info("Successfully created stream; starting to process events")
-            input_created_at = datetime.now(timezone.utc).timestamp()
             async for event in response:
                 print(event)
-                if isinstance(event, ResponseCreatedEvent):
-                    print(f"Stream response created with ID: {event.response.id}")
-                elif isinstance(event, ResponseTextDeltaEvent):
-                    print(f"Delta: {event.delta}")
+                if event.type == "response.created":
+                    logger.info(f"Stream response created with ID: {event.response.id}")
+                elif event.type == "response.output_text.delta":
+                    logger.info(f"Delta: {event.delta}")
                     stream_data = {'content': event.delta, 'type': "message"}
                     yield serialize_sse_event(stream_data)
-                elif isinstance(event, ResponseOutputItemDoneEvent) and event.item.type == "message":
+                elif event.type == "response.output_item.done" and event.item.type == "message":
                     stream_data = await get_message_and_annotations(event.item)
                     stream_data['type'] = "completed_message"
-                    yield serialize_sse_event(stream_data)                    
-                elif isinstance(event, ResponseCompletedEvent):
-                    print(f"Response completed with full message: {event.response.output_text}")
-                    stream_data = {'type': "stream_end"}
-                    await save_user_message_created_at(openAI, event.response, conversation, input_created_at)
-                    yield serialize_sse_event(stream_data)           
-                    
-                                 
-
+                    yield serialize_sse_event(stream_data)
+                elif event.type == "response.completed":
+                    logger.info(f"Response completed with full message: {event.response.output_text}")
+                                                    
         except Exception as e:
             logger.exception(f"Exception in get_result: {e}")
-            yield serialize_sse_event({'type': "error", 'message': str(e)})
+            error_data = {
+                'content': str(e),
+                'annotations': [],
+                'type': "completed_message"
+            }
+            yield serialize_sse_event(error_data)
+        finally:
+            stream_data = {'type': "stream_end"}
+            await save_user_message_created_at(openAI, conversation, input_created_at)
+            yield serialize_sse_event(stream_data)           
+
 
 
 @router.get("/chat/history")

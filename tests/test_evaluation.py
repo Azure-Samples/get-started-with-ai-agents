@@ -24,17 +24,14 @@ if not endpoint:
 
 
 def test_evaluation():
-    project_client = AIProjectClient(
-        endpoint=endpoint,
-        credential=DefaultAzureCredential(),
-    )
-
     agent_name = agent_id.split(":")[0]
     agent_version = agent_id.split(":")[1]
 
-    with project_client:
-
-        openai_client = project_client.get_openai_client()
+    with (
+        DefaultAzureCredential(exclude_interactive_browser_credential=False) as credential,
+        AIProjectClient(endpoint=endpoint, credential=credential) as project_client,
+        project_client.get_openai_client() as openai_client,
+    ):
 
         agent = project_client.agents.get_version(
             agent_name=agent_name, agent_version=agent_version

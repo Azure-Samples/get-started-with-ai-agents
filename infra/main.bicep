@@ -424,6 +424,7 @@ module backendRoleAzureAIDeveloperRG 'core/security/role.bicep' = {
 output AZURE_RESOURCE_GROUP string = rg.name
 
 // Outputs required for local development server
+output AZURE_TENANT_ID string = tenant().tenantId
 output AZURE_EXISTING_AIPROJECT_RESOURCE_ID string = projectResourceId
 output AZURE_AI_AGENT_DEPLOYMENT_NAME string = agentDeploymentName
 output AZURE_AI_SEARCH_CONNECTION_NAME string = searchConnectionName
