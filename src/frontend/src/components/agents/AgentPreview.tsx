@@ -79,6 +79,32 @@ const preprocessContent = (
   return processedContent;
 };
 
+const formatTimestampToLocalTime = (timestampStr: string): string => {
+  // Convert timestamp string to local timezone with specific format
+  let localTime = new Date().toLocaleString();
+  if (timestampStr) {
+    try {
+      // Parse timestamp (assuming it's a Unix timestamp in seconds as string, could be float)
+      const timestamp = parseFloat(timestampStr);
+      if (!isNaN(timestamp)) {
+        const date = new Date(timestamp * 1000); // Convert to milliseconds
+        localTime = date.toLocaleDateString('en-US', {
+          month: '2-digit',
+          day: '2-digit',
+          year: '2-digit'
+        }) + ', ' + date.toLocaleTimeString('en-US', {
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true
+        });
+      }
+    } catch (e) {
+      console.error('Error parsing timestamp:', e);
+    }
+  }
+  return localTime;
+};
+
 export function AgentPreview({ agentDetails }: IAgentPreviewProps): ReactNode {
   const [isSettingsPanelOpen, setIsSettingsPanelOpen] = useState(false);
   const [messageList, setMessageList] = useState<IChatItem[]>([]);
@@ -108,12 +134,14 @@ export function AgentPreview({ agentDetails }: IAgentPreviewProps): ReactNode {
         const reversedResponse = [...json_response].reverse();
 
         for (const entry of reversedResponse) {
+          const localTime = formatTimestampToLocalTime(entry.created_at);
+
           if (entry.role === "user") {
             historyMessages.push({
               id: crypto.randomUUID(),
               content: entry.content,
               role: "user",
-              more: { time: entry.created_at }, // Or use timestamp from history if available
+              more: { time: localTime },
             });
           } else {
             historyMessages.push({
@@ -121,7 +149,7 @@ export function AgentPreview({ agentDetails }: IAgentPreviewProps): ReactNode {
               content: preprocessContent(entry.content, entry.annotations),
               role: "assistant", // Assuming 'assistant' role for non-user
               isAnswer: true, // Assuming this property for assistant messages
-              more: { time: entry.created_at }, // Or use timestamp from history if available
+              more: { time: localTime },
               // annotations: entry.annotations, // If you plan to use annotations
             });
           }
