@@ -166,7 +166,12 @@ async def create_agent(ai_project: AIProjectClient,
     logger.info("Creating new agent with resources")
     tool = await get_available_tool(ai_project, await ai_project.get_openai_client(), creds)
     
-    instructions = "Use AI Search always with citations. Avoid to use base knowledge." if isinstance(tool, AzureAISearchAgentTool) else "Use File Search always with citations.  Avoid to use base knowledge."
+    instructions = "Use File Search always with citations.  Avoid to use base knowledge."
+    
+    if isinstance(tool, AzureAISearchAgentTool):
+        instructions = """Use AI Search always.  
+                        You must always provide citations for answers using the tool and render them as: `\u3010message_idx:search_idx\u2020source\u3011`.  
+                        Avoid to use base knowledge."""
 
     agent = await ai_project.agents.create_version(
         agent_name=os.environ["AZURE_AI_AGENT_NAME"],

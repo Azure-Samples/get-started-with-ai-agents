@@ -140,14 +140,20 @@ async def get_message_and_annotations(event: Message | ResponseOutputMessage) ->
     # Get file annotations for the file search.
     text = ""
     content = event.content[0]
-    if isinstance(content, ResponseOutputText) or isinstance(content, ResponseInputText):
+    if content.type == "output_text" or content.type == "input_text":
         text = content.text
-    if isinstance(content, ResponseOutputText):
+    if content.type == "output_text":
         for annotation in content.annotations:
-            if isinstance(annotation, AnnotationFileCitation):
+            if annotation.type == "file_citation":
                 ann = {
-                    'file_name': annotation.filename,
+                    'label': annotation.filename,
                     "index": annotation.index
+                }
+                annotations.append(ann)
+            elif annotation.type == "url_citation":
+                ann = {
+                    'label': annotation.url,
+                    "index": annotation.start_index
                 }
                 annotations.append(ann)
 

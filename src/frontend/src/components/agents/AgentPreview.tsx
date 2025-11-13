@@ -46,7 +46,7 @@ interface IAgentPreviewProps {
 }
 
 interface IAnnotation {
-  file_name: string;
+  label: string;
   index: number;
 }
 
@@ -57,8 +57,8 @@ const preprocessContent = (
   if (!annotations || annotations.length === 0) {
     return content;
   }
-  
-  // Process annotations in descending order index, ascending file_name, remove duplicates
+
+  // Process annotations in descending order index, ascending label, remove duplicates
   let processedContent = content;
   annotations
     .slice()
@@ -67,18 +67,18 @@ const preprocessContent = (
       if (b.index !== a.index) {
         return b.index - a.index;
       }
-      // Secondary sort: descending file_name (as tiebreaker)
-      return b.file_name.localeCompare(a.file_name);
+      // Secondary sort: descending label (as tiebreaker)
+      return b.label.localeCompare(a.label);
     })
     .filter((annotation, index, self) => 
-      index === self.findIndex(a => a.file_name === annotation.file_name && a.index === annotation.index))
+      index === self.findIndex(a => a.label === annotation.label && a.index === annotation.index))
     .forEach((annotation) => {
       // Only process if the index is valid and within bounds
       if (annotation.index >= 0 && annotation.index <= processedContent.length) {
-        // If there's a file_name, show it (wrapped in brackets), inserting after the index
+        // If there's a label, show it (wrapped in brackets), inserting after the index
         processedContent =
           processedContent.slice(0, annotation.index + 1) +
-          ` [${annotation.file_name}]` +
+          ` [${annotation.label}]` +
           processedContent.slice(annotation.index + 1);
       }
     });
