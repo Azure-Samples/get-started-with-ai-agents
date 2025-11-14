@@ -4,7 +4,7 @@ gunicorn==23.0.0
 azure-identity==1.19.0
 aiohttp==3.13.1
 openai
-./packages/azure_ai_projects-2.0.0a120251111001-py3-none-any.whl
+./packages/azure_ai_projects-2.0.0a20251114001-py3-none-any.whl
 azure-core==1.36.0  # other versions might not compatible
 azure-core-tracing-opentelemetry==1.0.0b12
 azure-monitor-opentelemetry-exporter==1.0.0b44
