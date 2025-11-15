@@ -20,48 +20,16 @@ from azure.ai.projects.models import (
 import json
 import time
 from azure.ai.projects.models import EvaluationTaxonomy, AgentVersionObject
-
-load_dotenv()
-agent_name = os.environ.get("AZURE_AI_AGENT_NAME", "")
-agent_id = os.environ.get("AZURE_EXISTING_AGENT_ID", "")
-endpoint = os.environ.get("AZURE_EXISTING_AIPROJECT_ENDPOINT", "")
-
-
-def retrieve_agent(project_client: AIProjectClient) -> AgentVersionObject:
-    agent_version = ""
-    if agent_id:
-        if ":" not in agent_id:
-            raise ValueError(
-                "Please set AZURE_EXISTING_AIPROJECT_ENDPOINT and AZURE_EXISTING_AGENT_ID environment variables."
-            )
-        agent_name = agent_id.split(":")[0]
-
-    agent_version = agent_id.split(":")[1]
-
-    print(f"Retrieving agent: {agent_name}")
-    if agent_version:
-        agent = project_client.agents.get_version(
-            agent_name=agent_name, agent_version=agent_version
-        )
-        print(f"Retrieved agent: {agent_name}, version: {agent_version}")
-        return agent
-    else:
-        agent_versions = project_client.agents.get(agent_name=agent_name)
-        agent_version = agent_versions.versions.latest
-        print(f"Retrieved agent: {agent_name}, with latest version: {agent_version}")
-        return agent_versions.versions.latest
-
+from test_utils import retrieve_agent, retrieve_endpoint
 
 def test_red_teaming() -> None:
-    
-
     # Construct the paths to the data folder and data file used in this sample
     script_dir = os.path.dirname(os.path.abspath(__file__))
     data_folder = os.environ.get("DATA_FOLDER", os.path.join(script_dir, "data_folder"))
 
     with (
         DefaultAzureCredential(exclude_interactive_browser_credential=False) as credential,
-        AIProjectClient(endpoint=endpoint, credential=credential) as project_client,
+        AIProjectClient(endpoint=retrieve_endpoint(), credential=credential) as project_client,
         project_client.get_openai_client() as client,
     ):
             
@@ -145,6 +113,8 @@ def test_red_teaming() -> None:
                 break
             time.sleep(5)
             print("Waiting for eval run to complete...")
+
+        assert run.status == "completed"
 
 
 def _get_tool_descriptions(agent: AgentVersionObject):

@@ -218,7 +218,7 @@ async def initialize_eval(project_client: AIProjectClient, openai_client: AsyncO
                     filter=EvaluationRuleFilter(
                         agent_name=agent_obj.name
                     ),
-                    enabled=True # Read from env variable?
+                    enabled=False
                 )
             )
 
