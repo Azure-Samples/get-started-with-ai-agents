@@ -27,37 +27,44 @@ You can view the App Insights tracing in Azure AI Foundry. Select your project o
 
 **First, make sure tracing is working by following the steps in the [Tracing and Monitoring](#tracing-and-monitoring) section above.**
 
-AI Foundry offers a number of [built-in evaluators](https://learn.microsoft.com/azure/ai-foundry/how-to/develop/agent-evaluate-sdk) to measure the quality, efficiency, risk and safety of your agents. For example, intent resolution, tool call accuracy, and task adherence evaluators are targeted to assess the performance of agent workflow, while content safety evaluator checks for inappropriate content in the responses such as violence or hate. (screenshot)
+AI Foundry offers a number of [built-in evaluators](https://learn.microsoft.com/azure/ai-foundry/how-to/develop/agent-evaluate-sdk) to measure the quality, efficiency, risk and safety of your agents. For example, intent resolution, tool call accuracy, and task adherence evaluators are targeted to assess the performance of agent workflow, while content safety evaluator checks for inappropriate content in the responses such as violence or hate.
 
 In this template, we show how these evaluations can be performed during different phases of your development cycle.
 
-- **Local development**: You can use this [local evaluation script](../evals/evaluate.py) to get performance and evaluation metrics based on a set of [test queries](../evals/eval-queries.json) for a sample set of built-in evaluators.
+- **Local development**: You can use the [evaluation test script](../tests/test_evaluation.py) to validate your agent's performance using built-in Azure AI evaluators. The test demonstrates how to:
+  - Create an evaluation with custom data source configuration
+  - Define testing criteria using Azure AI evaluators (e.g., violence detection)
+  - Run evaluation against specific test queries
+  - Retrieve and analyze evaluation results
 
-  The script reads the following environment variables:
+  The test reads the following environment variables:
   - `AZURE_EXISTING_AIPROJECT_ENDPOINT`: AI Project endpoint
-  - `AZURE_EXISTING_AGENT_ID`: AI Agent Id, with fallback logic to look up agent Id by name `AZURE_AI_AGENT_NAME`
-  - `AZURE_AI_AGENT_DEPLOYMENT_NAME`: Deployment model used by the AI-assisted evaluators, with fallback logic to your agent model
+  - `AZURE_EXISTING_AGENT_ID`: AI Agent Id in the format `agent_name:agent_version` (with fallback logic to look up the latest version by name using `AZURE_AI_AGENT_NAME`)
 
-** (Optional) All of these are generated locally in [`.env`](../src/.env) after executing `azd up` except `AZURE_EXISTING_AGENT_ID` which is generated remotely.  To find this variables remotely in Container App, follow this:
+  **Note:** Most of these environment variables are generated locally in `.env` after executing `azd up`. To find the Agent ID remotely in the Azure AI Foundry Portal:
 
-1. Go to [Azure AI Foundry Portal](https://ai.azure.com/) and sign in
-2. Click on your project from the homepage
-3. In the left-hand menu, select Agents
-4. Choose the agent you want to inspect
-5. The Agent ID will be shown in the agent’s detail panel—usually near the top or under the “Properties” or “Overview” tab [Entra Agent ID Spec]
-![Agent ID in Foundry UI](./images/agent_id_in_foundry_ui.png)
-
+  1. Go to [Azure AI Foundry Portal](https://ai.azure.com/) and sign in
+  2. Click on your project from the homepage
+  3. In the left-hand menu, select **Agents**
+  4. Choose the agent you want to inspect
+  5. The Agent ID will be shown in the agent's detail panel—usually near the top or under the "Properties" or "Overview" tab
   
-To install required packages and run the script:  
+  ![Agent ID in Foundry UI](./images/agent_id_in_foundry_ui.png)
+
+  To install required packages and run the evaluation test:  
 
   ```shell
   python -m pip install -r src/requirements.txt
-  python -m pip install azure-ai-evaluation
 
-  python evals/evaluate.py
+  pytest tests/test_evaluation.py
   ```
 
-- **Monitoring**: When tracing is enabled, the [application code](../src/api/routes.py) sends an asynchronous evaluation request after processing a thread run, allowing continuous monitoring of your agent. You can view results from the AI Foundry Tracing tab.
+  **Tip:** Add the `-s` flag to see detailed print output during test execution:
+  ```shell
+  pytest tests/test_evaluation.py -s
+  ```
+
+- **Monitoring**: You can view evaluation results and traces from the AI Foundry Tracing tab.
     ![Tracing](./images/tracing_eval_screenshot.png)
     Alternatively, you can go to your Application Insights logs for an interactive experience. To access Application Insights logs in the Azure portal:
     
@@ -80,21 +87,34 @@ To install required packages and run the script:
 
 ![Application Insight Logs Query](../docs/images/app_insight_logs_query.png)
 
-- **Continuous Integration**: You can try the [AI Agent Evaluation GitHub action](https://github.com/microsoft/ai-agent-evals) using the [sample GitHub workflow](../.github/workflows/ai-evaluation.yaml) in your CI/CD pipeline. This GitHub action runs a set of queries against your agent, performs evaluations with evaluators of your choice, and produce a summary report. It also supports a comparison mode with statistical test, allowing you to iterate agent changes on your production environment with confidence. See [documentation](https://github.com/microsoft/ai-agent-evals) for more details.
-
 ## AI Red Teaming Agent
 
 The [AI Red Teaming Agent](https://learn.microsoft.com/azure/ai-foundry/concepts/ai-red-teaming-agent) is a powerful tool designed to help organizations proactively find security and safety risks associated with generative AI systems during design and development of generative AI models and applications.
 
-In this [script](../airedteaming/ai_redteaming.py), you will be able to set up an AI Red Teaming Agent to run an automated scan of your agent in this sample. No test dataset or adversarial LLM is needed as the AI Red Teaming Agent will generate all the attack prompts for you.
+In the [red teaming test script](../tests/test_red_teaming.py), you will be able to set up an AI Red Teaming Agent to run an automated scan of your agent in this sample. The test demonstrates how to:
+- Create evaluation groups and runs for red teaming
+- Generate taxonomies for risk categories (e.g., prohibited actions)
+- Configure attack strategies (Flip, Base64) with multi-turn conversations
+- Use built-in safety evaluators (prohibited actions, task adherence, sensitive data leakage, self-harm, violence, sexual, hate/unfairness)
+- Retrieve and analyze red teaming results
 
-To install required extra packages from Azure AI Evaluation SDK and run the script in your local development environment:  
+No test dataset or adversarial LLM is needed as the AI Red Teaming Agent will generate all the attack prompts for you.
+
+To install required packages and run the red teaming test in your local development environment:  
 
 ```shell
 python -m pip install -r src/requirements.txt
-python -m pip install azure-ai-evaluation[redteam]
 
-python airedteaming/ai_redteaming.py
+pytest tests/test_red_teaming.py
 ```
+
+**Tip:** Add the `-s` flag to see detailed print output during test execution:
+```shell
+pytest tests/test_red_teaming.py -s
+```
+
+The test will generate output files in the `tests/data_folder` directory:
+- `taxonomy_{agent_name}.json`: The generated taxonomy for red teaming
+- `redteam_eval_output_items_{agent_name}.json`: Detailed results from the red teaming evaluation
 
 Read more on supported attack techniques and risk categories in our [documentation](https://learn.microsoft.com/azure/ai-foundry/how-to/develop/run-scans-ai-red-teaming-agent).

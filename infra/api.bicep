@@ -15,8 +15,9 @@ param searchServiceEndpoint string
 param agentName string
 param agentID string
 param enableAzureMonitorTracing bool
-param azureTracingGenAIContentRecordingEnabled bool
+param otelInstrumentationGenAICaptureMessageContent bool
 param projectEndpoint string
+param searchConnectionId string
 
 resource apiIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
   name: identityName
@@ -73,12 +74,16 @@ var env = [
     value: enableAzureMonitorTracing
   }
   {
-    name: 'AZURE_TRACING_GEN_AI_CONTENT_RECORDING_ENABLED'
-    value: azureTracingGenAIContentRecordingEnabled
+    name: 'OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT'
+    value: otelInstrumentationGenAICaptureMessageContent
   }
   {
     name: 'AZURE_EXISTING_AIPROJECT_ENDPOINT'
     value: projectEndpoint
+  }
+  {
+    name: 'SEARCH_CONNECTION_ID'
+    value: searchConnectionId
   }
 ]
 

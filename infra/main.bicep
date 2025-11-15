@@ -20,9 +20,9 @@ param environmentName string
 @metadata({
   azd: {
     type: 'location'
-    // quota-validation for ai models: gpt-4o-mini
+    // quota-validation for ai models: gpt-4o
     usageName: [
-      'OpenAI.GlobalStandard.gpt-4o-mini,80'
+      'OpenAI.GlobalStandard.gpt-4o,80'
     ]
   }
 })
@@ -62,9 +62,9 @@ param aiAgentID string = ''
 @description('ID of the existing agent')
 param azureExistingAgentId string = ''
 @description('Name of the chat model to deploy')
-param agentModelName string = 'gpt-4o-mini'
+param agentModelName string = 'gpt-4o'
 @description('Name of the model deployment')
-param agentDeploymentName string = 'gpt-4o-mini'
+param agentDeploymentName string = 'gpt-4o'
 
 @description('Version of the chat model to deploy')
 // See version availability in this table:
@@ -112,7 +112,7 @@ param useSearchService bool = false
 param enableAzureMonitorTracing bool = false
 
 @description('Do we want to use the Azure Monitor tracing for GenAI content recording')
-param azureTracingGenAIContentRecordingEnabled bool = false
+param otelInstrumentationGenAICaptureMessageContent bool = false
 
 param templateValidationMode bool = false
 
@@ -208,6 +208,11 @@ var searchServiceEndpoint = !useSearchService
   ? ''
   : empty(azureExistingAIProjectResourceId) ? ai!.outputs.searchServiceEndpoint : ''
 
+  var searchConnectionId = !useSearchService
+  ? ''
+  : empty(azureExistingAIProjectResourceId) ? ai!.outputs.searchConnectionId : ''
+
+
 // If bringing an existing AI project, set up the log analytics workspace here
 module logAnalytics 'core/monitor/loganalytics.bicep' = if (!empty(azureExistingAIProjectResourceId)) {
   name: 'logAnalytics'
@@ -294,8 +299,9 @@ module api 'api.bicep' = {
     agentName: agentName
     agentID: agentID
     enableAzureMonitorTracing: enableAzureMonitorTracing
-    azureTracingGenAIContentRecordingEnabled: azureTracingGenAIContentRecordingEnabled
+    otelInstrumentationGenAICaptureMessageContent: otelInstrumentationGenAICaptureMessageContent
     projectEndpoint: projectEndpoint
+    searchConnectionId: searchConnectionId
   }
 }
 
@@ -327,6 +333,16 @@ module userAzureAIUser  'core/security/role.bicep' = if (empty(azureExistingAIPr
   params: {
     principalType: runnerPrincipalType
     principalId: principalId
+    roleDefinitionId: '53ca6127-db72-4b80-b1b0-d745d6d5456d'
+  }
+}
+
+module backendAzureAIUser  'core/security/role.bicep' = if (empty(azureExistingAIProjectResourceId)) {
+  name: 'backend-role-azure-ai-user'
+  scope: rg
+  params: {
+    principalType: 'ServicePrincipal'
+    principalId: api.outputs.SERVICE_API_IDENTITY_PRINCIPAL_ID
     roleDefinitionId: '53ca6127-db72-4b80-b1b0-d745d6d5456d'
   }
 }
@@ -437,7 +453,7 @@ output AZURE_AI_AGENT_NAME string = agentName
 output AZURE_EXISTING_AGENT_ID string = agentID
 output AZURE_EXISTING_AIPROJECT_ENDPOINT string = projectEndpoint
 output ENABLE_AZURE_MONITOR_TRACING bool = enableAzureMonitorTracing
-output AZURE_TRACING_GEN_AI_CONTENT_RECORDING_ENABLED bool = azureTracingGenAIContentRecordingEnabled
+output OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT bool = otelInstrumentationGenAICaptureMessageContent
 
 // Outputs required by azd for ACA
 output AZURE_CONTAINER_ENVIRONMENT_NAME string = containerApps.outputs.environmentName
@@ -445,5 +461,5 @@ output SERVICE_API_IDENTITY_PRINCIPAL_ID string = api.outputs.SERVICE_API_IDENTI
 output SERVICE_API_NAME string = api.outputs.SERVICE_API_NAME
 output SERVICE_API_URI string = api.outputs.SERVICE_API_URI
 output SERVICE_API_ENDPOINTS array = ['${api.outputs.SERVICE_API_URI}']
-output SEARCH_CONNECTION_ID string = ''
+output SEARCH_CONNECTION_ID string = searchConnectionId
 output AZURE_CONTAINER_REGISTRY_ENDPOINT string = containerApps.outputs.registryLoginServer
