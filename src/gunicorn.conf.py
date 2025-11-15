@@ -162,11 +162,17 @@ async def get_available_tool(
 
 
 async def create_agent(ai_project: AIProjectClient,
+                       openai_client: AsyncOpenAI,
                        creds: AsyncTokenCredential) -> AgentVersionObject:
     logger.info("Creating new agent with resources")
-    tool = await get_available_tool(ai_project, await ai_project.get_openai_client(), creds)
+    tool = await get_available_tool(ai_project, openai_client, creds)
+
+    instructions = "Use File Search always with citations.  Avoid to use base knowledge."
     
-    instructions = "Use AI Search always. Avoid to use base knowledge." if isinstance(tool, AzureAISearchAgentTool) else "Use File Search always.  Avoid to use base knowledge."
+    if isinstance(tool, AzureAISearchAgentTool):
+        instructions = """Use AI Search always.  
+                        You must always provide citations for answers using the tool and render them as: `\u3010message_idx:search_idx\u2020source\u3011`.  
+                        Avoid to use base knowledge."""
 
     agent = await ai_project.agents.create_version(
         agent_name=os.environ["AZURE_AI_AGENT_NAME"],
@@ -178,144 +184,88 @@ async def create_agent(ai_project: AIProjectClient,
     )
     return agent
 
-async def initialize_eval(project_client: AIProjectClient, agent: AgentVersionObject):
-    print("Creating a single evaluator version - Prompt based (json style)")
-    prompt_evaluator = await project_client.evaluators.create_version(
-        name="my_custom_evaluator_prompt",
-        evaluator_version={
-            "name": "my_custom_evaluator_prompt",
-            "categories": [EvaluatorCategory.QUALITY],
-            "display_name": "my_custom_evaluator_prompt",
-            "description": "Custom evaluator to for groundedness",
-            "definition": {
-                "type": EvaluatorDefinitionType.PROMPT,
-                "prompt_text": """
-                        You are a Groundedness Evaluator.
-
-                        Your task is to evaluate how well the given response is grounded in the provided ground truth.
-                        Groundedness means the response's statements are factually supported by the ground truth.
-                        Evaluate factual alignment only — ignore grammar, fluency, or completeness.
-
-                        ---
-
-                        ### Input:
-                        Query:
-                        {query}
-
-                        Response:
-                        {response}
-
-                        Ground Truth:
-                        {ground_truth}
-
-                        ---
-
-                        ### Scoring Scale (1-5):
-                        5 → Fully grounded. All claims supported by ground truth.  
-                        4 → Mostly grounded. Minor unsupported details.  
-                        3 → Partially grounded. About half the claims supported.  
-                        2 → Mostly ungrounded. Only a few details supported.  
-                        1 → Not grounded. Almost all information unsupported.
-
-                        ---
-
-                        ### Output should be Integer:
-                        <integer from 1 to 5>
-                """,
-                "init_parameters": {
-                    "type": "object",
-                    "properties": {"deployment_name": {"type": "string"}, "threshold": {"type": "number"}},
-                    "required": ["deployment_name"],
-                },
-                "data_schema": {
-                    "type": "object",
-                    "properties": {
-                        "query": {"type": "string"},
-                        "response": {"type": "string"},
-                        "ground_truth": {"type": "string"},
-                    },
-                    "required": ["query", "response", "ground_truth"],
-                },
-                "metrics": {
-                    "tool_selection": {
-                        "type": "ordinal",
-                        "desirable_direction": "increase",
-                        "min_value": 1,
-                        "max_value": 5,
-                    }
-                },
-            },
+async def initialize_eval(project_client: AIProjectClient, openai_client: AsyncOpenAI, agent_obj: AgentVersionObject):
+    # Create Continuous Evaluation testing criteria and trigger rule
+    eval_object = await openai_client.evals.create(
+        name="Continuous Evaluation",
+        data_source_config={
+            "type": "azure_ai_source",
+            "scenario": "responses"
         },
+        testing_criteria=[
+            {
+                "type": "azure_ai_evaluator",
+                "name": "violence_detection",
+                "evaluator_name": "builtin.violence"
+            } # Add more testing criteria as needed
+        ]
     )
+    logger.info(f"Evaluation created (id: {eval_object.id}, name: {eval_object.name})")
 
-    print(f"Evaluator version created (id: {prompt_evaluator.id}, name: {prompt_evaluator.name})")
-
-    print("Creating continuous evaluation rule to run evaluator on agent responses")
     continuous_eval_rule = await project_client.evaluation_rules.create_or_update(
         id="my-continuous-eval-rule",
         evaluation_rule=EvaluationRule(
             display_name="My Continuous Eval Rule",
-            description="An eval rule that runs on agent response completions",
-            action=ContinuousEvaluationRuleAction(eval_id=prompt_evaluator.id, max_hourly_runs=10),
+            description="Evaluate agent responses continuously",
+            action=ContinuousEvaluationRuleAction(
+                eval_id=eval_object.id,
+                max_hourly_runs=10 # up to 10 evaluations per hour
+            ),
             event_type=EvaluationRuleEventType.RESPONSE_COMPLETED,
-            filter=EvaluationRuleFilter(agent_name=agent.name),
-            enabled=True,
-        ),
+            filter=EvaluationRuleFilter(
+                agent_name=agent_obj.name
+            ),
+            enabled=True # Reead from env variable?
+        )
     )
-    print(
-        f"Continuous Evaluation Rule created (id: {continuous_eval_rule.id}, name: {continuous_eval_rule.display_name})"
-    )
-
-
+    logger.info(f"Continuous Evaluation Rule created (id: {continuous_eval_rule.id}, name: {continuous_eval_rule.display_name})")
 
 async def initialize_resources():
     proj_endpoint = os.environ.get("AZURE_EXISTING_AIPROJECT_ENDPOINT")
     try:
-        async with DefaultAzureCredential() as credential:
-            async with AIProjectClient(
-                credential=credential,
-                endpoint=proj_endpoint,
-                api_version="2025-11-15-preview",
-            ) as ai_project:
-                # If the environment already has AZURE_AI_AGENT_ID or AZURE_EXISTING_AGENT_ID, try
-                # fetching that agent
-                agent_obj: Optional[AgentVersionObject] = None
+        async with (
+            DefaultAzureCredential() as credential,
+            AIProjectClient(endpoint=proj_endpoint, credential=credential) as project_client,
+            project_client.get_openai_client() as openai_client,
+        ):
+            # If the environment already has AZURE_AI_AGENT_ID or AZURE_EXISTING_AGENT_ID, try
+            # fetching that agent
+            agent_obj: Optional[AgentVersionObject] = None
 
-                agentID = os.environ.get("AZURE_EXISTING_AGENT_ID")
+            agentID = os.environ.get("AZURE_EXISTING_AGENT_ID")
 
-                if agentID:
-                    try:
-                        agent_name = agentID.split(":")[0]
-                        agent_version = agentID.split(":")[1]
-                        agent_obj = await ai_project.agents.get_version(agent_name, agent_version)
-                        logger.info(f"Found agent by ID: {agent_obj.id}")
-                    except Exception as e:
-                        logger.warning(
-                            "Could not retrieve agent by AZURE_EXISTING_AGENT_ID = "
-                            f"{agentID}, error: {e}")
-                else:
-                    logger.info("No existing agent ID found.")
+            if agentID:
+                try:
+                    agent_name = agentID.split(":")[0]
+                    agent_version = agentID.split(":")[1]
+                    agent_obj = await project_client.agents.get_version(agent_name, agent_version)
+                    logger.info(f"Found agent by ID: {agent_obj.id}")
+                except Exception as e:
+                    logger.warning(
+                        "Could not retrieve agent by AZURE_EXISTING_AGENT_ID = "
+                        f"{agentID}, error: {e}")
+            else:
+                logger.info("No existing agent ID found.")
 
-                # Check if an agent with the same name already exists
-                if not agent_obj:
-                    try:
-                        agent_name = os.environ["AZURE_AI_AGENT_NAME"]
-                        logger.info(f"Retrieving agent by name: {agent_name}")
-                        agents = await ai_project.agents.get(agent_name)
-                        agent_obj = agents.versions.latest
-                        logger.info(f"Agent with agent id, {agent_obj.id} retrieved.")
-                    except Exception as e:
-                        logger.info(f"Agent name, {agent_name} not found.")
-                        
-                # Create a new agent
-                if not agent_obj:
-                    agent_obj = await create_agent(ai_project, credential)
-                    logger.info(f"Created agent, agent ID: {agent_obj.id}")
+            # Check if an agent with the same name already exists
+            if not agent_obj:
+                try:
+                    agent_name = os.environ["AZURE_AI_AGENT_NAME"]
+                    logger.info(f"Retrieving agent by name: {agent_name}")
+                    agents = await project_client.agents.get(agent_name)
+                    agent_obj = agents.versions.latest
+                    logger.info(f"Agent with agent id, {agent_obj.id} retrieved.")
+                except Exception as e:
+                    logger.info(f"Agent name, {agent_name} not found.")
+                    
+            # Create a new agent
+            if not agent_obj:
+                agent_obj = await create_agent(project_client, openai_client, credential)
+                logger.info(f"Created agent, agent ID: {agent_obj.id}")
 
-                os.environ["AZURE_EXISTING_AGENT_ID"] = agent_obj.id
+            os.environ["AZURE_EXISTING_AGENT_ID"] = agent_obj.id
 
-                await initialize_eval(ai_project, agent_obj)                
-
+            await initialize_eval(project_client, openai_client, agent_obj)
     except Exception as e:
         logger.info("Error creating agent: {e}", exc_info=True)
         raise RuntimeError(f"Failed to create the agent: {e}")

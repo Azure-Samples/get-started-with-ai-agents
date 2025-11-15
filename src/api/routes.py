@@ -27,7 +27,6 @@ from azure.ai.projects.aio import AIProjectClient
 from openai.types.responses import ResponseTextDeltaEvent, ResponseCompletedEvent, ResponseTextDoneEvent, ResponseCreatedEvent, ResponseOutputItemDoneEvent
 
 from openai import AsyncOpenAI
-from openai.resources.responses import Responses
 
 # Create a logger for this module
 logger = logging.getLogger("azureaiapp")
@@ -94,15 +93,9 @@ def get_ai_project(request: Request) -> AIProjectClient:
 def get_agent_version_obj(request: Request) -> AgentVersionObject:
     return request.app.state.agent_version_obj
 
-async def get_openai_client(request: Request) -> AsyncOpenAI:
-    return await get_ai_project(request).get_openai_client()
+def get_openai_client(request: Request) -> AsyncOpenAI:
+    return request.app.state.openai_client
 
-def get_app_insights_conn_str(request: Request) -> str:
-    if hasattr(request.app.state, "application_insights_connection_string"):
-        return request.app.state.application_insights_connection_string
-    else:
-        return None
-    
 def get_created_at_label(message_id: str) -> str:
     return f"{message_id}_created_at"
 
@@ -147,14 +140,20 @@ async def get_message_and_annotations(event: Message | ResponseOutputMessage) ->
     # Get file annotations for the file search.
     text = ""
     content = event.content[0]
-    if isinstance(content, ResponseOutputText) or isinstance(content, ResponseInputText):
+    if content.type == "output_text" or content.type == "input_text":
         text = content.text
-    if isinstance(content, ResponseOutputText):
+    if content.type == "output_text":
         for annotation in content.annotations:
-            if isinstance(annotation, AnnotationFileCitation):
+            if annotation.type == "file_citation":
                 ann = {
-                    'file_name': annotation.filename,
+                    'label': annotation.filename,
                     "index": annotation.index
+                }
+                annotations.append(ann)
+            elif annotation.type == "url_citation":
+                ann = {
+                    'label': annotation.url,
+                    "index": annotation.start_index
                 }
                 annotations.append(ann)
 
@@ -170,66 +169,6 @@ async def get_message_and_annotations(event: Message | ResponseOutputMessage) ->
         'annotations': annotations
     }
 
-# class MyEventHandler(AsyncAgentEventHandler[str]):
-#     def __init__(self, ai_project: AIProjectClient, app_insights_conn_str: str):
-#         super().__init__()
-#         self.agent_client = ai_project.agents
-#         self.ai_project = ai_project
-#         self.app_insights_conn_str = app_insights_conn_str
-
-#     async def on_message_delta(self, delta: MessageDeltaChunk) -> Optional[str]:
-#         stream_data = {'content': delta.text, 'type': "message"}
-#         return serialize_sse_event(stream_data)
-
-#     async def on_thread_message(self, message: ThreadMessage) -> Optional[str]:
-#         try:
-#             logger.info(f"MyEventHandler: Received thread message, message ID: {message.id}, status: {message.status}")
-#             if message.status != "completed":
-#                 return None
-
-#             logger.info("MyEventHandler: Received completed message")
-
-#             stream_data = await get_message_and_annotations(self.agent_client, message)
-#             stream_data['type'] = "completed_message"
-#             return serialize_sse_event(stream_data)
-#         except Exception as e:
-#             logger.error(f"Error in event handler for thread message: {e}", exc_info=True)
-#             return None
-
-#     async def on_thread_run(self, run: ThreadRun) -> Optional[str]:
-#         logger.info("MyEventHandler: on_thread_run event received")
-#         run_information = f"ThreadRun status: {run.status}, thread ID: {run.thread_id}"
-#         stream_data = {'content': run_information, 'type': 'thread_run'}
-#         if run.status == "failed":
-#             stream_data['error'] = run.last_error.as_dict()
-#         # automatically run agent evaluation when the run is completed
-#         if run.status == "completed":
-#             run_agent_evaluation(run.thread_id, run.id, self.ai_project, self.app_insights_conn_str)
-#         return serialize_sse_event(stream_data)
-
-#     async def on_error(self, data: str) -> Optional[str]:
-#         logger.error(f"MyEventHandler: on_error event received: {data}")
-#         stream_data = {'type': "stream_end"}
-#         return serialize_sse_event(stream_data)
-
-#     async def on_done(self) -> Optional[str]:
-#         logger.info("MyEventHandler: on_done event received")
-#         stream_data = {'type': "stream_end"}
-#         return serialize_sse_event(stream_data)
-
-#     async def on_run_step(self, step: RunStep) -> Optional[str]:
-#         logger.info(f"Step {step['id']} status: {step['status']}")
-#         step_details = step.get("step_details", {})
-#         tool_calls = step_details.get("tool_calls", [])
-
-#         if tool_calls:
-#             logger.info("Tool calls:")
-#             for call in tool_calls:
-#                 azure_ai_search_details = call.get("azure_ai_search", {})
-#                 if azure_ai_search_details:
-#                     logger.info(f"azure_ai_search input: {azure_ai_search_details.get('input')}")
-#                     logger.info(f"azure_ai_search output: {azure_ai_search_details.get('output')}")
-#         return None
 
 @router.get("/", response_class=HTMLResponse)
 async def index(request: Request, _ = auth_dependency):
@@ -240,8 +179,7 @@ async def index(request: Request, _ = auth_dependency):
         }
     )
 
-async def save_created_at(openai_client: AsyncOpenAI, response: Response, conversation: Conversation,  input_created_at: int, output_message_id):
-    # Note: OpenAI doesn't support retrieving created_at by message ID, so we save it by local dictionary
+async def save_user_message_created_at(openai_client: AsyncOpenAI, conversation: Conversation,  input_created_at: float):
     conversation.metadata = conversation.metadata  or {}
     try:
         logger.info(f"Saving created_at.")
@@ -252,13 +190,12 @@ async def save_created_at(openai_client: AsyncOpenAI, response: Response, conver
                 last_input_message = message
                 break
         if last_input_message:
-            conversation.metadata[get_created_at_label(last_input_message.id)] = datetime.fromtimestamp(input_created_at, timezone.utc).astimezone().strftime("%m/%d/%y, %I:%M %p")
-        conversation.metadata[get_created_at_label(output_message_id)] = datetime.fromtimestamp(response.created_at, timezone.utc).astimezone().strftime("%m/%d/%y, %I:%M %p")
+            conversation.metadata[get_created_at_label(last_input_message.id)] = str(input_created_at)
         cleanup_created_at_metadata(conversation.metadata)
 
         await openai_client.conversations.update(conversation.id, metadata=conversation.metadata)
         
-        logger.info(f"Successfully saved created_at for response {response.id}")
+        logger.info(f"Successfully saved created_at for user message")
         return  # Success, exit the retry loop
 
     except Exception as e:
@@ -276,43 +213,43 @@ async def get_result(
     ctx = TraceContextTextMapPropagator().extract(carrier=carrier)
     with tracer.start_as_current_span('get_result', context=ctx):
         logger.info(f"get_result invoked for conversation={conversation.id}")
+        input_created_at = datetime.now(timezone.utc).timestamp()
         try:
             response = await openAI.responses.create(
                 conversation=conversation.id,
-                input=[
-                    {"role": "user", "content": user_message},
-                ],
+                input=user_message,
                 extra_body={"agent": AgentReference(name=agent.name, version=agent.version).as_dict()},
                 stream=True
             )
             logger.info("Successfully created stream; starting to process events")
-            output_message_id = ""
-            input_created_at = datetime.now(timezone.utc).timestamp()
             async for event in response:
                 print(event)
-                if isinstance(event, ResponseCreatedEvent):
-                    print(f"Stream response created with ID: {event.response.id}")
-                elif isinstance(event, ResponseTextDeltaEvent):
-                    print(f"Delta: {event.delta}")
+                if event.type == "response.created":
+                    logger.info(f"Stream response created with ID: {event.response.id}")
+                elif event.type == "response.output_text.delta":
+                    logger.info(f"Delta: {event.delta}")
                     stream_data = {'content': event.delta, 'type': "message"}
                     yield serialize_sse_event(stream_data)
-                elif isinstance(event, ResponseOutputItemDoneEvent) and event.item.type == "message":
+                elif event.type == "response.output_item.done" and event.item.type == "message":
                     stream_data = await get_message_and_annotations(event.item)
                     stream_data['type'] = "completed_message"
-                    output_message_id = event.item.id
-                    yield serialize_sse_event(stream_data)                    
-                elif isinstance(event, ResponseCompletedEvent):
-                    print(f"Response completed with full message: {event.response.output_text}")
-                    stream_data = {'type': "stream_end"}
-                    # Save created_at timestamps in the background (non-blocking)
-                    await save_created_at(openAI, event.response, conversation, input_created_at, output_message_id)
-                    yield serialize_sse_event(stream_data)           
-                    
-                                 
-
+                    yield serialize_sse_event(stream_data)
+                elif event.type == "response.completed":
+                    logger.info(f"Response completed with full message: {event.response.output_text}")
+                                                    
         except Exception as e:
             logger.exception(f"Exception in get_result: {e}")
-            yield serialize_sse_event({'type': "error", 'message': str(e)})
+            error_data = {
+                'content': str(e),
+                'annotations': [],
+                'type': "completed_message"
+            }
+            yield serialize_sse_event(error_data)
+        finally:
+            stream_data = {'type': "stream_end"}
+            await save_user_message_created_at(openAI, conversation, input_created_at)
+            yield serialize_sse_event(stream_data)           
+
 
 
 @router.get("/chat/history")
@@ -334,12 +271,12 @@ async def history(
         # Create a new message from the user's input.
         try:
             content = []
-            messages = await openai_client.conversations.items.list(conversation_id=conversation.id, order="desc", limit=16)
-            async for message in messages:
-                if isinstance(message, Message):
-                    formatteded_message = await get_message_and_annotations(message)
-                    formatteded_message['role'] = message.role
-                    formatteded_message['created_at'] = conversation.metadata.get(get_created_at_label(message.id), "")
+            items = await openai_client.conversations.items.list(conversation_id=conversation.id, order="desc", limit=16)
+            async for item in items:
+                if item.type == "message":
+                    formatteded_message = await get_message_and_annotations(item)
+                    formatteded_message['role'] = item.role
+                    formatteded_message['created_at'] = conversation.metadata.get(get_created_at_label(item.id), "")
                     content.append(formatteded_message)
 
 
@@ -356,10 +293,9 @@ async def history(
 
 @router.get("/agent")
 async def get_chat_agent(
-    request: Request,
     agent: AgentVersionObject = Depends(get_agent_version_obj),
 ):
-    return JSONResponse(content={"name": agent.name, "metadata": {"logo": agent.metadata.get("logo", "")}})
+    return JSONResponse(content={"name": agent.name, "metadata": agent.metadata})
 
 @router.post("/chat")
 async def chat(
@@ -367,7 +303,6 @@ async def chat(
     openai_client : AsyncOpenAI = Depends(get_openai_client),
     agent: AgentVersionObject = Depends(get_agent_version_obj),
     
-    app_insights_conn_str : str = Depends(get_app_insights_conn_str),
 	_ = auth_dependency
 ):
     # Retrieve the conversation ID from the cookies (if available).
@@ -412,46 +347,6 @@ async def chat(
 def read_file(path: str) -> str:
     with open(path, 'r') as file:
         return file.read()
-
-
-# def run_agent_evaluation(
-#     thread_id: str, 
-#     run_id: str,
-#     ai_project: AIProjectClient,
-#     app_insights_conn_str: str):
-
-#     if app_insights_conn_str:
-#         agent_evaluation_request = AgentEvaluationRequest(
-#             run_id=run_id,
-#             thread_id=thread_id,
-#             evaluators={
-#                 "Relevance": {"Id": EvaluatorIds.RELEVANCE.value},
-#                 "TaskAdherence": {"Id": EvaluatorIds.TASK_ADHERENCE.value},
-#                 "ToolCallAccuracy": {"Id": EvaluatorIds.TOOL_CALL_ACCURACY.value},
-#             },
-#             sampling_configuration=AgentEvaluationSamplingConfiguration(
-#                 name="default",
-#                 sampling_percent=100,
-#             ),
-#             redaction_configuration=AgentEvaluationRedactionConfiguration(
-#                 redact_score_properties=False,
-#             ),
-#             app_insights_connection_string=app_insights_conn_str,
-#         )
-        
-#         async def run_evaluation():
-#             try:        
-#                 logger.info(f"Running agent evaluation on thread ID {thread_id} and run ID {run_id}")
-#                 agent_evaluation_response = await ai_project.evaluations.create_agent_evaluation(
-#                     evaluation=agent_evaluation_request
-#                 )
-#                 logger.info(f"Evaluation response: {agent_evaluation_response}")
-#             except Exception as e:
-#                 logger.error(f"Error creating agent evaluation: {e}")
-
-#         # Create a new task to run the evaluation asynchronously
-#         asyncio.create_task(run_evaluation())
-
 
 @router.get("/config/azure")
 async def get_azure_config(_ = auth_dependency):

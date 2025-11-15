@@ -66,6 +66,16 @@ resource search 'Microsoft.Search/searchServices@2024-06-01-preview' = {
   }
 }
 
+module aiSearchCognitiveServicesUser  '../security/role.bicep' = {
+  name: 'aisearch-role-cognitive-services-user'
+  scope: resourceGroup()
+  params: {
+    principalType: 'ServicePrincipal'
+    principalId: search.identity.principalId
+    roleDefinitionId: 'a97b65f3-24c7-4388-baec-2e87135dc908'
+  }
+}
+
 resource aiServices 'Microsoft.CognitiveServices/accounts@2025-04-01-preview' existing = {
   name: serviceName
 

@@ -4,11 +4,11 @@ The agent leverages Foundry Agent Service and utilizes file search for knowledge
 
 <div style="text-align:center;">
 
-[**SOLUTION OVERVIEW**](#solution-overview) \| [**GETTING STARTED**](#getting-started) \| [**LOCAL DEVELOPMENT**](#local-development) \| [**OTHER FEATURES**](#other-features) \| [**RESOURCE CLEAN-UP**](#resource-clean-up) \| [**GUIDANCE**](#guidance) \| [**TROUBLESHOOTING**](./docs/troubleshooting.md)
+[**SOLUTION OVERVIEW**](#solution-overview) \| [**GETTING STARTED**](#getting-started) \| [**LOCAL DEVELOPMENT**](#local-development) \| [**RESOURCE CLEAN-UP**](#resource-clean-up) \| [**GUIDANCE**](#guidance) \| [**TROUBLESHOOTING**](./docs/troubleshooting.md)
 
 </div>
 
-⚠️ **NOTE!** With any AI solutions you create using these templates, you are responsible for assessing all associated risks, and for complying with all applicable laws and safety standards. Learn more in the transparency documents for [Agent Service](https://nam06.safelinks.protection.outlook.com/?url=https%3A%2F%2Flearn.microsoft.com%2Fen-us%2Fazure%2Fai-foundry%2Fresponsible-ai%2Fagents%2Ftransparency-note&data=05%7C02%7Chowieleung%40microsoft.com%7C42645ec29da244bd920508de2095bcad%7C72f988bf86f141af91ab2d7cd011db47%7C1%7C0%7C638984024651276233%7CUnknown%7CTWFpbGZsb3d8eyJFbXB0eU1hcGkiOnRydWUsIlYiOiIwLjAuMDAwMCIsIlAiOiJXaW4zMiIsIkFOIjoiTWFpbCIsIldUIjoyfQ%3D%3D%7C0%7C%7C%7C&sdata=Un4HtoksTeodWPQMQp7zh8BNW6j%2BeIw4mcs6gbS4e6E%3D&reserved=0) and [Agent Framework](https://nam06.safelinks.protection.outlook.com/?url=https%3A%2F%2Fgithub.com%2Fmicrosoft%2Fagent-framework%2Fblob%2Fmain%2FTRANSPARENCY_FAQ.md&data=05%7C02%7Chowieleung%40microsoft.com%7C42645ec29da244bd920508de2095bcad%7C72f988bf86f141af91ab2d7cd011db47%7C1%7C0%7C638984024651325701%7CUnknown%7CTWFpbGZsb3d8eyJFbXB0eU1hcGkiOnRydWUsIlYiOiIwLjAuMDAwMCIsIlAiOiJXaW4zMiIsIkFOIjoiTWFpbCIsIldUIjoyfQ%3D%3D%7C0%7C%7C%7C&sdata=19nfzxn8ZN1qr7Hy77fn%2BgFXD1sc%2BXiuPuUi3H2NNz4%3D&reserved=0).
+**Note**: With any AI solutions you create using these templates, you are responsible for assessing all associated risks, and for complying with all applicable laws and safety standards. Learn more in the transparency documents for [Agent Service](https://nam06.safelinks.protection.outlook.com/?url=https%3A%2F%2Flearn.microsoft.com%2Fen-us%2Fazure%2Fai-foundry%2Fresponsible-ai%2Fagents%2Ftransparency-note&data=05%7C02%7Chowieleung%40microsoft.com%7C42645ec29da244bd920508de2095bcad%7C72f988bf86f141af91ab2d7cd011db47%7C1%7C0%7C638984024651276233%7CUnknown%7CTWFpbGZsb3d8eyJFbXB0eU1hcGkiOnRydWUsIlYiOiIwLjAuMDAwMCIsIlAiOiJXaW4zMiIsIkFOIjoiTWFpbCIsIldUIjoyfQ%3D%3D%7C0%7C%7C%7C&sdata=Un4HtoksTeodWPQMQp7zh8BNW6j%2BeIw4mcs6gbS4e6E%3D&reserved=0) and [Agent Framework](https://nam06.safelinks.protection.outlook.com/?url=https%3A%2F%2Fgithub.com%2Fmicrosoft%2Fagent-framework%2Fblob%2Fmain%2FTRANSPARENCY_FAQ.md&data=05%7C02%7Chowieleung%40microsoft.com%7C42645ec29da244bd920508de2095bcad%7C72f988bf86f141af91ab2d7cd011db47%7C1%7C0%7C638984024651325701%7CUnknown%7CTWFpbGZsb3d8eyJFbXB0eU1hcGkiOnRydWUsIlYiOiIwLjAuMDAwMCIsIlAiOiJXaW4zMiIsIkFOIjoiTWFpbCIsIldUIjoyfQ%3D%3D%7C0%7C%7C%7C&sdata=19nfzxn8ZN1qr7Hy77fn%2BgFXD1sc%2BXiuPuUi3H2NNz4%3D&reserved=0).
 
 ## Solution Overview
 
@@ -28,22 +28,22 @@ The app code runs in Azure Container App to process the user input and generate 
 
 ### Key Features
 
-- **Knowledge Retrieval**<br/>
-The AI agent uses file search to retrieve knowledge from uploaded files.
+- **[Knowledge Retrieval](./docs/deploy_customization.md#enabling-and-disabling-resources-provision)**<br/>
+The AI agent uses file search or Azure AI Search to retrieve knowledge from uploaded files.
 
-- **Customizable AI Model Deployment**<br/>
+- **[Customizable AI Model Deployment](./docs/deploy_customization.md#customizing-model-deployments)**<br/>
 The solution allows users to configure and deploy AI models, such as gpt-4o-mini, with options to adjust model capacity, and knowledge retrieval methods.
 
-- **Built-in Monitoring and Tracing**<br/>
+- **[Built-in Monitoring and Tracing](./docs/other_features.md#tracing-and-monitoring)**<br/>
 Integrated monitoring capabilities, including Azure Monitor and Application Insights, enable tracing and logging for easier troubleshooting and performance optimization.
 
-- **Flexible Deployment Options**<br/>
+- **[Flexible Deployment Options](./docs/deployment.md)**<br/>
 The solution supports deployment through GitHub Codespaces, VS Code Dev Containers, or local environments, providing flexibility for different development workflows.
 
-- **Agent Evaluation**<br/>
+- **[Agent Evaluation](./docs/other_features.md#agent-evaluation)**<br/>
 This solution demonstrates how you can evaluate your agent's performance and quality during local development and incorporate it into monitoring and CI/CD workflow.
 
-- **AI Red Teaming Agent**<br/>
+- **[AI Red Teaming Agent](./docs/other_features.md#ai-red-teaming-agent)**<br/>
 Facilitates the creation of an AI Red Teaming Agent that can run batch automated scans for safety and security scans on your Agent solution to check your risk posture before deploying it into production.
 
 <br/>
@@ -83,14 +83,6 @@ This guide covers:
 - File management and agent recreation
 - Using agent evaluation for code improvement
 
-## Other Features
-Once you have the agents and the web app working, you are encouraged to try one of the following:
-
-- **[Tracing and Monitoring](./docs/other_features.md#tracing-and-monitoring)** - View console logs in Azure portal and App Insights tracing in Azure AI Foundry for debugging and performance monitoring.
-
-- **[Agent Evaluation](./docs/other_features.md#agent-evaluation)** - Evaluate your agent's performance and quality using built-in evaluators for local development, continuous monitoring, and CI/CD integration.
-
-- **[AI Red Teaming Agent](./docs/other_features.md#ai-red-teaming-agent)** - Run automated security and safety scans on your agent solution to check your risk posture before production deployment.
 
 ## Resource Clean-up
 
