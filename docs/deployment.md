@@ -225,7 +225,7 @@ azd env set ENABLE_AZURE_MONITOR_TRACING true
 To enable message contents to be included in the traces, set the following environment variable. Note that the messages may contain personally identifiable information.
 
 ```shell
-azd env set AZURE_TRACING_GEN_AI_CONTENT_RECORDING_ENABLED true
+azd env set OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT true
 ```
 
 You can view the App Insights tracing in Azure AI Foundry. Select your project on the Azure AI Foundry page and then click 'Tracing'.
