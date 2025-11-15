@@ -331,7 +331,7 @@ module userAzureAIUser  'core/security/role.bicep' = if (empty(azureExistingAIPr
 }
 
 module backendAzureAIUser  'core/security/role.bicep' = if (empty(azureExistingAIProjectResourceId)) {
-  name: 'user-role-azure-ai-user'
+  name: 'backend-role-azure-ai-user'
   scope: rg
   params: {
     principalType: 'ServicePrincipal'
