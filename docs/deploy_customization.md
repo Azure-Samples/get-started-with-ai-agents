@@ -50,7 +50,7 @@ To override any of those resource names, run `azd env set <key> <value>` before 
 
 ## Customizing model deployments
 
-For more information on the Azure OpenAI models and non-Microsoft models that can be used in your deployment, view the [list of models supported by Azure AI Agent Service](https://learn.microsoft.com/azure/ai-services/agents/concepts/model-region-support).
+For more information on the Azure OpenAI models and non-Microsoft models that can be used in your deployment, view the [list of models supported by Foundry Agent Service](https://learn.microsoft.com/azure/ai-services/agents/concepts/model-region-support).
 
 To customize the model deployments, you can set the following environment variables:
 
