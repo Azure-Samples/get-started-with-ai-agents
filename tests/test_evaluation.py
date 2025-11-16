@@ -11,32 +11,17 @@ from azure.identity import DefaultAzureCredential
 from azure.ai.projects import AIProjectClient
 from openai.types.eval_create_params import DataSourceConfigCustom
 
-load_dotenv()
-
-agent_id = os.environ.get("AZURE_EXISTING_AGENT_ID", "")
-endpoint = os.environ.get("AZURE_EXISTING_AIPROJECT_ENDPOINT", "")
-
-if not agent_id or ":" not in agent_id:
-    raise ValueError("Please set AZURE_EXISTING_AGENT_ID environment variable in the format 'agent_name:agent_version'.")
-
-if not endpoint:
-    raise ValueError("Please set AZURE_EXISTING_AIPROJECT_ENDPOINT environment variable.")
+from test_utils import retrieve_agent, retrieve_endpoint
 
 
 def test_evaluation():
-    agent_name = agent_id.split(":")[0]
-    agent_version = agent_id.split(":")[1]
-
     with (
         DefaultAzureCredential(exclude_interactive_browser_credential=False) as credential,
-        AIProjectClient(endpoint=endpoint, credential=credential) as project_client,
+        AIProjectClient(endpoint=retrieve_endpoint(), credential=credential) as project_client,
         project_client.get_openai_client() as openai_client,
     ):
 
-        agent = project_client.agents.get_version(
-            agent_name=agent_name, agent_version=agent_version
-        )
-        print(f"Agent retrieved (id: {agent.id}, name: {agent.name}, version: {agent.version})")
+        agent = retrieve_agent(project_client)
 
         data_source_config = DataSourceConfigCustom(
             type="custom",
@@ -63,8 +48,8 @@ def test_evaluation():
             "source": {
                 "type": "file_content",
                 "content": [
-                    {"item": {"query": "What is the capital of France?"}},
-                    {"item": {"query": "How do I reverse a string in Python?"}},
+                    {"item": {"query": "Which products have wireless charging capabilities and what are their battery life specifications?"}},
+                    {"item": {"query": "Find products designed for comfort and temperature control - what features do they offer?"}},
                 ],
             },
             "input_messages": {
@@ -90,8 +75,9 @@ def test_evaluation():
             print(f"Waiting for eval run to complete... current status: {agent_eval_run.status}")
             time.sleep(5)
 
+
         if agent_eval_run.status == "completed":
-            print("\n✓ Evaluation run completed successfully!")
+            print("\n\u2713 Evaluation run completed successfully!")
             print(f"Result Counts: {agent_eval_run.result_counts}")
 
             output_items = list(
@@ -102,12 +88,9 @@ def test_evaluation():
             pprint(output_items)
             print(f"{'-'*60}")
         else:
-            print("\n✗ Evaluation run failed.")
+            print("\n\u2717 Evaluation run failed.")
 
         openai_client.evals.delete(eval_id=eval_object.id)
         print("Evaluation deleted")
 
-        project_client.agents.delete(agent_name=agent.name)
-        print("Agent deleted")
-
-        assert True==True
+        assert agent_eval_run.status == "completed"
