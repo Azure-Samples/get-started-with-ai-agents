@@ -307,7 +307,7 @@ module api 'api.bicep' = {
     enableAzureMonitorTracing: enableAzureMonitorTracing
     otelInstrumentationGenAICaptureMessageContent: otelInstrumentationGenAICaptureMessageContent
     projectEndpoint: projectEndpoint
-    searchConnectionId: searchConnectionId
+    searchConnectionId: searchConnectionId_final
   }
 }
 
