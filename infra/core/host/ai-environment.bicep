@@ -115,6 +115,16 @@ module projectStorageRoleAssignment  '../../core/security/role.bicep' = {
   }
 }
 
+module projectAIUserRoleAssignment  '../../core/security/role.bicep' = {
+  name: 'ai-project-role-ai-user'
+  params: {
+    principalType: 'ServicePrincipal'
+    principalId: cognitiveServices.outputs.projectPrincipalId
+    roleDefinitionId: '53ca6127-db72-4b80-b1b0-d745d6d5456d' // Azure AI User
+  }
+}
+
+
 module searchService '../search/search-services.bicep' =
   if (!empty(searchServiceName)) {
     dependsOn: [cognitiveServices]

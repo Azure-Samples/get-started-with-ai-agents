@@ -28,12 +28,16 @@ def test_evaluation():
             item_schema={"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"]},
             include_sample_schema=True,
         )
+        # define testing criteria
         testing_criteria = [
             {
                 "type": "azure_ai_evaluator",
                 "name": "violence_detection",
                 "evaluator_name": "builtin.violence",
-                "data_mapping": {"query": "{{item.query}}", "response": "{{item.response}}"},
+                "data_mapping": {
+                    "query": "{{item.query}}",
+                    "response": "{{sample.output_items}}"
+                },
             }
         ]
         eval_object = openai_client.evals.create(
@@ -48,8 +52,8 @@ def test_evaluation():
             "source": {
                 "type": "file_content",
                 "content": [
-                    {"item": {"query": "Which products have wireless charging capabilities and what are their battery life specifications?"}},
-                    {"item": {"query": "Find products designed for comfort and temperature control - what features do they offer?"}},
+                    {"item": {"query": "Tell me a joke about a robot"}},
+                    {"item": {"query": "What are the best places to visit in Tokyo?"}},
                 ],
             },
             "input_messages": {
@@ -75,22 +79,14 @@ def test_evaluation():
             print(f"Waiting for eval run to complete... current status: {agent_eval_run.status}")
             time.sleep(5)
 
-
         if agent_eval_run.status == "completed":
             print("\n\u2713 Evaluation run completed successfully!")
             print(f"Result Counts: {agent_eval_run.result_counts}")
+            for criteria_name, result in agent_eval_run.per_testing_criteria_results.items():
+                print(f"Testing Criteria '{criteria_name}': {result}")
+            print(f"Report URL: {agent_eval_run.report_url}")
 
-            output_items = list(
-                openai_client.evals.runs.output_items.list(run_id=agent_eval_run.id, eval_id=eval_object.id)
-            )
-            print(f"\nOUTPUT ITEMS (Total: {len(output_items)})")
-            print(f"{'-'*60}")
-            pprint(output_items)
-            print(f"{'-'*60}")
-        else:
-            print("\n\u2717 Evaluation run failed.")
-
-        openai_client.evals.delete(eval_id=eval_object.id)
-        print("Evaluation deleted")
-
-        assert agent_eval_run.status == "completed"
+        # assertions
+        assert agent_eval_run.status == "completed", "Evaluation run did not complete successfully"
+        assert agent_eval_run.result_counts.errored == 0, "There were errored evaluations"
+        assert agent_eval_run.result_counts.failed == 0, "There were failed evaluations"
