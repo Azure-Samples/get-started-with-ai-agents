@@ -27,7 +27,7 @@ You can view the App Insights tracing in Azure AI Foundry. Select your project o
 
 **First, make sure tracing is working by following the steps in the [Tracing and Monitoring](#tracing-and-monitoring) section above.**
 
-AI Foundry offers a number of [built-in evaluators](https://learn.microsoft.com/azure/ai-foundry/how-to/develop/agent-evaluate-sdk) to measure the quality, efficiency, risk and safety of your agents. For example, intent resolution, tool call accuracy, and task adherence evaluators are targeted to assess the performance of agent workflow, while content safety evaluator checks for inappropriate content in the responses such as violence or hate.
+Microsoft Foundry offers a number of [built-in evaluators](https://learn.microsoft.com/azure/ai-foundry/how-to/develop/agent-evaluate-sdk) to measure the quality, efficiency, risk and safety of your agents. For example, intent resolution, tool call accuracy, and task adherence evaluators are targeted to assess the performance of agent workflow, while content safety evaluator checks for inappropriate content in the responses such as violence or hate.
 
 In this template, we show how these evaluations can be performed during different phases of your development cycle.
 
