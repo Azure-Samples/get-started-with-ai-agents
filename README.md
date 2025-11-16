@@ -40,11 +40,14 @@ Integrated monitoring capabilities, including Azure Monitor and Application Insi
 - **[Flexible Deployment Options](./docs/deployment.md)**<br/>
 The solution supports deployment through GitHub Codespaces, VS Code Dev Containers, or local environments, providing flexibility for different development workflows.
 
+- **[Continuous Evaluation](./docs/other_features.md#continuous-evaluation)**<br/>
+Proactively monitor and assess your agent's performance over time with continuous evaluation that automatically checks real-world interactions to identify potential issues before they impact users.
+
 - **[Agent Evaluation](./docs/other_features.md#agent-evaluation)**<br/>
-This solution demonstrates how you can evaluate your agent's performance and quality during local development and incorporate it into monitoring and CI/CD workflow.
+This solution demonstrates how you can evaluate your agent's performance and quality through Pytest.
 
 - **[AI Red Teaming Agent](./docs/other_features.md#ai-red-teaming-agent)**<br/>
-Facilitates the creation of an AI Red Teaming Agent that can run batch automated scans for safety and security scans on your Agent solution to check your risk posture before deploying it into production.
+Facilitates the creation of an AI Red Teaming Agent through Pytest that can run batch automated scans for safety and security on your Agent solution to check your risk posture before deploying it into production.
 
 <br/>
 

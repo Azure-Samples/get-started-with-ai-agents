@@ -23,6 +23,27 @@ You can view the App Insights tracing in Azure AI Foundry. Select your project o
 
 ![Tracing Tab](../docs/images/tracing_tab.png)
 
+## Continuous Evaluation
+
+Continuous evaluation is an automated monitoring capability that continuously assesses your agent's quality, performance, and safety as it handles real user interactions in production. It helps you catch potential issues early by running evaluators on actual conversations, ensuring your agent maintains high standards over time.
+
+During container startup, continuous evaluation is already set up but disabled by default. Continuous evaluation allows you to automatically monitor and assess your agent's performance over time as it handles real user interactions.
+
+To enable continuous evaluation:
+
+1. Go to [Azure AI Foundry Portal](https://ai.azure.com/) and sign in
+2. Click on your project from the homepage
+3. In the top navigation, select **Build on top**
+4. In the left-hand menu, select **Agents**
+5. Select **Monitor**
+6. Choose the agent you want to enable continuous evaluation for from the agent list
+7. Click on **Settings**
+8. Toggle the **Enabled** switch for continuous evaluation
+
+![Enable Continuous Evaluation](./images/enable_cont_eval.png)
+
+Once enabled, your agent will be continuously evaluated based on the configured criteria, allowing you to track performance metrics and identify potential issues in production.
+
 ## Agent Evaluation
 
 **First, make sure tracing is working by following the steps in the [Tracing and Monitoring](#tracing-and-monitoring) section above.**

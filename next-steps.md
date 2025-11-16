@@ -19,13 +19,6 @@ To troubleshoot any issues, see [troubleshooting](#troubleshooting).
 
 Configure environment variables for running services by updating `settings` in [main.parameters.json](./infra/main.parameters.json).
 
-### Configure CI/CD pipeline
-
-1. Create a workflow pipeline file locally. The following starters are available:
-   - [Deploy with GitHub Actions](https://github.com/Azure-Samples/azd-starter-bicep/blob/main/.github/workflows/azure-dev.yml)
-   - [Deploy with Azure Pipelines](https://github.com/Azure-Samples/azd-starter-bicep/blob/main/.azdo/pipelines/azure-dev.yml)
-2. Run `azd pipeline config` to configure the deployment pipeline to connect securely to Azure.
-
 ## What was added
 
 ### Infrastructure configuration
