@@ -25,7 +25,8 @@ from azure.ai.projects.models import (
     EvaluationRuleFilter,
     EvaluationRuleEventType,
     EvaluatorCategory,
-    EvaluatorDefinitionType
+    EvaluatorDefinitionType,
+    EvaluationRuleActionType
 )
 
 
@@ -188,43 +189,54 @@ async def create_agent(ai_project: AIProjectClient,
 async def initialize_eval(project_client: AIProjectClient, openai_client: AsyncOpenAI, agent_obj: AgentVersionObject, credential: AsyncTokenCredential):
     eval_rule_id = f"eval-rule-for-{agent_obj.name}-{agent_obj.version}"
     try:
-        await project_client.evaluation_rules.get(id=eval_rule_id)
-    except Exception as e:
-        logger.info("Failed to retrieve existing, let's create a Continuous Evaluation Rule")
+        eval_rules = project_client.evaluation_rules.list(
+                action_type=EvaluationRuleActionType.CONTINUOUS_EVALUATION,
+                agent_name=agent_obj.name)
+        rules_list = [rule async for rule in eval_rules]
+        if len(rules_list) >= 1:
+            print(f"Continuous Evaluation Rule for agent {agent_obj.name} already exists")
+        else:
+            # Create an evaluation with testing criteria
+            data_source_config = {"type": "azure_ai_source", "scenario": "responses"}
+            testing_criteria = [
+                {   "type": "azure_ai_evaluator", 
+                    "name": "violence_detection",
+                    "evaluator_name": "builtin.violence"
+                },
+                {
+                    "type": "azure_ai_evaluator",
+                    "name": "fluency",
+                    "evaluator_name": "builtin.fluency",
+                    "initialization_parameters": {"deployment_name": os.environ["AZURE_AI_AGENT_DEPLOYMENT_NAME"]},
+                    "data_mapping": {"query": "{{item.query}}", "response": "{{item.response}}"},
+                },
+            ]
+            eval_object = await openai_client.evals.create(
+                name=f"{agent_obj.name}:{agent_obj.version} Continuous Evaluation",
+                data_source_config=data_source_config,  # type: ignore
+                testing_criteria=testing_criteria,  # type: ignore
+            )
+            print(f"Evaluation created (id: {eval_object.id}, name: {eval_object.name})")
 
-        # Create an evaluation to be used by the continuous evaluation rule
-        data_source_config = {"type": "azure_ai_source", "scenario": "responses"}
-        testing_criteria = [
-            {"type": "azure_ai_evaluator", "name": "violence_detection", "evaluator_name": "builtin.violence"}
-        ]
-        eval_object = await openai_client.evals.create(
-            name=f"{agent_obj.name}:{agent_obj.version} Continuous Evaluation",
-            data_source_config=data_source_config,  # type: ignore
-            testing_criteria=testing_criteria,  # type: ignore
-        )
-        print(f"Evaluation created (id: {eval_object.id}, name: {eval_object.name})")
-
-        try:
+            # Configure a rule that triggers the evaluation on agent responses
             continuous_eval_rule = await project_client.evaluation_rules.create_or_update(
                 id=eval_rule_id,
                 evaluation_rule=EvaluationRule(
-                    display_name=f"{agent_obj.name}:{agent_obj.version} Eval Rule",
-                    description="Evaluate agent responses continuously",
+                    display_name=f"{agent_obj.name}:{agent_obj.version} Continuous Eval Rule",
+                    description="An eval rule that runs on agent response completions",
                     action=ContinuousEvaluationRuleAction(
-                        eval_id=eval_object.id,
-                        max_hourly_runs=10 # up to 10 evaluations per hour
-                    ),
+                        eval_id=eval_object.id, # link to evaluation created above
+                        max_hourly_runs=5), # set limit to control spending on evaluation
                     event_type=EvaluationRuleEventType.RESPONSE_COMPLETED,
-                    filter=EvaluationRuleFilter(
-                        agent_name=agent_obj.name
-                    ),
-                    enabled=False
-                )
+                    filter=EvaluationRuleFilter(agent_name=agent_obj.name),
+                    enabled=False,
+                ),
             )
-
-            logger.info(f"Continuous Evaluation Rule created (id: {continuous_eval_rule.id}, name: {continuous_eval_rule.display_name})")
-        except Exception as e:
-            logger.error(f"Error creating Continuous Evaluation Rule: {e}", exc_info=True)
+            print(
+                f"Continuous Evaluation Rule created (id: {continuous_eval_rule.id}, name: {continuous_eval_rule.display_name})"
+            )
+    except Exception as e:
+        logger.error(f"Error creating Continuous Evaluation Rule: {e}", exc_info=True)
 
 async def initialize_resources():
     proj_endpoint = os.environ.get("AZURE_EXISTING_AIPROJECT_ENDPOINT")
