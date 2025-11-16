@@ -119,6 +119,9 @@ param templateValidationMode bool = false
 @description('Random seed to be used during generation of new resources suffixes.')
 param seed string = newGuid()
 
+param searchServiceEndpoint string = ''
+param searchConnectionId string = ''
+
 var runnerPrincipalType = templateValidationMode? 'ServicePrincipal' : 'User'
 
 var abbrs = loadJsonContent('./abbreviations.json')
@@ -204,14 +207,17 @@ module ai 'core/host/ai-environment.bicep' = if (empty(azureExistingAIProjectRes
   }
 }
 
-var searchServiceEndpoint = !useSearchService
+var searchServiceEndpointFromAIOutput = !useSearchService
   ? ''
   : empty(azureExistingAIProjectResourceId) ? ai!.outputs.searchServiceEndpoint : ''
 
-  var searchConnectionId = !useSearchService
+var searchConnectionIdFromAIOutput = !useSearchService
   ? ''
   : empty(azureExistingAIProjectResourceId) ? ai!.outputs.searchConnectionId : ''
 
+var searchServiceEndpoint_final = empty(searchServiceEndpoint) ? searchServiceEndpointFromAIOutput : searchServiceEndpoint
+
+var searchConnectionId_final = empty(searchConnectionId) ? searchConnectionIdFromAIOutput : searchConnectionId
 
 // If bringing an existing AI project, set up the log analytics workspace here
 module logAnalytics 'core/monitor/loganalytics.bicep' = if (!empty(azureExistingAIProjectResourceId)) {
@@ -293,7 +299,7 @@ module api 'api.bicep' = {
     agentDeploymentName: agentDeploymentName
     searchConnectionName: searchConnectionName
     aiSearchIndexName: aiSearchIndexName
-    searchServiceEndpoint: searchServiceEndpoint
+    searchServiceEndpoint: searchServiceEndpointFromAIOutput
     embeddingDeploymentName: embeddingDeploymentName
     embeddingDeploymentDimensions: embeddingDeploymentDimensions
     agentName: agentName
@@ -447,7 +453,7 @@ output AZURE_AI_AGENT_DEPLOYMENT_NAME string = agentDeploymentName
 output AZURE_AI_SEARCH_CONNECTION_NAME string = searchConnectionName
 output AZURE_AI_EMBED_DEPLOYMENT_NAME string = embeddingDeploymentName
 output AZURE_AI_SEARCH_INDEX_NAME string = aiSearchIndexName
-output AZURE_AI_SEARCH_ENDPOINT string = searchServiceEndpoint
+output AZURE_AI_SEARCH_ENDPOINT string = searchServiceEndpoint_final
 output AZURE_AI_EMBED_DIMENSIONS string = embeddingDeploymentDimensions
 output AZURE_AI_AGENT_NAME string = agentName
 output AZURE_EXISTING_AGENT_ID string = agentID
@@ -461,5 +467,5 @@ output SERVICE_API_IDENTITY_PRINCIPAL_ID string = api.outputs.SERVICE_API_IDENTI
 output SERVICE_API_NAME string = api.outputs.SERVICE_API_NAME
 output SERVICE_API_URI string = api.outputs.SERVICE_API_URI
 output SERVICE_API_ENDPOINTS array = ['${api.outputs.SERVICE_API_URI}']
-output SEARCH_CONNECTION_ID string = searchConnectionId
+output SEARCH_CONNECTION_ID string = searchConnectionId_final
 output AZURE_CONTAINER_REGISTRY_ENDPOINT string = containerApps.outputs.registryLoginServer

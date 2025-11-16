@@ -115,6 +115,12 @@
     },
     "templateValidationMode": {
       "value": "${TEMPLATE_VALIDATION_MODE=false}"
+    },
+    "searchServiceEndpoint": {
+      "value": "${AZURE_AI_SEARCH_ENDPOINT}"
+    },
+    "searchConnectionId": {
+      "value": "${SEARCH_CONNECTION_ID}"
     }
   }
 }
