@@ -1,4 +1,4 @@
-# Observability Features
+# Observability features
 
 ## Tracing and monitoring
 
@@ -9,13 +9,13 @@ azd env set ENABLE_AZURE_MONITOR_TRACING true
 azd deploy
 ```
 
+### Console traces
+
 You can view console traces in the Azure portal. You can get the link to the resource group with the azd tool:
 
 ```shell
 azd show
 ```
-
-### Console traces
 
 Or if you want to navigate from the Azure portal main page, select your resource group from the 'Recent' list, or by clicking the 'Resource groups' and searching your resource group there.
 
@@ -25,22 +25,19 @@ After accessing your resource group in Azure portal, choose your container app f
 
 You can view both the server-side and client-side traces, cost and evaluation data in Azure AI Foundry. Go to the agent under your project on the Azure AI Foundry page and then click 'Tracing'.
 
-![Tracing Tab](../docs/images/tracing_tab.png)
+![Tracing Tab](./images/tracing_tab.png)
 
 ### Monitor
 
 Once App Insights is connected to your foundry project, you can also visit the monitoring dashboard to view trends such as agent runs and tokens count, error rates, evaluation results, and other key metrics that help you monitor agent performance and usage.
 
-
-![Monitor Dashboard](../docs/images/agent_monitor.png)
+![Monitor Dashboard](./images/agent_monitor.png)
 
 ## Continuous Evaluation
 
 Continuous evaluation is an automated monitoring capability that continuously assesses your agent's quality, performance, and safety as it handles real user interactions in production. It helps you catch potential issues early by running evaluators on actual conversations, ensuring your agent maintains high standards over time.
 
-During container startup, continuous evaluation is pre-configured with 1 sample evaluator and up to 5 evaluations of agent responses per hour by default. You may explore the built-in evaluator catalog or define your own custom evaluator to adapt to your need.
-
-To enable continuous evaluation:
+During container startup, continuous evaluation is pre-configured with a sample evaluator and up to 5 evaluations of agent responses per hour by default. To customize continuous evaluation from the Azure AI Foundry:
 
 1. Go to [Azure AI Foundry Portal](https://ai.azure.com/) and sign in
 2. Click on your project from the homepage
@@ -49,20 +46,18 @@ To enable continuous evaluation:
 5. Select **Monitor**
 6. Choose the agent you want to enable continuous evaluation for from the agent list
 7. Click on **Settings**
-8. Toggle the **Enabled** switch for continuous evaluation
+8. Select evaluators and adjust maximal number of runs per hour
 
-![Enable Continuous Evaluation](./images/enable_cont_eval.png)
-
-Once enabled, your agent will be continuously evaluated based on the configured criteria, allowing you to track agent metrics and identify potential issues in production.
+![Configure Continuous Evaluation](./images/enable_cont_eval.png)
 
 ## Agent Evaluation
 
-Microsoft Foundry offers a number of [built-in evaluators](https://learn.microsoft.com/azure/ai-foundry/how-to/develop/agent-evaluate-sdk) to measure the quality, efficiency, risk and safety of your agents. For example, intent resolution, tool call accuracy, and task adherence evaluators are targeted to assess the performance of agent workflow, while content safety evaluator checks for inappropriate content in the responses such as violence or hate. 
+Azure AI Foundry offers a number of [built-in evaluators](https://learn.microsoft.com/azure/ai-foundry/how-to/develop/agent-evaluate-sdk) to measure the quality, efficiency, risk and safety of your agents. For example, intent resolution, tool call accuracy, and task adherence evaluators are targeted to assess the performance of agent workflow, while content safety evaluator checks for inappropriate content in the responses such as violence or hate. 
 You can also create custom evaluators tailored to your specific requirements, including custom prompt-based evaluators or code-based evaluators that implement your unique assessment criteria.
 
-In this template, we show how these evaluations can be performed during different phases of your development cycle.
+In this template, we show how the evaluation of your agent can be intergrated into the test suite of your AI application.
 
-- **Local development**: You can use the [evaluation test script](../tests/test_evaluation.py) to validate your agent's performance using built-in Azure AI evaluators. The test demonstrates how to:
+You can use the [evaluation test script](../tests/test_evaluation.py) to validate your agent's performance using built-in Azure AI evaluators. The test demonstrates how to:
   - Define testing criteria using Azure AI evaluators (e.g., violence)
   - Run evaluation against specific test queries
   - Retrieve and analyze evaluation results
