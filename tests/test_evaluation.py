@@ -3,15 +3,12 @@
 # Licensed under the MIT License.
 # ------------------------------------
 
-import os
 import time
-from pprint import pprint
-from dotenv import load_dotenv
 from azure.identity import DefaultAzureCredential
 from azure.ai.projects import AIProjectClient
 from openai.types.eval_create_params import DataSourceConfigCustom
 
-from test_utils import retrieve_agent, retrieve_endpoint
+from test_utils import retrieve_agent, retrieve_endpoint, retrieve_model_deployment
 
 
 def test_evaluation():
@@ -22,22 +19,34 @@ def test_evaluation():
     ):
 
         agent = retrieve_agent(project_client)
+        model = retrieve_model_deployment()
 
         data_source_config = DataSourceConfigCustom(
             type="custom",
             item_schema={"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"]},
             include_sample_schema=True,
         )
-        # define testing criteria
+
+        # Define testing criteria. Explore the evaluator catalog for more built-in evaluators.
         testing_criteria = [
             {
                 "type": "azure_ai_evaluator",
-                "name": "violence_detection",
+                "name": "violence",
                 "evaluator_name": "builtin.violence",
                 "data_mapping": {
                     "query": "{{item.query}}",
-                    "response": "{{sample.output_items}}"
+                    "response": "{{sample.output_text}}"
                 },
+            },
+            {
+                "type": "azure_ai_evaluator",
+                "name": "fluency",
+                "evaluator_name": "builtin.fluency",
+                "data_mapping": {
+                    "query": "{{item.query}}",
+                    "response": "{{sample.output_text}}"
+                },
+                "initialization_parameters": {"deployment_name": f"{model}"},
             }
         ]
         eval_object = openai_client.evals.create(
@@ -47,6 +56,7 @@ def test_evaluation():
         )
         print(f"Evaluation created (id: {eval_object.id}, name: {eval_object.name})")
 
+        # Define data source for evaluation run
         data_source = {
             "type": "azure_ai_target_completions",
             "source": {
@@ -69,24 +79,24 @@ def test_evaluation():
             },
         }
 
+        # Submit evaluation run
         agent_eval_run = openai_client.evals.runs.create(
             eval_id=eval_object.id, name=f"Evaluation Run for Agent {agent.name}", data_source=data_source
         )
         print(f"Evaluation run created (id: {agent_eval_run.id})")
 
+        # Poll for completion
         while agent_eval_run.status not in ["completed", "failed"]:
             agent_eval_run = openai_client.evals.runs.retrieve(run_id=agent_eval_run.id, eval_id=eval_object.id)
             print(f"Waiting for eval run to complete... current status: {agent_eval_run.status}")
             time.sleep(5)
 
         if agent_eval_run.status == "completed":
-            print("\n\u2713 Evaluation run completed successfully!")
+            print("\n Evaluation run completed successfully!")
             print(f"Result Counts: {agent_eval_run.result_counts}")
-            for criteria_name, result in agent_eval_run.per_testing_criteria_results.items():
-                print(f"Testing Criteria '{criteria_name}': {result}")
             print(f"Report URL: {agent_eval_run.report_url}")
 
-        # assertions
-        assert agent_eval_run.status == "completed", "Evaluation run did not complete successfully"
-        assert agent_eval_run.result_counts.errored == 0, "There were errored evaluations"
-        assert agent_eval_run.result_counts.failed == 0, "There were failed evaluations"
+        # Assertions
+        assert agent_eval_run.status == "completed", "Evaluation run did not complete successfully. Review logs from the evaluation report."
+        assert agent_eval_run.result_counts.errored == 0, "There were errored evaluation items. Review error details in the evaluation report."
+        assert agent_eval_run.result_counts.failed == 0, "There were failed evaluation items. Review evaluation results and explanations in the evaluation report."
