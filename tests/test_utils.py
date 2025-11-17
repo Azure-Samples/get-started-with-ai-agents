@@ -41,3 +41,9 @@ def retrieve_endpoint():
     if not endpoint:
         raise ValueError("Please set AZURE_EXISTING_AIPROJECT_ENDPOINT environment variable.")
     return endpoint
+
+def retrieve_model_deployment():
+    deployment = os.environ.get("AZURE_AI_AGENT_DEPLOYMENT_NAME", "")
+    if not deployment:
+        raise ValueError("Please set AZURE_AI_AGENT_DEPLOYMENT_NAME environment variable.")
+    return deployment

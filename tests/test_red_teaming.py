@@ -4,9 +4,6 @@
 # Licensed under the MIT License.
 # ------------------------------------
 
-import os
-
-from dotenv import load_dotenv
 from pprint import pprint
 from azure.identity import DefaultAzureCredential
 from azure.ai.projects import AIProjectClient
@@ -17,15 +14,11 @@ from azure.ai.projects.models import (
     AgentTaxonomyInput,
     RiskCategory,
 )
-import json
 import time
 from azure.ai.projects.models import EvaluationTaxonomy, AgentVersionObject
 from test_utils import retrieve_agent, retrieve_endpoint
 
 def test_red_teaming() -> None:
-    # Construct the paths to the data folder and data file used in this sample
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    data_folder = os.environ.get("DATA_FOLDER", os.path.join(script_dir, "data_folder"))
 
     with (
         DefaultAzureCredential(exclude_interactive_browser_credential=False) as credential,
@@ -35,46 +28,39 @@ def test_red_teaming() -> None:
             
         agent = retrieve_agent(project_client)
 
-        eval_group_name = "Red Team Agent Safety Eval Group -" + str(int(time.time()))
-        eval_run_name = f"Red Team Agent Safety Eval Run for {agent.name} -" + str(int(time.time()))
+        eval_group_name = "Red Team Agent Safety evaluation -" + str(int(time.time()))
+        eval_run_name = f"Red Team Agent Safety evaluation run for {agent.name} -" + str(int(time.time()))
         data_source_config = {"type": "azure_ai_source", "scenario": "red_team"}
 
-        testing_criteria = _get_agent_safety_evaluation_criteria()
-        print(f"Defining testing criteria for red teaming for agent target")
+        # Define testing criteria for red teaming. 
+        # Explore evaluator catalog for assessments of additional risk categories.
+        testing_criteria = [
+             {
+                "type": "azure_ai_evaluator",
+                "name": "Prohibited Actions",
+                "evaluator_name": "builtin.prohibited_actions"
+            }
+        ]
         pprint(testing_criteria)
 
-        print("Creating Eval Group")
         eval_object = client.evals.create(
             name=eval_group_name,
             data_source_config=data_source_config,
             testing_criteria=testing_criteria,
         )
-        print(f"Eval Group created for red teaming: {eval_group_name}")
-
-        print(f"Get Eval Group by Id: {eval_object.id}")
-        eval_object_response = client.evals.retrieve(eval_object.id)
-        print("Eval Group Response:")
-        pprint(eval_object_response)
+        print(f"Red team evaluation created for red teaming: {eval_group_name}")
 
         risk_categories_for_taxonomy = [RiskCategory.PROHIBITED_ACTIONS]
         target = AzureAIAgentTarget(
             name=agent.name, version=agent.version, tool_descriptions=_get_tool_descriptions(agent)
         )
         agent_taxonomy_input = AgentTaxonomyInput(risk_categories=risk_categories_for_taxonomy, target=target)
-        print("Creating Eval Taxonomies")
         eval_taxonomy_input = EvaluationTaxonomy(
             description="Taxonomy for red teaming evaluation", taxonomy_input=agent_taxonomy_input
         )
-
         taxonomy = project_client.evaluation_taxonomies.create(name=agent.name, body=eval_taxonomy_input)
-        taxonomy_path = os.path.join(data_folder, f"taxonomy_{agent.name}.json")
-        # Create the data folder if it doesn't exist
-        os.makedirs(data_folder, exist_ok=True)
-        with open(taxonomy_path, "w") as f:
-            f.write(json.dumps(_to_json_primitive(taxonomy), indent=2))
-        print(f"RedTeaming Taxonomy created for agent: {agent.name}. Taxonomy written to {taxonomy_path}")
-
-        print("Creating RedTeaming Eval Run")
+        
+        # Submit evaluation run for red teaming
         eval_run_object = client.evals.runs.create(
             eval_id=eval_object.id,
             name=eval_run_name,
@@ -83,7 +69,7 @@ def test_red_teaming() -> None:
                 "item_generation_params": {
                     "type": "red_team_taxonomy",
                     "attack_strategies": ["Flip", "Base64"],
-                    "num_turns": 5,
+                    "num_turns": 1, # number of interaction turns per item
                     "source": {"type": "file_id", "id": taxonomy.id},
                 },
                 "target": target.as_dict(),
@@ -91,30 +77,21 @@ def test_red_teaming() -> None:
         )
 
         print(f"Eval Run created for red teaming: {eval_run_name}")
-        pprint(eval_run_object)
-
-        print(f"Get Eval Run by Id: {eval_run_object.id}")
-        eval_run_response = client.evals.runs.retrieve(run_id=eval_run_object.id, eval_id=eval_object.id)
-        print("Eval Run Response:")
-        pprint(eval_run_response)
-
+        
+        # Poll for completion
         while True:
-            run = client.evals.runs.retrieve(run_id=eval_run_response.id, eval_id=eval_object.id)
+            run = client.evals.runs.retrieve(run_id=eval_run_object.id, eval_id=eval_object.id)
             if run.status == "completed" or run.status == "failed":
-                output_items = list(client.evals.runs.output_items.list(run_id=run.id, eval_id=eval_object.id))
-                output_items_path = os.path.join(data_folder, f"redteam_eval_output_items_{agent.name}.json")
-                # Create the data folder if it doesn't exist
-                os.makedirs(data_folder, exist_ok=True)
-                with open(output_items_path, "w") as f:
-                    f.write(json.dumps(_to_json_primitive(output_items), indent=2))
-                print(
-                    f"RedTeam Eval Run completed with status: {run.status}. Output items written to {output_items_path}"
-                )
+                print(f"Result Counts: {run.result_counts}")
+                print(f"Report URL: {run.report_url}")
                 break
             time.sleep(5)
-            print("Waiting for eval run to complete...")
+            print(f"Waiting for eval run to complete... {run.status}")
 
-        assert run.status == "completed"
+        # assertions
+        assert run.status == "completed", "Evaluation run did not complete successfully. Review logs from the evaluation report."
+        assert run.result_counts.errored == 0, "There were errored evaluation items. Review error details in the evaluation report."
+        assert run.result_counts.failed == 0, "There were failed evaluation items. Review evaluation results and explanations in the evaluation report."
 
 
 def _get_tool_descriptions(agent: AgentVersionObject):
@@ -141,63 +118,3 @@ def _get_tool_descriptions(agent: AgentVersionObject):
             )
 
     return tool_descriptions
-
-
-def _get_agent_safety_evaluation_criteria():
-    return [
-        {
-            "type": "azure_ai_evaluator",
-            "name": "Prohibited Actions",
-            "evaluator_name": "builtin.prohibited_actions",
-            "evaluator_version": "1",
-        },
-        {
-            "type": "azure_ai_evaluator",
-            "name": "Task Adherence",
-            "evaluator_name": "builtin.task_adherence",
-            "evaluator_version": "1",
-        },
-        {
-            "type": "azure_ai_evaluator",
-            "name": "Sensitive Data Leakage",
-            "evaluator_name": "builtin.sensitive_data_leakage",
-            "evaluator_version": "1",
-        },
-        {
-            "type": "azure_ai_evaluator",
-            "name": "Self Harm",
-            "evaluator_name": "builtin.self_harm",
-            "evaluator_version": "1",
-        },
-        {
-            "type": "azure_ai_evaluator",
-            "name": "Violence",
-            "evaluator_name": "builtin.violence",
-            "evaluator_version": "1",
-        },
-        {"type": "azure_ai_evaluator", "name": "Sexual", "evaluator_name": "builtin.sexual", "evaluator_version": "1"},
-        {
-            "type": "azure_ai_evaluator",
-            "name": "Hate Unfairness",
-            "evaluator_name": "builtin.hate_unfairness",
-            "evaluator_version": "1",
-        },
-    ]
-
-
-def _to_json_primitive(obj):
-    if obj is None or isinstance(obj, (str, int, float, bool)):
-        return obj
-    if isinstance(obj, (list, tuple)):
-        return [_to_json_primitive(i) for i in obj]
-    if isinstance(obj, dict):
-        return {k: _to_json_primitive(v) for k, v in obj.items()}
-    for method in ("to_dict", "as_dict", "dict", "serialize"):
-        if hasattr(obj, method):
-            try:
-                return _to_json_primitive(getattr(obj, method)())
-            except Exception:
-                pass
-    if hasattr(obj, "__dict__"):
-        return _to_json_primitive({k: v for k, v in vars(obj).items() if not k.startswith("_")})
-    return str(obj)
