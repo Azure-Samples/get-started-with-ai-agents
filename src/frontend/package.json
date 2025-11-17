@@ -6,14 +6,14 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "setup": "npm install -g pnpm@10.4.1 && pnpm install && pnpm build",
+    "setup": "npm install -g pnpm@10.6.0 && pnpm install && pnpm build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "packageManager": "pnpm@10.4.1",
+  "packageManager": "pnpm@10.6.0",
   "dependencies": {
     "@fluentui-copilot/react-copilot": "0.23.3",
     "@fluentui-copilot/react-copilot-chat": "0.9.6",
@@ -27,21 +27,21 @@
     "@vitejs/plugin-react": "4.4.1",
     "clsx": "2.1.1",
     "copy-to-clipboard": "^3.3.3",
+    "prismjs": "1.30.0",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-markdown": "10.1.0",
-    "react-syntax-highlighter": "^15.5.0",
-    "rehype-katex": "^7.0.0",
+    "react-syntax-highlighter": "^15.6.1",
+    "rehype-katex": "^7.0.1",
     "rehype-raw": "^7.0.0",
     "rehype-sanitize": "^6.0.0",
-    "rehype-stringify": "^10.0.0",
+    "rehype-stringify": "^10.0.1",
     "remark-breaks": "^4.0.0",
-    "remark-gfm": "^4.0.0",
+    "remark-gfm": "^4.0.1",
     "remark-math": "^6.0.0",
     "remark-parse": "^11.0.0",
     "remark-supersub": "^1.0.0",
-    "vite": "6.3.4",
-    "prismjs": "1.30.0"
+    "vite": "^6.4.1"
   },
   "devDependencies": {
     "@types/node": "22.14.1",
@@ -51,6 +51,7 @@
     "typescript": "5.8.3"
   },
   "resolutions": {
-    "prismjs": "1.30.0"
+    "prismjs": "1.30.0",
+    "esbuild": ">=0.27.0"
   }
 }

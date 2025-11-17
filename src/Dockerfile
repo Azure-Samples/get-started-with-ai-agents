@@ -13,14 +13,17 @@ RUN apt-get update \
     && apt-get install -y curl \
     && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
     && apt-get install -y nodejs \
-    && npm install -g pnpm@10.4.1 \
+    && npm install -g pnpm@10.6.0 \
     && node --version \
     && pnpm --version
 
 # Build React frontend
 WORKDIR /code/frontend
-RUN pnpm install \
-    && pnpm build
+RUN pnpm install --frozen-lockfile=false \
+    && pnpm build \
+    && rm -rf node_modules \
+    && rm -rf /root/.local/share/pnpm \
+    && rm -rf /root/.pnpm-store
 
 
 RUN apt-get purge -y krb5-user libkrb5-3 libkrb5support0 libgssapi-krb5-2
