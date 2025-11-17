@@ -239,9 +239,8 @@ You can view the App Insights tracing in Azure AI Foundry. Select your project o
 
 The default for the model capacity in deployment is 80k tokens for chat model and 50k for embedded model for AI Search. For optimal performance, it is recommended to increase to 100k tokens. You can change the capacity by following the steps in [setting capacity and deployment SKU](deploy_customization.md#customizing-model-deployments).
 
-- Navigate to the home screen of the [Azure AI Foundry Portal](https://ai.azure.com/)
-- Select Quota Management buttom at the bottom of the home screen
-* In the Quota tab, click the GlobalStandard dropdown and select the model and region you are using for this accelerator to see your available quota. Please note gpt-4o-mini and text-embedding-3-small are used as default.
+- Navigate to [Monitor and track your quota usage](https://ai.azure.com/managementCenter/quota)
+* In the Quota tab, click the GlobalStandard dropdown and select the model and region you are using for this accelerator to see your available quota. Please note gpt-4o and text-embedding-3-small are used as default.
 - Request more quota or delete any unused model deployments as needed.
 
 </details>
