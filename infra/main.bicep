@@ -7,7 +7,7 @@ param environmentName string
 
 @description('Location for all resources')
 // Based on the model, creating an agent is not supported in all regions. 
-// The combination of allowed and usageName below is for AZD to check AI model gpt-4o-mini quota only for the allowed regions for creating an agent.
+// The combination of allowed and usageName below is for AZD to check AI model gpt-4o quota only for the allowed regions for creating an agent.
 // If using different models, update the SKU,capacity depending on the model you use.
 // https://learn.microsoft.com/azure/ai-services/agents/concepts/model-region-support
 @allowed([
