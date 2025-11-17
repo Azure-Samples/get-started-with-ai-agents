@@ -35,13 +35,15 @@ Once App Insights is connected to your foundry project, you can also visit the m
 
 ## Continuous Evaluation
 
-Continuous evaluation is an automated monitoring capability that continuously assesses your agent's quality, performance, and safety as it handles real user interactions in production. It helps you catch potential issues early by running evaluators on actual conversations, ensuring your agent maintains high standards over time.
+Continuous evaluation is an automated monitoring capability that continuously assesses your agent's quality, performance, and safety as it handles real user interactions in production.
 
-During container startup, continuous evaluation is pre-configured with a sample evaluator and up to 5 evaluations of agent responses per hour by default. To customize continuous evaluation from the Azure AI Foundry:
+During container startup, continuous evaluation is `enabled` by default and pre-configured with a sample evaluator set to evaluate up to `5` agent responses per hour. Continuous evaluation does not generate test inputs—instead, it evaluates real user conversations as they occur. This means evaluation runs are triggered only when actual users interact with your agent, and if there are no user interactions, there will be no evaluation entries.
+
+To customize continuous evaluation from the Azure AI Foundry:
 
 1. Go to [Azure AI Foundry Portal](https://ai.azure.com/) and sign in
 2. Click on your project from the homepage
-3. In the top navigation, select **Build on top**
+3. In the top navigation, select **Build**
 4. In the left-hand menu, select **Agents**
 5. Select **Monitor**
 6. Choose the agent you want to enable continuous evaluation for from the agent list
@@ -71,9 +73,10 @@ You can use the [evaluation test script](../tests/test_evaluation.py) to validat
 
   1. Go to [Azure AI Foundry Portal](https://ai.azure.com/) and sign in
   2. Click on your project from the homepage
-  3. In the left-hand menu, select **Agents**
-  4. Choose the agent you want to inspect
-  5. The Agent ID will be shown in the agent's detail panel—usually near the top or under the "Properties" or "Overview" tab
+  3. In the top navigation, select **Build**
+  4. In the left-hand menu, select **Agents**
+  5. Locate your agent in the list - the agent name and version will be displayed
+  6. The Agent ID follows the format: `{agent_name}:{agent_version}` (e.g., `agent-template-assistant:1`)
   
   ![Agent ID in Foundry UI](./images/agent_id_in_foundry_ui.png)
 
