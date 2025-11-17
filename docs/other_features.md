@@ -65,6 +65,7 @@ You can use the [evaluation test script](../tests/test_evaluation.py) to validat
   The test reads the following environment variables:
   - `AZURE_EXISTING_AIPROJECT_ENDPOINT`: AI Project endpoint
   - `AZURE_EXISTING_AGENT_ID`: AI Agent Id in the format `agent_name:agent_version` (with fallback logic to look up the latest version by name using `AZURE_AI_AGENT_NAME`)
+  - `AZURE_AI_AGENT_DEPLOYMENT_NAME`: The judge model deployment name used by evaluators
 
   **Note:** Most of these environment variables are generated locally in `.env` after executing `azd up`. To find the Agent ID remotely in the Azure AI Foundry Portal:
 
