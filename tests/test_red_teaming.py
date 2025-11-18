@@ -118,3 +118,7 @@ def _get_tool_descriptions(agent: AgentVersionObject):
             )
 
     return tool_descriptions
+
+
+if __name__ == "__main__":
+    test_red_teaming()

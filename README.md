@@ -34,19 +34,19 @@ The AI agent uses file search or Azure AI Search to retrieve knowledge from uplo
 - **[Customizable AI Model Deployment](./docs/deploy_customization.md#customizing-model-deployments)**<br/>
 The solution allows users to configure and deploy AI models, such as gpt-4o-mini, with options to adjust model capacity, and knowledge retrieval methods.
 
-- **[Built-in Monitoring and Tracing](./docs/other_features.md#tracing-and-monitoring)**<br/>
+- **[Built-in Monitoring and Tracing](./docs/observability.md#tracing-and-monitoring)**<br/>
 Integrated monitoring capabilities, including Azure Monitor and Application Insights, enable tracing and logging for easier troubleshooting and performance optimization.
 
 - **[Flexible Deployment Options](./docs/deployment.md)**<br/>
 The solution supports deployment through GitHub Codespaces, VS Code Dev Containers, or local environments, providing flexibility for different development workflows.
 
-- **[Continuous Evaluation](./docs/other_features.md#continuous-evaluation)**<br/>
+- **[Continuous Evaluation](./docs/observability.md#continuous-evaluation)**<br/>
 Proactively monitor and assess your agent's performance over time with continuous evaluation that automatically checks real-world interactions to identify potential issues before they impact users.
 
-- **[Agent Evaluation](./docs/other_features.md#agent-evaluation)**<br/>
+- **[Agent Evaluation](./docs/observability.md#agent-evaluation)**<br/>
 This solution demonstrates how you can evaluate your agent's performance and quality through Pytest.
 
-- **[AI Red Teaming Agent](./docs/other_features.md#ai-red-teaming-agent)**<br/>
+- **[AI Red Teaming Agent](./docs/observability.md#ai-red-teaming-agent)**<br/>
 Facilitates the creation of an AI Red Teaming Agent through Pytest that can run batch automated scans for safety and security on your Agent solution to check your risk posture before deploying it into production.
 
 <br/>
