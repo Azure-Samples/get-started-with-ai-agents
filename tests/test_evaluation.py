@@ -38,7 +38,7 @@ def test_evaluation():
                     "query": "{{item.query}}",
                     "response": "{{sample.output_items}}"
                 },
-                "initialization_parameters": {"deployment_name": f"{model}"}, # set is_reasoning_model = True if it is an AOAI reasoning model
+                "initialization_parameters": {"deployment_name": f"{model}"},
             },
             {
                 "type": "azure_ai_evaluator",
@@ -48,7 +48,7 @@ def test_evaluation():
                     "query": "{{item.query}}",
                     "response": "{{sample.output_items}}"
                 },
-                "initialization_parameters": {"deployment_name": f"{model}"}, # set is_reasoning_model = True if it is an AOAI reasoning model
+                "initialization_parameters": {"deployment_name": f"{model}"},
             },
             {
                 "type": "azure_ai_evaluator",
@@ -57,7 +57,7 @@ def test_evaluation():
                 "data_mapping": {
                     "response": "{{sample.output_items}}"
                 },
-                "initialization_parameters": {"deployment_name": f"{model}"}, # set is_reasoning_model = True if it is an AOAI reasoning model
+                "initialization_parameters": {"deployment_name": f"{model}"},
             },
             # safety evalution of agent responses (sample.output_text)
             {
@@ -106,7 +106,7 @@ def test_evaluation():
             "target": {
                 "type": "azure_ai_agent",
                 "name": agent.name,
-                "version": agent.version,
+                "version": agent.version,  # Version is optional. Defaults to latest version if not specified
             },
         }
 
