@@ -12,13 +12,13 @@ To deploy this Azure environment successfully, your Azure account (the account y
 
 You can view the permissions for your account and subscription by going to Azure portal, clicking 'Subscriptions' under 'Navigation' and then choosing your subscription from the list. If cannot find the subscription, make sure no filters are selected. After selecting your subscription, select 'Access control (IAM)' and you can see the roles that are assigned to your account for this subscription. To get more information about the roles, go to the 'Role assignments' tab, search by your account name and click the role you want to view more information about.
 
-Check the [Azure Products by Region](https://azure.microsoft.com/en-us/explore/global-infrastructure/products-by-region/?products=all&regions=all) page and select a **region** where the following services are available:
+Check the [Azure Products by Region](https://azure.microsoft.com/explore/global-infrastructure/products-by-region/?products=all&regions=all) page and select a **region** where the following services are available:
 
-- [Azure AI Foundry](https://learn.microsoft.com/en-us/azure/ai-foundry/)
-- [Azure Container Apps](https://learn.microsoft.com/en-us/azure/container-apps/)
-- [Azure Container Registry](https://learn.microsoft.com/en-us/azure/container-registry/)
-- [Azure AI Search](https://learn.microsoft.com/en-us/azure/search/)
-- [GPT Model Capacity](https://learn.microsoft.com/en-us/azure/ai-services/openai/concepts/models)
+- [Azure AI Foundry](https://learn.microsoft.com/azure/ai-foundry/)
+- [Azure Container Apps](https://learn.microsoft.com/azure/container-apps/)
+- [Azure Container Registry](https://learn.microsoft.com/azure/container-registry/)
+- [Azure AI Search](https://learn.microsoft.com/azure/search/)
+- [GPT Model Capacity](https://learn.microsoft.com/azure/ai-services/openai/concepts/models)
 
 Here are some examples of the regions where the services are available: East US, East US2, Japan East, UK South, Sweden Central.
 
@@ -184,12 +184,12 @@ When you start a deployment, most parameters will have default values. You can c
 
 | **Setting** | **Description** |  **Default value** |
 |------------|----------------|  ------------|
-| **Existing Project Resource ID** | Specify an existing project resource ID to be used instead of provisioning new Azure AI Foundry project and Azure AI services. |   |
+| **Existing Project Resource ID** | Specify an existing project resource ID to be used instead of provisioning new Azure AI Foundry project and Foundry Tools. |   |
 | **Azure Region** | Select a region with quota which supports your selected model. |   |
-| **Model** | Choose from the [list of models supported by Azure AI Agent Service](https://learn.microsoft.com/azure/ai-services/agents/concepts/model-region-support) for your selected region. | gpt-4o-mini |  
+| **Model** | Choose from the [list of models supported by Foundry Agent Service](https://learn.microsoft.com/azure/ai-services/agents/concepts/model-region-support) for your selected region. | gpt-4o |  
 | **Model Format** | Choose from OpenAI or Microsoft, depending on your model. | OpenAI |  
 | **Model Deployment Capacity** | Configure capacity for your model. | 80k |
-| **Embedding Model** | Choose from text-embedding-3-large, text-embedding-3-small, and text-embedding-ada-002. This may only be deployed if Azure AI Search is enabled. |  text-embedding-3-small |
+| **Embedding Model** | Choose from text-embedding-3-large, azdtext-embedding-3-small, and text-embedding-ada-002. This may only be deployed if Azure AI Search is enabled. |  text-embedding-3-small |
 | **Embedding Model Capacity** | Configure capacity for your embedding model. |  50k |
 | **Knowledge Retrieval** | Choose OpenAI's file search or Azure AI Search Index. |  OpenAI's file search |
 
@@ -225,7 +225,7 @@ azd env set ENABLE_AZURE_MONITOR_TRACING true
 To enable message contents to be included in the traces, set the following environment variable. Note that the messages may contain personally identifiable information.
 
 ```shell
-azd env set AZURE_TRACING_GEN_AI_CONTENT_RECORDING_ENABLED true
+azd env set OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT true
 ```
 
 You can view the App Insights tracing in Azure AI Foundry. Select your project on the Azure AI Foundry page and then click 'Tracing'.
@@ -239,9 +239,8 @@ You can view the App Insights tracing in Azure AI Foundry. Select your project o
 
 The default for the model capacity in deployment is 80k tokens for chat model and 50k for embedded model for AI Search. For optimal performance, it is recommended to increase to 100k tokens. You can change the capacity by following the steps in [setting capacity and deployment SKU](deploy_customization.md#customizing-model-deployments).
 
-- Navigate to the home screen of the [Azure AI Foundry Portal](https://ai.azure.com/)
-- Select Quota Management buttom at the bottom of the home screen
-* In the Quota tab, click the GlobalStandard dropdown and select the model and region you are using for this accelerator to see your available quota. Please note gpt-4o-mini and text-embedding-3-small are used as default.
+- Navigate to [Monitor and track your quota usage](https://ai.azure.com/managementCenter/quota)
+* In the Quota tab, click the GlobalStandard dropdown and select the model and region you are using for this accelerator to see your available quota. Please note gpt-4o and text-embedding-3-small are used as default.
 - Request more quota or delete any unused model deployments as needed.
 
 </details>
@@ -269,7 +268,7 @@ Once you've opened the project in [Codespaces](#github-codespaces) or in [Dev Co
 
 3. You will be prompted to provide an `azd` environment name (like "azureaiapp"), select a subscription from your Azure account, and select a location which has quota for all the resources. Then, it will provision the resources in your account and deploy the latest code.
 
-    - For guidance on selecting a region with quota and model availability, follow the instructions in the [quota recommendations](#quota-recommendations) section and ensure that your model is available in your selected region by checking the [list of models supported by Azure AI Agent Service](https://learn.microsoft.com/azure/ai-services/agents/concepts/model-region-support)
+    - For guidance on selecting a region with quota and model availability, follow the instructions in the [quota recommendations](#quota-recommendations) section and ensure that your model is available in your selected region by checking the [list of models supported by Foundry Agent Service](https://learn.microsoft.com/azure/ai-services/agents/concepts/model-region-support)
     - This deployment will take 7-10 minutes to provision the resources in your account and set up the solution with sample data.
     - If you get an error or timeout with deployment, changing the location can help, as there may be availability constraints for the resources. You can do this by running `azd down` and deleting the `.azure` folder from your code, and then running `azd up` again and selecting a new region.
 

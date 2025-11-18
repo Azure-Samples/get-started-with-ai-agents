@@ -1,3 +1,4 @@
 -r src/requirements.txt
+pytest
 ruff
 pre-commit

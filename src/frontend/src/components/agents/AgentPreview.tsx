@@ -15,7 +15,8 @@ import { AgentPreviewChatBot } from "./AgentPreviewChatBot";
 import { MenuButton } from "../core/MenuButton/MenuButton";
 import { IChatItem } from "./chatbot/types";
 import { Waves } from "./Waves";
-import { BuiltWithBadge } from "./BuiltWithBadge";
+/* temporarily disable BuiltWithBadge */
+// import { BuiltWithBadge } from "./BuiltWithBadge";
 
 import styles from "./AgentPreview.module.css";
 
@@ -46,34 +47,69 @@ interface IAgentPreviewProps {
 }
 
 interface IAnnotation {
-  file_name?: string;
-  text: string;
-  start_index: number;
-  end_index: number;
+  label: string;
+  index: number;
 }
 
 const preprocessContent = (
   content: string,
   annotations?: IAnnotation[]
 ): string => {
-  if (annotations) {
-    // Process annotations in reverse order so that the indexes remain valid
-    annotations
-      .slice()
-      .reverse()
-      .forEach((annotation) => {
-        // If there's a file_name, show it (wrapped in brackets), otherwise fall back to annotation.text.
-        const linkText = annotation.file_name
-          ? `[${annotation.file_name}]`
-          : annotation.text;
-
-        content =
-          content.slice(0, annotation.start_index) +
-          linkText +
-          content.slice(annotation.end_index);
-      });
+  if (!annotations || annotations.length === 0) {
+    return content;
   }
-  return content;
+
+  // Process annotations in descending order index, ascending label, remove duplicates
+  let processedContent = content;
+  annotations
+    .slice()
+    .sort((a, b) => {
+      // Primary sort: descending index
+      if (b.index !== a.index) {
+        return b.index - a.index;
+      }
+      // Secondary sort: descending label (as tiebreaker)
+      return b.label.localeCompare(a.label);
+    })
+    .filter((annotation, index, self) => 
+      index === self.findIndex(a => a.label === annotation.label && a.index === annotation.index))
+    .forEach((annotation) => {
+      // Only process if the index is valid and within bounds
+      if (annotation.index >= 0 && annotation.index <= processedContent.length) {
+        // If there's a label, show it (wrapped in brackets), inserting after the index
+        processedContent =
+          processedContent.slice(0, annotation.index + 1) +
+          ` [${annotation.label}]` +
+          processedContent.slice(annotation.index + 1);
+      }
+    });
+  return processedContent;
+};
+
+const formatTimestampToLocalTime = (timestampStr: string): string => {
+  // Convert timestamp string to local timezone with specific format
+  let localTime = new Date().toLocaleString();
+  if (timestampStr) {
+    try {
+      // Parse timestamp (assuming it's a Unix timestamp in seconds as string, could be float)
+      const timestamp = parseFloat(timestampStr);
+      if (!isNaN(timestamp)) {
+        const date = new Date(timestamp * 1000); // Convert to milliseconds
+        localTime = date.toLocaleDateString('en-US', {
+          month: '2-digit',
+          day: '2-digit',
+          year: '2-digit'
+        }) + ', ' + date.toLocaleTimeString('en-US', {
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true
+        });
+      }
+    } catch (e) {
+      console.error('Error parsing timestamp:', e);
+    }
+  }
+  return localTime;
 };
 
 export function AgentPreview({ agentDetails }: IAgentPreviewProps): ReactNode {
@@ -105,12 +141,14 @@ export function AgentPreview({ agentDetails }: IAgentPreviewProps): ReactNode {
         const reversedResponse = [...json_response].reverse();
 
         for (const entry of reversedResponse) {
+          const localTime = formatTimestampToLocalTime(entry.created_at);
+
           if (entry.role === "user") {
             historyMessages.push({
               id: crypto.randomUUID(),
               content: entry.content,
               role: "user",
-              more: { time: entry.created_at }, // Or use timestamp from history if available
+              more: { time: localTime },
             });
           } else {
             historyMessages.push({
@@ -118,29 +156,33 @@ export function AgentPreview({ agentDetails }: IAgentPreviewProps): ReactNode {
               content: preprocessContent(entry.content, entry.annotations),
               role: "assistant", // Assuming 'assistant' role for non-user
               isAnswer: true, // Assuming this property for assistant messages
-              more: { time: entry.created_at }, // Or use timestamp from history if available
+              more: { time: localTime },
               // annotations: entry.annotations, // If you plan to use annotations
             });
           }
         }
         setMessageList((prev) => [...historyMessages, ...prev]); // Prepend history
       } else {
-        const errorChatItem = createAssistantMessageDiv(); // This will add an empty message first
-        appendAssistantMessage(
-          errorChatItem,
-          "Error occurs while loading chat history!",
-          false
-        );
+        // For error messages, add directly to messageList without preprocessing
+        const errorMessage: IChatItem = {
+          id: crypto.randomUUID(),
+          content: "Error occurs while loading chat history!",
+          isAnswer: true,
+          more: { time: new Date().toISOString() },
+        };
+        setMessageList(prev => [...prev, errorMessage]);
       }
       setIsLoadingChatHistory(false);
     } catch (error) {
       console.error("Failed to load chat history:", error);
-      const errorChatItem = createAssistantMessageDiv();
-      appendAssistantMessage(
-        errorChatItem,
-        "Error occurs while loading chat history!",
-        false
-      );
+      // For error messages, add directly to messageList without preprocessing
+      const errorMessage: IChatItem = {
+        id: crypto.randomUUID(),
+        content: "Error occurs while loading chat history!",
+        isAnswer: true,
+        more: { time: new Date().toISOString() },
+      };
+      setMessageList(prev => [...prev, errorMessage]);
       setIsLoadingChatHistory(false);
     }
   };
@@ -236,6 +278,7 @@ export function AgentPreview({ agentDetails }: IAgentPreviewProps): ReactNode {
     let isStreaming = true;
     let buffer = "";
     let annotations: IAnnotation[] = [];
+    let hasReceivedCompletedMessage = false;
 
     // Create a reader for the SSE stream
     const reader = stream.getReader();
@@ -277,23 +320,6 @@ export function AgentPreview({ agentDetails }: IAgentPreviewProps): ReactNode {
 
             console.log("[ChatClient] Parsed SSE event:", data);
 
-            if (data.error) {
-              if (!chatItem) {
-                chatItem = createAssistantMessageDiv();
-                console.log(
-                  "[ChatClient] Created new messageDiv for assistant."
-                );
-              }
-
-              setIsResponding(false);
-              appendAssistantMessage(
-                chatItem,
-                data.error.message || "An error occurred.",
-                false
-              );
-              return;
-            }
-
             // Check the data type to decide how to update the UI
             if (data.type === "stream_end") {
               // End of the stream
@@ -313,18 +339,50 @@ export function AgentPreview({ agentDetails }: IAgentPreviewProps): ReactNode {
               }
 
               if (data.type === "completed_message") {
-                clearAssistantMessage(chatItem);
-                accumulatedContent = data.content;
-                annotations = data.annotations;
-                isStreaming = false;
+                // Each completed_message should get its own balloon
+                if (hasReceivedCompletedMessage) {
+                  // We've already processed a completed message, so create a new balloon for this one
+                  chatItem = createAssistantMessageDiv();
+                  console.log(
+                    "[ChatClient] Created new messageDiv for additional completed message."
+                  );
+                  
+                  // Reset for the new message
+                  accumulatedContent = data.content;
+                  annotations = data.annotations || [];
+                } else {
+                  // First completed message in this stream
+                  clearAssistantMessage(chatItem);
+                  accumulatedContent = data.content;
+                  annotations = data.annotations || [];
+                  hasReceivedCompletedMessage = true;
+                }
+                
                 console.log(
                   "[ChatClient] Received completed message:",
                   accumulatedContent
                 );
-
+                
+                isStreaming = false;
                 setIsResponding(false);
               } else {
+                // Handle streaming content
+                if (hasReceivedCompletedMessage) {
+                  // We've had a completed message before, so this is new streaming content
+                  // Create a new balloon for the new streaming content
+                  chatItem = createAssistantMessageDiv();
+                  console.log(
+                    "[ChatClient] Created new messageDiv for streaming after completed message."
+                  );
+                  
+                  // Reset for new streaming content
+                  annotations = [];
+                  accumulatedContent = "";
+                  hasReceivedCompletedMessage = false; // Reset for this new cycle
+                }
                 accumulatedContent += data.content;
+                isStreaming = true;
+                
                 console.log(
                   "[ChatClient] Received streaming chunk:",
                   data.content
@@ -543,7 +601,8 @@ export function AgentPreview({ agentDetails }: IAgentPreviewProps): ReactNode {
           )}
         </div>
 
-        <BuiltWithBadge className={styles.builtWithBadge} />
+        {/* temporarily disable BuiltWithBadge */}
+        {/* <BuiltWithBadge className={styles.builtWithBadge} /> */}
       </div>
 
       {/* Settings Panel */}

@@ -4,7 +4,9 @@
 import asyncio
 import json
 import os
-from typing import AsyncGenerator, Optional, Dict
+from datetime import datetime, timezone
+from typing import AsyncGenerator, Mapping, Optional, Dict
+
 
 import fastapi
 from fastapi import Request, Depends, HTTPException
@@ -14,24 +16,17 @@ from fastapi.responses import JSONResponse
 
 import logging
 from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
+from azure.ai.projects.models import AgentVersionObject, AgentReference
+from openai.types.conversations.message import Message
+from openai.types.responses import Response, ResponseOutputText, ResponseOutputMessage, ResponseInputText, ResponseInputMessageItem
+from openai.types.conversations import Conversation
+from openai.types.responses.response_output_text import AnnotationFileCitation
 
-from azure.ai.agents.aio import AgentsClient
-from azure.ai.agents.models import (
-    Agent,
-    MessageDeltaChunk,
-    ThreadMessage,
-    ThreadRun,
-    AsyncAgentEventHandler,
-    RunStep
-)
-from azure.ai.projects import AIProjectClient
-from azure.ai.projects.models import (
-   AgentEvaluationRequest,
-   AgentEvaluationSamplingConfiguration,
-   AgentEvaluationRedactionConfiguration,
-   EvaluatorIds
-)
+from azure.ai.projects.aio import AIProjectClient
 
+from openai.types.responses import ResponseTextDeltaEvent, ResponseCompletedEvent, ResponseTextDoneEvent, ResponseCreatedEvent, ResponseOutputItemDoneEvent
+
+from openai import AsyncOpenAI
 
 # Create a logger for this module
 logger = logging.getLogger("azureaiapp")
@@ -40,6 +35,7 @@ logger = logging.getLogger("azureaiapp")
 logging.getLogger("azure.core.pipeline.policies.http_logging_policy").setLevel(logging.WARNING)
 
 from opentelemetry import trace
+
 tracer = trace.get_tracer(__name__)
 
 # Define the directory for your templates.
@@ -78,108 +74,101 @@ def authenticate(credentials: Optional[HTTPBasicCredentials] = Depends(security)
 
 auth_dependency = Depends(authenticate) if basic_auth else None
 
+def cleanup_created_at_metadata(metadata: Mapping[str, str]) -> None:
+    """Remove oldest created_at timestamp entries to keep metadata under 16 items limit."""
+    if not metadata:
+        return
+
+    # metadata go to be up to 16 items.  If there is more than that, remove the one ended with _created_at key with smallest value
+    while len(metadata) > 16:
+        created_at_keys = [k for k in metadata if k.endswith("_created_at")]
+        if not created_at_keys:
+            break  # No more _created_at keys to remove
+        min_key = min(created_at_keys, key=metadata.get)
+        del metadata[min_key]
 
 def get_ai_project(request: Request) -> AIProjectClient:
     return request.app.state.ai_project
 
-def get_agent_client(request: Request) -> AgentsClient:
-    return request.app.state.agent_client
+def get_agent_version_obj(request: Request) -> AgentVersionObject:
+    return request.app.state.agent_version_obj
 
-def get_agent(request: Request) -> Agent:
-    return request.app.state.agent
+def get_openai_client(request: Request) -> AsyncOpenAI:
+    return request.app.state.openai_client
 
-def get_app_insights_conn_str(request: Request) -> str:
-    if hasattr(request.app.state, "application_insights_connection_string"):
-        return request.app.state.application_insights_connection_string
-    else:
-        return None
+def get_created_at_label(message_id: str) -> str:
+    return f"{message_id}_created_at"
 
 def serialize_sse_event(data: Dict) -> str:
     return f"data: {json.dumps(data)}\n\n"
 
-async def get_message_and_annotations(agent_client : AgentsClient, message: ThreadMessage) -> Dict:
+async def get_or_create_conversation(
+    openai_client: AsyncOpenAI,
+    conversation_id: Optional[str],
+    agent_id: Optional[str],
+    current_agent_id: str
+) -> Conversation:
+    """
+    Get an existing conversation or create a new one.
+    Returns the conversation_id.
+    """
+    conversation: Optional[Conversation] = None
+    
+    # Attempt to get an existing conversation if we have matching agent and conversation IDs
+    if conversation_id and agent_id == current_agent_id:
+        try:
+            logger.info(f"Using existing conversation with ID {conversation_id}")
+            conversation = await openai_client.conversations.retrieve(conversation_id=conversation_id)
+            logger.info(f"Retrieved conversation: {conversation.id}")
+        except Exception as e:
+            logger.error(f"Error retrieving conversation: {e}")
+
+    # Create a new conversation if we don't have one
+    if not conversation:
+        try:
+            logger.info("Creating a new conversation")
+            conversation = await openai_client.conversations.create()
+            logger.info(f"Generated new conversation ID: {conversation.id}")
+        except Exception as e:
+            logger.error(f"Error creating conversation: {e}")
+            raise HTTPException(status_code=400, detail=f"Error handling conversation: {e}")
+    
+    return conversation
+
+async def get_message_and_annotations(event: Message | ResponseOutputMessage) -> Dict:
     annotations = []
     # Get file annotations for the file search.
-    for annotation in (a.as_dict() for a in message.file_citation_annotations):
-        file_id = annotation["file_citation"]["file_id"]
-        logger.info(f"Fetching file with ID for annotation {file_id}")
-        openai_file = await agent_client.files.get(file_id)
-        annotation["file_name"] = openai_file.filename
-        logger.info(f"File name for annotation: {annotation['file_name']}")
-        annotations.append(annotation)
+    text = ""
+    content = event.content[0]
+    if content.type == "output_text" or content.type == "input_text":
+        text = content.text
+    if content.type == "output_text":
+        for annotation in content.annotations:
+            if annotation.type == "file_citation":
+                ann = {
+                    'label': annotation.filename,
+                    "index": annotation.index
+                }
+                annotations.append(ann)
+            elif annotation.type == "url_citation":
+                ann = {
+                    'label': annotation.title,
+                    "index": annotation.start_index
+                }
+                annotations.append(ann)
 
     # Get url annotation for the index search.
-    for url_annotation in message.url_citation_annotations:
-        annotation = url_annotation.as_dict()
-        annotation["file_name"] = annotation['url_citation']['title']
-        logger.info(f"File name for annotation: {annotation['file_name']}")
-        annotations.append(annotation)
+    # for url_annotation in event.url_citation_annotations:
+    #     annotation = url_annotation.as_dict()
+    #     annotation["file_name"] = annotation['url_citation']['title']
+    #     logger.info(f"File name for annotation: {annotation['file_name']}")
+    #     annotations.append(annotation)
             
     return {
-        'content': message.text_messages[0].text.value,
+        'content': text,
         'annotations': annotations
     }
 
-class MyEventHandler(AsyncAgentEventHandler[str]):
-    def __init__(self, ai_project: AIProjectClient, app_insights_conn_str: str):
-        super().__init__()
-        self.agent_client = ai_project.agents
-        self.ai_project = ai_project
-        self.app_insights_conn_str = app_insights_conn_str
-
-    async def on_message_delta(self, delta: MessageDeltaChunk) -> Optional[str]:
-        stream_data = {'content': delta.text, 'type': "message"}
-        return serialize_sse_event(stream_data)
-
-    async def on_thread_message(self, message: ThreadMessage) -> Optional[str]:
-        try:
-            logger.info(f"MyEventHandler: Received thread message, message ID: {message.id}, status: {message.status}")
-            if message.status != "completed":
-                return None
-
-            logger.info("MyEventHandler: Received completed message")
-
-            stream_data = await get_message_and_annotations(self.agent_client, message)
-            stream_data['type'] = "completed_message"
-            return serialize_sse_event(stream_data)
-        except Exception as e:
-            logger.error(f"Error in event handler for thread message: {e}", exc_info=True)
-            return None
-
-    async def on_thread_run(self, run: ThreadRun) -> Optional[str]:
-        logger.info("MyEventHandler: on_thread_run event received")
-        run_information = f"ThreadRun status: {run.status}, thread ID: {run.thread_id}"
-        stream_data = {'content': run_information, 'type': 'thread_run'}
-        if run.status == "failed":
-            stream_data['error'] = run.last_error.as_dict()
-        # automatically run agent evaluation when the run is completed
-        if run.status == "completed":
-            run_agent_evaluation(run.thread_id, run.id, self.ai_project, self.app_insights_conn_str)
-        return serialize_sse_event(stream_data)
-
-    async def on_error(self, data: str) -> Optional[str]:
-        logger.error(f"MyEventHandler: on_error event received: {data}")
-        stream_data = {'type': "stream_end"}
-        return serialize_sse_event(stream_data)
-
-    async def on_done(self) -> Optional[str]:
-        logger.info("MyEventHandler: on_done event received")
-        stream_data = {'type': "stream_end"}
-        return serialize_sse_event(stream_data)
-
-    async def on_run_step(self, step: RunStep) -> Optional[str]:
-        logger.info(f"Step {step['id']} status: {step['status']}")
-        step_details = step.get("step_details", {})
-        tool_calls = step_details.get("tool_calls", [])
-
-        if tool_calls:
-            logger.info("Tool calls:")
-            for call in tool_calls:
-                azure_ai_search_details = call.get("azure_ai_search", {})
-                if azure_ai_search_details:
-                    logger.info(f"azure_ai_search input: {azure_ai_search_details.get('input')}")
-                    logger.info(f"azure_ai_search output: {azure_ai_search_details.get('output')}")
-        return None
 
 @router.get("/", response_class=HTMLResponse)
 async def index(request: Request, _ = auth_dependency):
@@ -190,149 +179,154 @@ async def index(request: Request, _ = auth_dependency):
         }
     )
 
+async def save_user_message_created_at(openai_client: AsyncOpenAI, conversation: Conversation,  input_created_at: float):
+    conversation.metadata = conversation.metadata  or {}
+    try:
+        logger.info(f"Saving created_at.")
+        messages = await openai_client.conversations.items.list(conversation_id=conversation.id, order="desc")
+        last_input_message = None
+        async for message in messages:
+            if isinstance(message, Message) and message.role == "user":
+                last_input_message = message
+                break
+        if last_input_message:
+            conversation.metadata[get_created_at_label(last_input_message.id)] = str(input_created_at)
+        cleanup_created_at_metadata(conversation.metadata)
+
+        await openai_client.conversations.update(conversation.id, metadata=conversation.metadata)
+        
+        logger.info(f"Successfully saved created_at for user message")
+        return  # Success, exit the retry loop
+
+    except Exception as e:
+        logger.error(f"Error updating message created_at.")
+        
+
 
 async def get_result(
-    request: Request, 
-    thread_id: str, 
-    agent_id: str, 
-    ai_project: AIProjectClient,
-    app_insight_conn_str: Optional[str], 
+    agent: AgentVersionObject,
+    conversation: Conversation,
+    user_message: str, 
+    openAI: AsyncOpenAI,
     carrier: Dict[str, str]
 ) -> AsyncGenerator[str, None]:
     ctx = TraceContextTextMapPropagator().extract(carrier=carrier)
     with tracer.start_as_current_span('get_result', context=ctx):
-        logger.info(f"get_result invoked for thread_id={thread_id} and agent_id={agent_id}")
+        logger.info(f"get_result invoked for conversation={conversation.id}")
+        input_created_at = datetime.now(timezone.utc).timestamp()
         try:
-            agent_client = ai_project.agents
-            async with await agent_client.runs.stream(
-                thread_id=thread_id, 
-                agent_id=agent_id,
-                event_handler=MyEventHandler(ai_project, app_insight_conn_str),
-            ) as stream:
-                logger.info("Successfully created stream; starting to process events")
-                async for event in stream:
-                    _, _, event_func_return_val = event
-                    logger.debug(f"Received event: {event}")
-                    if event_func_return_val:
-                        logger.info(f"Yielding event: {event_func_return_val}")
-                        yield event_func_return_val
-                    else:
-                        logger.debug("Event received but no data to yield")
+            response = await openAI.responses.create(
+                conversation=conversation.id,
+                input=user_message,
+                extra_body={"agent": AgentReference(name=agent.name, version=agent.version).as_dict()},
+                stream=True
+            )
+            logger.info("Successfully created stream; starting to process events")
+            async for event in response:
+                print(event)
+                if event.type == "response.created":
+                    logger.info(f"Stream response created with ID: {event.response.id}")
+                elif event.type == "response.output_text.delta":
+                    logger.info(f"Delta: {event.delta}")
+                    stream_data = {'content': event.delta, 'type': "message"}
+                    yield serialize_sse_event(stream_data)
+                elif event.type == "response.output_item.done" and event.item.type == "message":
+                    stream_data = await get_message_and_annotations(event.item)
+                    stream_data['type'] = "completed_message"
+                    yield serialize_sse_event(stream_data)
+                elif event.type == "response.completed":
+                    logger.info(f"Response completed with full message: {event.response.output_text}")
+                                                    
         except Exception as e:
             logger.exception(f"Exception in get_result: {e}")
-            yield serialize_sse_event({'type': "error", 'message': str(e)})
+            error_data = {
+                'content': str(e),
+                'annotations': [],
+                'type': "completed_message"
+            }
+            yield serialize_sse_event(error_data)
+        finally:
+            stream_data = {'type': "stream_end"}
+            await save_user_message_created_at(openAI, conversation, input_created_at)
+            yield serialize_sse_event(stream_data)           
+
 
 
 @router.get("/chat/history")
 async def history(
     request: Request,
-    ai_project : AIProjectClient = Depends(get_ai_project),
-    agent : Agent = Depends(get_agent),
+    agent: AgentVersionObject = Depends(get_agent_version_obj),
+    openai_client : AsyncOpenAI = Depends(get_openai_client),
 	_ = auth_dependency
 ):
     with tracer.start_as_current_span("chat_history"):
-        # Retrieve the thread ID from the cookies (if available).
-        thread_id = request.cookies.get('thread_id')
+        conversation_id = request.cookies.get('conversation_id')
         agent_id = request.cookies.get('agent_id')
 
-        # Attempt to get an existing thread. If not found, create a new one.
-        try:
-            agent_client = ai_project.agents
-            if thread_id and agent_id == agent.id:
-                logger.info(f"Retrieving thread with ID {thread_id}")
-                thread = await agent_client.threads.get(thread_id)
-            else:
-                logger.info("Creating a new thread")
-                thread = await agent_client.threads.create()
-        except Exception as e:
-            logger.error(f"Error handling thread: {e}")
-            raise HTTPException(status_code=400, detail=f"Error handling thread: {e}")
-
-        thread_id = thread.id
-        agent_id = agent.id
-
-    # Create a new message from the user's input.
-    try:
-        content = []
-        response = agent_client.messages.list(
-            thread_id=thread_id,
+        # Get or create conversation using the reusable function
+        conversation = await get_or_create_conversation(
+            openai_client, conversation_id, agent_id, agent.id
         )
-        async for message in response:
-            formatteded_message = await get_message_and_annotations(agent_client, message)
-            formatteded_message['role'] = message.role
-            formatteded_message['created_at'] = message.created_at.astimezone().strftime("%m/%d/%y, %I:%M %p")
-            content.append(formatteded_message)
-                
-                                        
-        logger.info(f"List message, thread ID: {thread_id}")
-        response = JSONResponse(content=content)
-    
-        # Update cookies to persist the thread and agent IDs.
-        response.set_cookie("thread_id", thread_id)
-        response.set_cookie("agent_id", agent_id)
-        return response
-    except Exception as e:
-        logger.error(f"Error listing message: {e}")
-        raise HTTPException(status_code=500, detail=f"Error list message: {e}")
+        agent_id = agent.id
+        # Create a new message from the user's input.
+        try:
+            content = []
+            items = await openai_client.conversations.items.list(conversation_id=conversation.id, order="desc", limit=16)
+            async for item in items:
+                if item.type == "message":
+                    formatteded_message = await get_message_and_annotations(item)
+                    formatteded_message['role'] = item.role
+                    formatteded_message['created_at'] = conversation.metadata.get(get_created_at_label(item.id), "")
+                    content.append(formatteded_message)
+
+
+            logger.info(f"List message, conversation ID: {conversation_id}")
+            response = JSONResponse(content=content)
+        
+            # Update cookies to persist the conversation IDs.
+            response.set_cookie("conversation_id", conversation_id)
+            response.set_cookie("agent_id", agent_id)
+            return response
+        except Exception as e:
+            logger.error(f"Error listing message: {e}")
+            raise HTTPException(status_code=500, detail=f"Error list message: {e}")
 
 @router.get("/agent")
 async def get_chat_agent(
-    request: Request
+    agent: AgentVersionObject = Depends(get_agent_version_obj),
 ):
-    return JSONResponse(content=get_agent(request).as_dict())  
+    return JSONResponse(content={"name": agent.name, "metadata": agent.metadata})
 
 @router.post("/chat")
 async def chat(
     request: Request,
-    agent : Agent = Depends(get_agent),
-    ai_project: AIProjectClient = Depends(get_ai_project),
-    app_insights_conn_str : str = Depends(get_app_insights_conn_str),
+    openai_client : AsyncOpenAI = Depends(get_openai_client),
+    agent: AgentVersionObject = Depends(get_agent_version_obj),
+    
 	_ = auth_dependency
 ):
-    # Retrieve the thread ID from the cookies (if available).
-    thread_id = request.cookies.get('thread_id')
-    agent_id = request.cookies.get('agent_id')
+    # Retrieve the conversation ID from the cookies (if available).
+    conversation_id = request.cookies.get('conversation_id')
+    agent_id = request.cookies.get('agent_id')    
 
     with tracer.start_as_current_span("chat_request"):
         carrier = {}        
         TraceContextTextMapPropagator().inject(carrier)
-        
-        # Attempt to get an existing thread. If not found, create a new one.
-        try:
-            agent_client = ai_project.agents
-            if thread_id and agent_id == agent.id:
-                logger.info(f"Retrieving thread with ID {thread_id}")
-                thread = await agent_client.threads.get(thread_id)
-            else:
-                logger.info("Creating a new thread")
-                thread = await agent_client.threads.create()
-        except Exception as e:
-            logger.error(f"Error handling thread: {e}")
-            raise HTTPException(status_code=400, detail=f"Error handling thread: {e}")
 
-        thread_id = thread.id
+        # if the connection no longer exist or agent is changed, create a new one
+        conversation = await get_or_create_conversation(
+            openai_client, conversation_id, agent_id, agent.id
+        )
+        conversation_id = conversation.id
         agent_id = agent.id
-
+        
         # Parse the JSON from the request.
         try:
             user_message = await request.json()
         except Exception as e:
             logger.error(f"Invalid JSON in request: {e}")
             raise HTTPException(status_code=400, detail=f"Invalid JSON in request: {e}")
-
-        logger.info(f"user_message: {user_message}")
-
         # Create a new message from the user's input.
-        try:
-            message = await agent_client.messages.create(
-                thread_id=thread_id,
-                role="user",
-                content=user_message.get('message', '')
-            )
-            logger.info(f"Created message, message ID: {message.id}")
-        except Exception as e:
-            logger.error(f"Error creating message: {e}")
-            raise HTTPException(status_code=500, detail=f"Error creating message: {e}")
 
         # Set the Server-Sent Events (SSE) response headers.
         headers = {
@@ -340,59 +334,19 @@ async def chat(
             "Connection": "keep-alive",
             "Content-Type": "text/event-stream"
         }
-        logger.info(f"Starting streaming response for thread ID {thread_id}")
+        logger.info(f"Starting streaming response for conversation ID {conversation_id}")
 
         # Create the streaming response using the generator.
-        response = StreamingResponse(get_result(request, thread_id, agent_id, ai_project, app_insights_conn_str, carrier), headers=headers)
+        response = StreamingResponse(get_result(agent, conversation, user_message.get('message', ''), openai_client, carrier), headers=headers)
 
-        # Update cookies to persist the thread and agent IDs.
-        response.set_cookie("thread_id", thread_id)
+        # Update cookies to persist the conversation and agent IDs.
+        response.set_cookie("conversation_id", conversation_id)
         response.set_cookie("agent_id", agent_id)
         return response
 
 def read_file(path: str) -> str:
     with open(path, 'r') as file:
         return file.read()
-
-
-def run_agent_evaluation(
-    thread_id: str, 
-    run_id: str,
-    ai_project: AIProjectClient,
-    app_insights_conn_str: str):
-
-    if app_insights_conn_str:
-        agent_evaluation_request = AgentEvaluationRequest(
-            run_id=run_id,
-            thread_id=thread_id,
-            evaluators={
-                "Relevance": {"Id": EvaluatorIds.RELEVANCE.value},
-                "TaskAdherence": {"Id": EvaluatorIds.TASK_ADHERENCE.value},
-                "ToolCallAccuracy": {"Id": EvaluatorIds.TOOL_CALL_ACCURACY.value},
-            },
-            sampling_configuration=AgentEvaluationSamplingConfiguration(
-                name="default",
-                sampling_percent=100,
-            ),
-            redaction_configuration=AgentEvaluationRedactionConfiguration(
-                redact_score_properties=False,
-            ),
-            app_insights_connection_string=app_insights_conn_str,
-        )
-        
-        async def run_evaluation():
-            try:        
-                logger.info(f"Running agent evaluation on thread ID {thread_id} and run ID {run_id}")
-                agent_evaluation_response = await ai_project.evaluations.create_agent_evaluation(
-                    evaluation=agent_evaluation_request
-                )
-                logger.info(f"Evaluation response: {agent_evaluation_response}")
-            except Exception as e:
-                logger.error(f"Error creating agent evaluation: {e}")
-
-        # Create a new task to run the evaluation asynchronously
-        asyncio.create_task(run_evaluation())
-
 
 @router.get("/config/azure")
 async def get_azure_config(_ = auth_dependency):
