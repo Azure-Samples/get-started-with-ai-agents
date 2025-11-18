@@ -152,7 +152,7 @@ async def get_message_and_annotations(event: Message | ResponseOutputMessage) ->
                 annotations.append(ann)
             elif annotation.type == "url_citation":
                 ann = {
-                    'label': annotation.url,
+                    'label': annotation.title,
                     "index": annotation.start_index
                 }
                 annotations.append(ann)
