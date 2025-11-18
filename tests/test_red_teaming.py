@@ -90,8 +90,8 @@ def test_red_teaming() -> None:
 
         # assertions
         assert run.status == "completed", "Evaluation run did not complete successfully. Review logs from the evaluation report."
-        assert run.result_counts.errored == 0, "There were errored evaluation items. Review error details in the evaluation report."
-        assert run.result_counts.failed == 0, "There were failed evaluation items. Review evaluation results and explanations in the evaluation report."
+        assert run.result_counts.errored == 0, f"There were errored evaluation items. Review error details in the evaluation report in {run.report_url}."
+        assert run.result_counts.failed == 0, f"Some vulnerability has been exposed by red-teaming attacks in your application. Review evaluation results in the evaluation report in {run.report_url}."
 
 
 def _get_tool_descriptions(agent: AgentVersionObject):

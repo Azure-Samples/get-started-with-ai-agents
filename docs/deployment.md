@@ -12,13 +12,13 @@ To deploy this Azure environment successfully, your Azure account (the account y
 
 You can view the permissions for your account and subscription by going to Azure portal, clicking 'Subscriptions' under 'Navigation' and then choosing your subscription from the list. If cannot find the subscription, make sure no filters are selected. After selecting your subscription, select 'Access control (IAM)' and you can see the roles that are assigned to your account for this subscription. To get more information about the roles, go to the 'Role assignments' tab, search by your account name and click the role you want to view more information about.
 
-Check the [Azure Products by Region](https://azure.microsoft.com/en-us/explore/global-infrastructure/products-by-region/?products=all&regions=all) page and select a **region** where the following services are available:
+Check the [Azure Products by Region](https://azure.microsoft.com/explore/global-infrastructure/products-by-region/?products=all&regions=all) page and select a **region** where the following services are available:
 
-- [Azure AI Foundry](https://learn.microsoft.com/en-us/azure/ai-foundry/)
-- [Azure Container Apps](https://learn.microsoft.com/en-us/azure/container-apps/)
-- [Azure Container Registry](https://learn.microsoft.com/en-us/azure/container-registry/)
-- [Azure AI Search](https://learn.microsoft.com/en-us/azure/search/)
-- [GPT Model Capacity](https://learn.microsoft.com/en-us/azure/ai-services/openai/concepts/models)
+- [Azure AI Foundry](https://learn.microsoft.com/azure/ai-foundry/)
+- [Azure Container Apps](https://learn.microsoft.com/azure/container-apps/)
+- [Azure Container Registry](https://learn.microsoft.com/azure/container-registry/)
+- [Azure AI Search](https://learn.microsoft.com/azure/search/)
+- [GPT Model Capacity](https://learn.microsoft.com/azure/ai-services/openai/concepts/models)
 
 Here are some examples of the regions where the services are available: East US, East US2, Japan East, UK South, Sweden Central.
 
@@ -189,7 +189,7 @@ When you start a deployment, most parameters will have default values. You can c
 | **Model** | Choose from the [list of models supported by Foundry Agent Service](https://learn.microsoft.com/azure/ai-services/agents/concepts/model-region-support) for your selected region. | gpt-4o |  
 | **Model Format** | Choose from OpenAI or Microsoft, depending on your model. | OpenAI |  
 | **Model Deployment Capacity** | Configure capacity for your model. | 80k |
-| **Embedding Model** | Choose from text-embedding-3-large, text-embedding-3-small, and text-embedding-ada-002. This may only be deployed if Azure AI Search is enabled. |  text-embedding-3-small |
+| **Embedding Model** | Choose from text-embedding-3-large, azdtext-embedding-3-small, and text-embedding-ada-002. This may only be deployed if Azure AI Search is enabled. |  text-embedding-3-small |
 | **Embedding Model Capacity** | Configure capacity for your embedding model. |  50k |
 | **Knowledge Retrieval** | Choose OpenAI's file search or Azure AI Search Index. |  OpenAI's file search |
 
