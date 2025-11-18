@@ -6,6 +6,19 @@ In **pre-deployment** stage, you can leverage [Agent Evaluation](#agent-evaluati
 
 In **post-deployment** stage, you can utilize [Tracing and monitoring](#tracing-and-monitoring) and [Continuous Evaluation](#continuous-evaluation) capabilities to maintain ongoing visibility into your agent's performance and behavior in production. With the baselines established in pre-deployment, you can set up alerts for a desirable passing rate, so that you can review the failing traces that helps you quickly identify and address any issues that may arise, ensuring a consistent and high-quality user experience.
 
+## Prequisites 
+
+Execute `azd up` to generate most of these environment variables in `.azure/.env`. To specify the Agent ID, navigate to the Azure AI Foundry Portal:
+
+  1. Go to [Azure AI Foundry Portal](https://ai.azure.com/) and sign in
+  2. Click on your project from the homepage
+  3. In the top navigation, select **Build**
+  4. In the left-hand menu, select **Agents**
+  5. Locate your agent in the list - the agent name and version will be displayed
+  6. The Agent ID follows the format: `{agent_name}:{agent_version}` (e.g., `agent-template-assistant:1`)
+
+  ![Agent ID in Foundry UI](./images/agent_id_in_foundry_ui.png)
+
 ## Agent Evaluation
 
 Azure AI Foundry offers a number of [built-in evaluators](https://learn.microsoft.com/en-us/azure/ai-foundry/concepts/observability#what-are-evaluators) to measure the quality, efficiency, risk and safety of your agents. For example, intent resolution, tool call accuracy, and task adherence evaluators are targeted to assess the end-to-end and tool call process quality of agent workflow, while content safety evaluator checks for inappropriate content in the responses such as violence or hate. 
@@ -28,18 +41,7 @@ You can use the [evaluation test script](../tests/test_evaluation.py) to validat
   - `AZURE_EXISTING_AGENT_ID`: AI Agent Id in the format `agent_name:agent_version` (with fallback logic to look up the latest version by name using `AZURE_AI_AGENT_NAME`)
   - `AZURE_AI_AGENT_DEPLOYMENT_NAME`: The judge model deployment name used by evaluators
 
-  **Note:** Most of these environment variables are generated locally in `.env` after executing `azd up`. To find the Agent ID remotely in the Azure AI Foundry Portal:
-
-  1. Go to [Azure AI Foundry Portal](https://ai.azure.com/) and sign in
-  2. Click on your project from the homepage
-  3. In the top navigation, select **Build**
-  4. In the left-hand menu, select **Agents**
-  5. Locate your agent in the list - the agent name and version will be displayed
-  6. The Agent ID follows the format: `{agent_name}:{agent_version}` (e.g., `agent-template-assistant:1`)
-  
-  ![Agent ID in Foundry UI](./images/agent_id_in_foundry_ui.png)
-
-  To install required packages and run the evaluation test:  
+  Follow the [prerequisites](#prerequisites) to set up these environment variables. To install required packages and run the evaluation test in your python environment:  
 
   ```shell
   python -m pip install -r src/requirements.txt
@@ -64,7 +66,7 @@ In the [red teaming test script](../tests/test_red_teaming.py), you will be able
 
 No test dataset or adversarial LLM is needed as the AI Red Teaming Agent will generate all the attack prompts for you.
 
-To install required packages and run the red teaming test in your local development environment:  
+  Follow the [prerequisites](#prerequisites) to set up these environment variables. To install required packages and run the red teaming test in your local development environment:  
 
 ```shell
 python -m pip install -r src/requirements.txt
