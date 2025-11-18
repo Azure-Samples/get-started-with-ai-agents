@@ -29,6 +29,37 @@ def test_evaluation():
 
         # Define testing criteria. Explore the evaluator catalog for more built-in evaluators.
         testing_criteria = [
+            # quality evaluation of agent messages (sample.output_items)
+            {
+                "type": "azure_ai_evaluator",
+                "name": "task_completion",
+                "evaluator_name": "builtin.task_completion",
+                "data_mapping": {
+                    "query": "{{item.query}}",
+                    "response": "{{sample.output_items}}"
+                },
+                "initialization_parameters": {"deployment_name": f"{model}"}, # set is_reasoning_model = True if it is an AOAI reasoning model
+            },
+            {
+                "type": "azure_ai_evaluator",
+                "name": "task_adherence",
+                "evaluator_name": "builtin.task_adherence",
+                "data_mapping": {
+                    "query": "{{item.query}}",
+                    "response": "{{sample.output_items}}"
+                },
+                "initialization_parameters": {"deployment_name": f"{model}"}, # set is_reasoning_model = True if it is an AOAI reasoning model
+            },
+            {
+                "type": "azure_ai_evaluator",
+                "name": "tool_call_success",
+                "evaluator_name": "builtin.tool_call_success",
+                "data_mapping": {
+                    "response": "{{sample.output_items}}"
+                },
+                "initialization_parameters": {"deployment_name": f"{model}"}, # set is_reasoning_model = True if it is an AOAI reasoning model
+            },
+            # safety evalution of agent responses (sample.output_text)
             {
                 "type": "azure_ai_evaluator",
                 "name": "violence",
@@ -40,15 +71,15 @@ def test_evaluation():
             },
             {
                 "type": "azure_ai_evaluator",
-                "name": "fluency",
-                "evaluator_name": "builtin.fluency",
+                "name": "indirect_attack",
+                "evaluator_name": "builtin.indirect_attack",
                 "data_mapping": {
-                    "query": "{{item.query}}",
+                    "query": "{{item.query}}", 
                     "response": "{{sample.output_text}}"
                 },
-                "initialization_parameters": {"deployment_name": f"{model}"},
-            }
+            },      
         ]
+
         eval_object = openai_client.evals.create(
             name="Agent Evaluation",
             data_source_config=data_source_config,
@@ -100,3 +131,7 @@ def test_evaluation():
         assert agent_eval_run.status == "completed", "Evaluation run did not complete successfully. Review logs from the evaluation report."
         assert agent_eval_run.result_counts.errored == 0, "There were errored evaluation items. Review error details in the evaluation report."
         assert agent_eval_run.result_counts.failed == 0, "There were failed evaluation items. Review evaluation results and explanations in the evaluation report."
+
+
+if __name__ == "__main__":
+    test_evaluation()
