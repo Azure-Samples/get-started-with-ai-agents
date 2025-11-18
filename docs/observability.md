@@ -54,6 +54,12 @@ You can use the [evaluation test script](../tests/test_evaluation.py) to validat
   pytest tests/test_evaluation.py -s
   ```
 
+  Upon completion, the test will display a **Report URL** in the output where you can review the detailed evaluation results in the Azure AI Foundry UI, including individual evaluator passing scores and explanations.
+
+  ![Evaluation Report Link](./images/eval_link.png)
+
+  ![Evaluation Report](./images/eval_report.png)
+
 ## AI Red Teaming Agent
 
 The [AI Red Teaming Agent](https://learn.microsoft.com/azure/ai-foundry/concepts/ai-red-teaming-agent) is a powerful tool designed to help organizations proactively find security and safety risks associated with generative AI systems during design and development of generative AI models and applications.

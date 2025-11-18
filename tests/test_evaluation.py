@@ -129,8 +129,8 @@ def test_evaluation():
 
         # Assertions
         assert agent_eval_run.status == "completed", "Evaluation run did not complete successfully. Review logs from the evaluation report."
-        assert agent_eval_run.result_counts.errored == 0, "There were errored evaluation items. Review error details in the evaluation report."
-        assert agent_eval_run.result_counts.failed == 0, "There were failed evaluation items. Review evaluation results and explanations in the evaluation report."
+        assert agent_eval_run.result_counts.errored == 0, f"There were errored evaluation items. Review evaluation results in the evaluation report in {agent_eval_run.report_url}."
+        assert agent_eval_run.result_counts.failed == 0, f"There were failed evaluation items. Review evaluation results in {agent_eval_run.report_url}."
 
 
 if __name__ == "__main__":
