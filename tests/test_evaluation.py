@@ -29,25 +29,51 @@ def test_evaluation():
 
         # Define testing criteria. Explore the evaluator catalog for more built-in evaluators.
         testing_criteria = [
+            # quality of agent messages (output_items) with tool calls
             {
                 "type": "azure_ai_evaluator",
-                "name": "violence",
-                "evaluator_name": "builtin.violence",
+                "name": "task_completion",
+                "evaluator_name": "builtin.task_completion",
                 "data_mapping": {
                     "query": "{{item.query}}",
-                    "response": "{{sample.output_text}}"
+                    "response": "{{sample.output_items}}"
                 },
+                "initialization_parameters": {"deployment_name": f"{model}"}, # set "is_reasoning_model" to True if you are using a reasoning model defined by AzureOpenAI
             },
             {
                 "type": "azure_ai_evaluator",
-                "name": "fluency",
-                "evaluator_name": "builtin.fluency",
+                "name": "tool_call_accuracy",
+                "evaluator_name": "builtin.tool_call_accuracy",
                 "data_mapping": {
                     "query": "{{item.query}}",
-                    "response": "{{sample.output_text}}"
+                    "response": "{{sample.output_items}}",
+                    "tool_definitions": "{{sample.tool_definitions}}"
                 },
-                "initialization_parameters": {"deployment_name": f"{model}"},
-            }
+                "initialization_parameters": {"deployment_name": f"{model}"}, # set "is_reasoning_model" to True if you are using a reasoning model defined by AzureOpenAI
+            },
+            {
+                "type": "azure_ai_evaluator",
+                "name": "tool_call_success",
+                "evaluator_name": "builtin.tool_call_success",
+                "data_mapping": {
+                    "query": "{{item.query}}",
+                    "response": "{{sample.output_items}}"
+                },
+                "initialization_parameters": {"deployment_name": f"{model}"}, # set "is_reasoning_model" to True if you are using a reasoning model defined by AzureOpenAI
+            },
+            # safety of agent's response
+            {
+                "type": "azure_ai_evaluator",
+                "name": "Indirect Jailbreak Attack",
+                "evaluator_name": "builtin.indirect_attack",
+                "evaluator_version": "1",
+            },
+            {
+                "type": "azure_ai_evaluator",
+                "name": "Code Vulnerability",
+                "evaluator_name": "builtin.code_vulnerability",
+                "evaluator_version": "1",
+            },
         ]
         eval_object = openai_client.evals.create(
             name="Agent Evaluation",
@@ -100,3 +126,6 @@ def test_evaluation():
         assert agent_eval_run.status == "completed", "Evaluation run did not complete successfully. Review logs from the evaluation report."
         assert agent_eval_run.result_counts.errored == 0, "There were errored evaluation items. Review error details in the evaluation report."
         assert agent_eval_run.result_counts.failed == 0, "There were failed evaluation items. Review evaluation results and explanations in the evaluation report."
+
+if __name__ == "__main__":
+    test_evaluation()
