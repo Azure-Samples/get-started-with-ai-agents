@@ -46,19 +46,10 @@ You can use the [evaluation test script](../tests/test_evaluation.py) to validat
   ```shell
   python -m pip install -r src/requirements.txt
 
-  pytest tests/test_evaluation.py
-  ```
-
-  **Tip:** Add the `-s` flag to see detailed print output during test execution:
-  ```shell
   pytest tests/test_evaluation.py -s
   ```
 
-  Upon completion, the test will display a **Report URL** in the output where you can review the detailed evaluation results in the Azure AI Foundry UI, including individual evaluator passing scores and explanations.
-
-  ![Evaluation Report Link](./images/eval_link.png)
-
-  ![Evaluation Report](./images/eval_report.png)
+  Upon completion, the test will display an URL in the output where you can review the detailed evaluation results in the Azure AI Foundry UI, including individual evaluator passing scores and explanations.
 
 ## AI Red Teaming Agent
 
@@ -77,19 +68,10 @@ No test dataset or adversarial LLM is needed as the AI Red Teaming Agent will ge
 ```shell
 python -m pip install -r src/requirements.txt
 
-pytest tests/test_red_teaming.py
-```
-
-**Tip:** Add the `-s` flag to see detailed print output during test execution:
-```shell
 pytest tests/test_red_teaming.py -s
 ```
 
-Upon completion, the test will display a **Report URL** in the output where you can review the detailed red teaming evaluation results in the Azure AI Foundry UI, including attack inputs, outcomes, and reasons.
-
-![Red Teaming Report Link](./images/red_teaming_report_link.png)
-
-![Red Teaming Evaluation Report](./images/red_teaming_report.png)
+Upon completion, the test will display an URL in the output where you can review the detailed red teaming evaluation results in the Azure AI Foundry UI, including attack inputs, outcomes, and reasons.
 
 Read more on supported attack techniques and risk categories in our [documentation](https://learn.microsoft.com/azure/ai-foundry/how-to/develop/run-scans-ai-red-teaming-agent).
 
