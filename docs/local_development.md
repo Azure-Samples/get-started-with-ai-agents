@@ -47,7 +47,7 @@ pnpm run setup
 
 ### 4. Environment Configuration
 
-**Important**: The environment variables are stored in the `.azure/<environment-name>/.env` file, **not** in the root or `src` directory. This file is automatically created when you run `azd up` and contains all the Azure resource configuration needed for local development.
+**Important**: The environment variables are stored in the `.azure/<environment-name>/.env` file, **not** in the root or `src` directory. This file is automatically created when running `azd up` and contains all the Azure resource configuration needed for local development.
 
 The application automatically loads environment variables from `.env` in `.azure` folder when running locally.
 

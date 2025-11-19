@@ -32,7 +32,7 @@ The app code runs in an Azure Container App to process user input and generate a
 The AI agent uses file search or Azure AI Search to retrieve knowledge from uploaded files.
 
 - **[Customizable AI Model Deployment](./docs/deploy_customization.md#customizing-model-deployments)**<br/>
-The solution allows users to configure and deploy AI models—defaulting to gpt-5-mini—with options to adjust model capacity and knowledge retrieval methods.
+The solution allows users to configure and deploy AI models, defaulting to gpt-5-mini, with options to adjust model capacity and knowledge retrieval methods.
 
 - **[Built-in Monitoring and Tracing](./docs/observability.md#tracing-and-monitoring)**<br/>
 Integrated monitoring capabilities, including Azure Monitor and Application Insights, enable tracing and logging for easier troubleshooting and performance optimization.
