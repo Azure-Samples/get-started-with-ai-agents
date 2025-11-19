@@ -156,13 +156,6 @@ async def get_message_and_annotations(event: Message | ResponseOutputMessage) ->
                     "index": annotation.start_index
                 }
                 annotations.append(ann)
-
-    # Get url annotation for the index search.
-    # for url_annotation in event.url_citation_annotations:
-    #     annotation = url_annotation.as_dict()
-    #     annotation["file_name"] = annotation['url_citation']['title']
-    #     logger.info(f"File name for annotation: {annotation['file_name']}")
-    #     annotations.append(annotation)
             
     return {
         'content': text,
@@ -223,7 +216,6 @@ async def get_result(
             )
             logger.info("Successfully created stream; starting to process events")
             async for event in response:
-                print(event)
                 if event.type == "response.created":
                     logger.info(f"Stream response created with ID: {event.response.id}")
                 elif event.type == "response.output_text.delta":

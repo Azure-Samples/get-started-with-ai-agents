@@ -151,10 +151,10 @@ async def get_available_tool(
             await openai_client.vector_stores.file_batches.upload_and_poll(
                 vector_store_id=vector_store.id, files=file_streams
             )
-            print(f"File uploaded to vector store (id: {vector_store.id})")
+            logger.info(f"File uploaded to vector store (id: {vector_store.id})")
         except FileNotFoundError:
-            print(f"Warning: Asset file not found.")
-            print("Creating vector store without file for demonstration...")
+            logger.warning(f"Asset file not found.")
+            logger.info("Creating vector store without file for demonstration...")
 
 
         logger.info("agent: file store and vector store success")
@@ -197,7 +197,7 @@ async def initialize_eval(project_client: AIProjectClient, openai_client: AsyncO
         rules_list = [rule async for rule in eval_rules]
 
         if len(rules_list) >= 1:
-            print(f"Continuous Evaluation Rule for agent {agent_obj.name} already exists")
+            logger.info(f"Continuous Evaluation Rule for agent {agent_obj.name} already exists")
         else:
             # Create an evaluation with testing criteria
             data_source_config = {"type": "azure_ai_source", "scenario": "responses"}
@@ -213,7 +213,7 @@ async def initialize_eval(project_client: AIProjectClient, openai_client: AsyncO
                 data_source_config=data_source_config,  # type: ignore
                 testing_criteria=testing_criteria,  # type: ignore
             )
-            print(f"Evaluation created (id: {eval_object.id}, name: {eval_object.name})")
+            logger.info(f"Evaluation created (id: {eval_object.id}, name: {eval_object.name})")
 
             # Configure a rule that triggers the evaluation on agent responses
             continuous_eval_rule = await project_client.evaluation_rules.create_or_update(
@@ -229,7 +229,7 @@ async def initialize_eval(project_client: AIProjectClient, openai_client: AsyncO
                     enabled=True,
                 ),
             )
-            print(
+            logger.info(
                 f"Continuous Evaluation Rule created (id: {continuous_eval_rule.id}, name: {continuous_eval_rule.display_name})"
             )
     except Exception as e:
@@ -309,6 +309,6 @@ worker_class = "uvicorn.workers.UvicornWorker"
 timeout = 120
 
 if __name__ == "__main__":
-    print("Running initialize_resources directly...")
+    logger.info("Running initialize_resources directly...")
     asyncio.run(initialize_resources())
-    print("initialize_resources finished.")
+    logger.info("initialize_resources finished.")

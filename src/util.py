@@ -3,8 +3,6 @@
 
 import os
 import json
-from dotenv import load_dotenv
-
 
 def get_env_file_path():
     """
@@ -30,7 +28,6 @@ def get_env_file_path():
         config_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '.azure', 'config.json'))
         
         if not os.path.exists(config_path):
-            print(f"Config file not found: {config_path}")
             return None
             
         with open(config_path, 'r') as f:
@@ -38,13 +35,11 @@ def get_env_file_path():
             default_env = config.get('defaultEnvironment')
             
             if not default_env:
-                print(f"No defaultEnvironment found in {config_path}")
                 return None
                 
             env_file = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '.azure', default_env, '.env'))
             
             if not os.path.exists(env_file):
-                print(f"Environment file not found: {env_file}")
                 return None
                 
             # Successfully found the azd environment file
@@ -52,5 +47,4 @@ def get_env_file_path():
         
     except Exception as e:
         # On any error, return None to use default
-        print(f"Warning: Error getting azd environment path: {e}")
         return None
