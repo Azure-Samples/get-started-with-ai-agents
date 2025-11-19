@@ -4,12 +4,8 @@
 from typing import Dict, List, Optional
 
 import asyncio
-import csv
-import json
-import logging
 import multiprocessing
 import os
-import sys
 
 from azure.ai.projects.aio import AIProjectClient
 from azure.ai.projects.models import ConnectionType, ApiKeyCredentials, AgentVersionObject
@@ -24,8 +20,6 @@ from azure.ai.projects.models import (
     ContinuousEvaluationRuleAction,
     EvaluationRuleFilter,
     EvaluationRuleEventType,
-    EvaluatorCategory,
-    EvaluatorDefinitionType,
     EvaluationRuleActionType
 )
 
@@ -241,8 +235,6 @@ async def initialize_resources():
             AIProjectClient(endpoint=proj_endpoint, credential=credential) as project_client,
             project_client.get_openai_client() as openai_client,
         ):
-            # If the environment already has AZURE_AI_AGENT_ID or AZURE_EXISTING_AGENT_ID, try
-            # fetching that agent
             agent_obj: Optional[AgentVersionObject] = None
 
             agentID = os.environ.get("AZURE_EXISTING_AGENT_ID")
