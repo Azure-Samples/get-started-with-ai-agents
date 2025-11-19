@@ -1,0 +1,32 @@
+{
+    "version": "1.0.0",
+    "configurations": [
+        {
+            "name": "Debug: Initialize Agent (Gunicorn)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/gunicorn.conf.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}/src",
+            "justMyCode": false
+        },
+        {
+            "name": "Debug: FastAPI Server (Uvicorn)",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "uvicorn",
+            "args": [
+                "api.main:create_app",
+                "--factory",
+                "--reload",
+                "--host",
+                "127.0.0.1",
+                "--port",
+                "8000"
+            ],
+            "justMyCode": false,
+            "cwd": "${workspaceFolder}/src",
+            "jinja": true
+        }
+    ]
+}
