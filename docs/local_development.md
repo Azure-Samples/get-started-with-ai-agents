@@ -47,11 +47,13 @@ pnpm run setup
 
 ### 4. Environment Configuration
 
-Fill in the environment variables in `.env` file in the `src` directory.
+**Important**: The environment variables are stored in the `.azure/<environment-name>/.env` file, **not** in the root or `src` directory. This file is automatically created when running `azd up` and contains all the Azure resource configuration needed for local development.
 
-## Running the Development Server
+The application automatically loads environment variables from `.env` in `.azure` folder when running locally.
 
-### 1. Build Frontend (Optional)
+## Running the Development Server by CLI
+
+### 1. Build Frontend
 
 If you have changes in `src/frontend`, build the React application:
 
@@ -83,6 +85,33 @@ python -m uvicorn "api.main:create_app" --factory --reload
 ### 4. Access the Application
 
 Click '<http://127.0.0.1:8000>' in the terminal, which should open a new tab in the browser. Enter your message in the box to test the agent.
+
+## Debugging with VS Code
+
+VS Code provides two debug configurations for easy debugging:
+
+![VS Code Launch Profiles](images/vs_code_launch.png)
+
+### Available Launch Profiles
+
+1. **Debug: Initialize Agent (Gunicorn)** - Runs `gunicorn.conf.py` to test agent initialization and configuration
+2. **Debug: FastAPI Server (Uvicorn)** - Runs the FastAPI server with hot-reload for API development
+
+### How to Debug
+
+1. Click on the **Run and Debug** icon in the VS Code left sidebar
+2. Select the desired launch profile from the dropdown at the top
+3. Click the green **Start Debugging** button
+4. Set breakpoints in your code by clicking on the left margin of the editor
+
+### Important: Debugging FastAPI with Existing Agent
+
+When debugging the **FastAPI Server**, you **must** specify the `AZURE_EXISTING_AGENT_ID` environment variable in your `.azure/<environment-name>/.env` file. This tells the application to use an existing agent instead of creating a new one.
+
+Example:
+```properties
+AZURE_EXISTING_AGENT_ID="agent-template-assistant:1"
+```
 
 ## Frontend Development and Customization
 

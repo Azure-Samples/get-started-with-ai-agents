@@ -13,6 +13,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi import Request
 from fastapi.responses import JSONResponse
 from dotenv import load_dotenv
+from util import get_env_file_path
 
 from logging_config import configure_logging
 
@@ -52,17 +53,23 @@ async def lifespan(app: fastapi.FastAPI):
                     logger.info("Configured Application Insights for tracing.")                        
 
             if agent_id:
+                if agent_id.count(":") != 1:
+                    message = "AZURE_EXISTING_AGENT_ID must be in the format 'agent_name:agent_version'."
+                    message += f" (Environment from {env_file})"
+                    raise RuntimeError(message)
                 try: 
                     agent_name = agent_id.split(":")[0]
                     agent_version = agent_id.split(":")[1]
                     agent_version_obj = await project_client.agents.get_version(agent_name, agent_version)
-                    logger.info("Agent already exists, skipping creation")
                     logger.info(f"Fetched agent, agent ID: {agent_version_obj.id}")
                 except Exception as e:
                     logger.error(f"Error fetching agent: {e}", exc_info=True)
 
             if not agent_version_obj:
-                raise RuntimeError("No agent found. Ensure qunicorn.py created one or set AZURE_EXISTING_AGENT_ID.")
+                message = "Fail to fetch agent. Ensure qunicorn.py created one or set AZURE_EXISTING_AGENT_ID."
+                if env_file:
+                    message += f" (Environment from {env_file})"
+                raise RuntimeError(message)
 
             app.state.ai_project = project_client
             app.state.agent_version_obj = agent_version_obj
@@ -78,11 +85,19 @@ async def lifespan(app: fastapi.FastAPI):
 
 
 def create_app():
-    if not os.getenv("RUNNING_IN_PRODUCTION"):
-        load_dotenv(override=True)
-
-    global logger
+    
+    global logger, env_file
     logger = configure_logging(os.getenv("APP_LOG_FILE", ""))
+
+    # Load environment variables from azd environment folder for local development
+    env_file = get_env_file_path()
+    load_dotenv(env_file)
+
+    if env_file:
+        logger.info(f"Loaded environment variables from {env_file}")
+    else:
+        logger.info("Loaded environment variables from default location")    
+    
 
     enable_trace_string = os.getenv("ENABLE_AZURE_MONITOR_TRACING", "")
     global enable_trace
