@@ -32,7 +32,7 @@ The app code runs in an Azure Container App to process user input and generate a
 The AI agent uses file search or Azure AI Search to retrieve knowledge from uploaded files.
 
 - **[Customizable AI Model Deployment](./docs/deploy_customization.md#customizing-model-deployments)**<br/>
-The solution allows users to configure and deploy AI models, such as gpt-4o-mini, with options to adjust model capacity, and knowledge retrieval methods.
+The solution allows users to configure and deploy AI models, default as gpt-5-mini, with options to adjust model capacity, and knowledge retrieval methods.
 
 - **[Built-in Monitoring and Tracing](./docs/observability.md#tracing-and-monitoring)**<br/>
 Integrated monitoring capabilities, including Azure Monitor and Application Insights, enable tracing and logging for easier troubleshooting and performance optimization.
@@ -118,7 +118,7 @@ You can try the [Azure pricing calculator](https://azure.microsoft.com/pricing/c
 
 - **Microsoft Foundry**: Free tier. [Pricing](https://azure.microsoft.com/pricing/details/ai-studio/)  
 - **Azure Storage Account**: Standard tier, LRS. Pricing is based on storage and operations. [Pricing](https://azure.microsoft.com/pricing/details/storage/blobs/)  
-- **Foundry Tools**: S0 tier, defaults to gpt-4o-mini. Pricing is based on token count. [Pricing](https://azure.microsoft.com/pricing/details/cognitive-services/)  
+- **Foundry Tools**: S0 tier, defaults to gpt-5-mini. Pricing is based on token count. [Pricing](https://azure.microsoft.com/pricing/details/cognitive-services/)  
 - **Azure Container App**: Consumption tier with 0.5 CPU, 1GiB memory/storage. Pricing is based on resource allocation, and each month allows for a certain amount of free usage. [Pricing](https://azure.microsoft.com/pricing/details/container-apps/)  
 - **Log analytics**: Pay-as-you-go tier. Costs based on data ingested. [Pricing](https://azure.microsoft.com/pricing/details/monitor/)  
 - **Agent Evaluations**: Incurs the cost of your provided model deployment used for local evaluations.  
@@ -149,7 +149,7 @@ This template creates everything you need to get started with Azure AI Foundry:
 | Resource | Description |
 |----------|-------------|
 | [Azure AI Project](https://learn.microsoft.com/azure/ai-studio/how-to/create-projects) | Provides a collaborative workspace for AI development with access to models, data, and compute resources |
-| [Azure OpenAI Service](https://learn.microsoft.com/azure/ai-services/openai/) | Powers the AI agents for conversational AI and intelligent search capabilities. Default models deployed are gpt-4o-mini, but any Azure AI models can be specified per the [documentation](docs/deploy_customization.md#customizing-model-deployments) |
+| [Azure OpenAI Service](https://learn.microsoft.com/azure/ai-services/openai/) | Powers the AI agents for conversational AI and intelligent search capabilities. Default models deployed are gpt-5-mini, but any Azure AI models can be specified per the [documentation](docs/deploy_customization.md#customizing-model-deployments) |
 | [Azure Container Apps](https://learn.microsoft.com/azure/container-apps/) | Hosts and scales the web application with serverless containers |
 | [Azure Container Registry](https://learn.microsoft.com/azure/container-registry/) | Stores and manages container images for secure deployment |
 | [Storage Account](https://learn.microsoft.com/azure/storage/blobs/) | Provides blob storage for application data and file uploads |

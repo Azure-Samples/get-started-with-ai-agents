@@ -30,7 +30,7 @@
         "azd": {
           "type": "location",
           "usageName": [
-            "OpenAI.GlobalStandard.gpt-4o-mini,30",
+            "OpenAI.GlobalStandard.gpt-5-mini,30",
             "OpenAI.GlobalStandard.text-embedding-3-small,30"
           ]
         },
@@ -162,14 +162,14 @@
     },
     "agentModelName": {
       "type": "string",
-      "defaultValue": "gpt-4o-mini",
+      "defaultValue": "gpt-5-mini",
       "metadata": {
         "description": "Name of the chat model to deploy"
       }
     },
     "agentDeploymentName": {
       "type": "string",
-      "defaultValue": "gpt-4o-mini",
+      "defaultValue": "gpt-5-mini",
       "metadata": {
         "description": "Name of the model deployment"
       }

@@ -47,3 +47,16 @@ def retrieve_model_deployment():
     if not deployment:
         raise ValueError("Please set AZURE_AI_AGENT_DEPLOYMENT_NAME environment variable.")
     return deployment
+
+class Colors:
+    RED = "\033[91m"
+    GREEN = '\033[92m'    
+    YELLOW = "\033[93m"
+    CYAN = "\033[96m"
+    BOLD = "\033[1m"
+    RESET = "\033[0m"
+    
+    @staticmethod
+    def reset():
+        """Properly reset terminal colors"""
+        print("\033[0m", end='', flush=True)

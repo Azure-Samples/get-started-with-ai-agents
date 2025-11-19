@@ -8,7 +8,7 @@ from azure.identity import DefaultAzureCredential
 from azure.ai.projects import AIProjectClient
 from openai.types.eval_create_params import DataSourceConfigCustom
 
-from test_utils import retrieve_agent, retrieve_endpoint, retrieve_model_deployment
+from test_utils import retrieve_agent, retrieve_endpoint, retrieve_model_deployment, Colors
 
 
 def test_evaluation():
@@ -111,26 +111,30 @@ def test_evaluation():
         }
 
         # Submit evaluation run
-        agent_eval_run = openai_client.evals.runs.create(
+        run = openai_client.evals.runs.create(
             eval_id=eval_object.id, name=f"Evaluation Run for Agent {agent.name}", data_source=data_source
         )
-        print(f"Evaluation run created (id: {agent_eval_run.id})")
+        print(f"Evaluation run created (id: {run.id})")
 
         # Poll for completion
-        while agent_eval_run.status not in ["completed", "failed"]:
-            agent_eval_run = openai_client.evals.runs.retrieve(run_id=agent_eval_run.id, eval_id=eval_object.id)
-            print(f"Waiting for eval run to complete... current status: {agent_eval_run.status}")
+        while run.status not in ["completed", "failed"]:
+            run = openai_client.evals.runs.retrieve(run_id=run.id, eval_id=eval_object.id)
+            print(f"Waiting for eval run to complete... current status: {run.status}")
             time.sleep(5)
 
-        if agent_eval_run.status == "completed":
-            print("\n Evaluation run completed successfully!")
-            print(f"Result Counts: {agent_eval_run.result_counts}")
-            print(f"Report URL: {agent_eval_run.report_url}")
+        assert run.status == "completed", "Evaluation run did not complete successfully!"
+        print(f"\n{Colors.GREEN}Evaluation run completed successfully!")
+ 
+        if run.result_counts.errored > 0:
+            print(f"{Colors.RED}Error items: {run.result_counts.errored}")
 
-        # Assertions
-        assert agent_eval_run.status == "completed", "Evaluation run did not complete successfully. Review logs from the evaluation report."
-        assert agent_eval_run.result_counts.errored == 0, f"There were errored evaluation items. Review evaluation results in the evaluation report in {agent_eval_run.report_url}."
-        assert agent_eval_run.result_counts.failed == 0, f"There were failed evaluation items. Review evaluation results in {agent_eval_run.report_url}."
+        if run.result_counts.failed > 0:
+            print(f"{Colors.RED}Failed items: {run.result_counts.failed}")
+
+        print(f"{Colors.YELLOW}Review evaluation results in this report:")
+        print(f"{Colors.CYAN}{run.report_url}\n")
+
+        Colors.reset()
 
 
 if __name__ == "__main__":

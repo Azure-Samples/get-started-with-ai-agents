@@ -186,7 +186,7 @@ When you start a deployment, most parameters will have default values. You can c
 |------------|----------------|  ------------|
 | **Existing Project Resource ID** | Specify an existing project resource ID to be used instead of provisioning new Azure AI Foundry project and Foundry Tools. |   |
 | **Azure Region** | Select a region with quota which supports your selected model. |   |
-| **Model** | Choose from the [list of models supported by Foundry Agent Service](https://learn.microsoft.com/azure/ai-services/agents/concepts/model-region-support) for your selected region. | gpt-4o |  
+| **Model** | Choose from the [list of models supported by Foundry Agent Service](https://learn.microsoft.com/azure/ai-services/agents/concepts/model-region-support) for your selected region. | gpt-5-mini |  
 | **Model Format** | Choose from OpenAI or Microsoft, depending on your model. | OpenAI |  
 | **Model Deployment Capacity** | Configure capacity for your model. | 80k |
 | **Embedding Model** | Choose from text-embedding-3-large, azdtext-embedding-3-small, and text-embedding-ada-002. This may only be deployed if Azure AI Search is enabled. |  text-embedding-3-small |
@@ -206,7 +206,7 @@ For a detailed description of customizable fields and instructions, view the [de
 By default, the template deploys OpenAI's [file search](https://learn.microsoft.com/azure/ai-services/agents/how-to/tools/file-search?tabs=python&pivots=overview) for agent's knowledge retrieval. An agent also can perform search using the search index, deployed in Azure AI Search resource. The semantic index search represents so-called hybrid search i.e. it uses LLM to search for the relevant context in the provided index as well as embedding similarity search. This index is built from the `embeddings.csv` file, containing the embeddings vectors, followed by the contexts.
 To use index search, please set the local environment variable `USE_AZURE_AI_SEARCH_SERVICE` to `true` during the `azd up` command. In this case the Azure AI Search resource will be deployed and used. For more information on Azure AI serach, please see the [Azure AI Search Setup Guide](ai_search.md)
 
-To specify the model (e.g. gpt-4o-mini, gpt-4o) that is deployed for the agent when `azd up` is called, set the following environment variables:
+To specify the model (e.g. gpt-5-mini, gpt-5) that is deployed for the agent when `azd up` is called, set the following environment variables:
 
 ```shell
 azd env set AZURE_AI_AGENT_MODEL_NAME <MODEL_NAME>
@@ -240,7 +240,7 @@ You can view the App Insights tracing in Azure AI Foundry. Select your project o
 The default for the model capacity in deployment is 80k tokens for chat model and 50k for embedded model for AI Search. For optimal performance, it is recommended to increase to 100k tokens. You can change the capacity by following the steps in [setting capacity and deployment SKU](deploy_customization.md#customizing-model-deployments).
 
 - Navigate to [Monitor and track your quota usage](https://ai.azure.com/managementCenter/quota)
-* In the Quota tab, click the GlobalStandard dropdown and select the model and region you are using for this accelerator to see your available quota. Please note gpt-4o and text-embedding-3-small are used as default.
+* In the Quota tab, click the GlobalStandard dropdown and select the model and region you are using for this accelerator to see your available quota. Please note gpt-5-mini and text-embedding-3-small are used as default.
 - Request more quota or delete any unused model deployments as needed.
 
 </details>

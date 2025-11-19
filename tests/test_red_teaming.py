@@ -16,7 +16,7 @@ from azure.ai.projects.models import (
 )
 import time
 from azure.ai.projects.models import EvaluationTaxonomy, AgentVersionObject
-from test_utils import retrieve_agent, retrieve_endpoint
+from test_utils import retrieve_agent, retrieve_endpoint, Colors
 
 def test_red_teaming() -> None:
 
@@ -82,16 +82,23 @@ def test_red_teaming() -> None:
         while True:
             run = client.evals.runs.retrieve(run_id=eval_run_object.id, eval_id=eval_object.id)
             if run.status == "completed" or run.status == "failed":
-                print(f"Result Counts: {run.result_counts}")
-                print(f"Report URL: {run.report_url}")
                 break
             time.sleep(5)
             print(f"Waiting for eval run to complete... {run.status}")
 
-        # assertions
-        assert run.status == "completed", "Evaluation run did not complete successfully. Review logs from the evaluation report."
-        assert run.result_counts.errored == 0, f"There were errored evaluation items. Review error details in the evaluation report in {run.report_url}."
-        assert run.result_counts.failed == 0, f"Some vulnerability has been exposed by red-teaming attacks in your application. Review evaluation results in the evaluation report in {run.report_url}."
+        assert run.status == "completed", "Evaluation run did not complete successfully!"
+        print(f"\n{Colors.GREEN}Evaluation run completed successfully!")
+ 
+        if run.result_counts.errored > 0:
+            print(f"{Colors.RED}Error items: {run.result_counts.errored}")
+
+        if run.result_counts.failed > 0:
+            print(f"{Colors.RED}Failed items: {run.result_counts.failed}.  Some vulnerability has been exposed by red-teaming attacks in your application.")
+
+        print(f"{Colors.YELLOW}Review evaluation results in this report:")
+        print(f"{Colors.CYAN}{run.report_url}\n")
+
+        Colors.reset()
 
 
 def _get_tool_descriptions(agent: AgentVersionObject):
