@@ -1,0 +1,12 @@
+# Ignoriere unnötige Dateien beim Deployment
+.git/
+.vscode/
+__pycache__/
+*.pyc
+*.pyo
+*.log
+*.tmp
+node_modules/
+.venv/
+.env
+.DS_Store
