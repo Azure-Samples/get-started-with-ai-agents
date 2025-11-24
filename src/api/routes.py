@@ -87,14 +87,14 @@ def cleanup_created_at_metadata(metadata: Mapping[str, str]) -> None:
         min_key = min(created_at_keys, key=metadata.get)
         del metadata[min_key]
 
-def get_ai_project(request: Request) -> AIProjectClient:
+def get_project_client(request: Request) -> AIProjectClient:
     return request.app.state.ai_project
 
 def get_agent_version_obj(request: Request) -> AgentVersionObject:
     return request.app.state.agent_version_obj
 
 def get_openai_client(request: Request) -> AsyncOpenAI:
-    return request.app.state.openai_client
+    return get_project_client(request).get_openai_client()
 
 def get_created_at_label(message_id: str) -> str:
     return f"{message_id}_created_at"
@@ -200,47 +200,48 @@ async def get_result(
     agent: AgentVersionObject,
     conversation: Conversation,
     user_message: str, 
-    openAI: AsyncOpenAI,
+    project_client: AIProjectClient,
     carrier: Dict[str, str]
 ) -> AsyncGenerator[str, None]:
     ctx = TraceContextTextMapPropagator().extract(carrier=carrier)
     with tracer.start_as_current_span('get_result', context=ctx):
-        logger.info(f"get_result invoked for conversation={conversation.id}")
-        input_created_at = datetime.now(timezone.utc).timestamp()
-        try:
-            response = await openAI.responses.create(
-                conversation=conversation.id,
-                input=user_message,
-                extra_body={"agent": AgentReference(name=agent.name, version=agent.version).as_dict()},
-                stream=True
-            )
-            logger.info("Successfully created stream; starting to process events")
-            async for event in response:
-                if event.type == "response.created":
-                    logger.info(f"Stream response created with ID: {event.response.id}")
-                elif event.type == "response.output_text.delta":
-                    logger.info(f"Delta: {event.delta}")
-                    stream_data = {'content': event.delta, 'type': "message"}
-                    yield serialize_sse_event(stream_data)
-                elif event.type == "response.output_item.done" and event.item.type == "message":
-                    stream_data = await get_message_and_annotations(event.item)
-                    stream_data['type'] = "completed_message"
-                    yield serialize_sse_event(stream_data)
-                elif event.type == "response.completed":
-                    logger.info(f"Response completed with full message: {event.response.output_text}")
-                                                    
-        except Exception as e:
-            logger.exception(f"Exception in get_result: {e}")
-            error_data = {
-                'content': str(e),
-                'annotations': [],
-                'type': "completed_message"
-            }
-            yield serialize_sse_event(error_data)
-        finally:
-            stream_data = {'type': "stream_end"}
-            await save_user_message_created_at(openAI, conversation, input_created_at)
-            yield serialize_sse_event(stream_data)           
+        async with project_client.get_openai_client() as openai_client:
+            logger.info(f"get_result invoked for conversation={conversation.id}")
+            input_created_at = datetime.now(timezone.utc).timestamp()
+            try:
+                response = await openai_client.responses.create(
+                    conversation=conversation.id,
+                    input=user_message,
+                    extra_body={"agent": AgentReference(name=agent.name, version=agent.version).as_dict()},
+                    stream=True
+                )
+                logger.info("Successfully created stream; starting to process events")
+                async for event in response:
+                    if event.type == "response.created":
+                        logger.info(f"Stream response created with ID: {event.response.id}")
+                    elif event.type == "response.output_text.delta":
+                        logger.info(f"Delta: {event.delta}")
+                        stream_data = {'content': event.delta, 'type': "message"}
+                        yield serialize_sse_event(stream_data)
+                    elif event.type == "response.output_item.done" and event.item.type == "message":
+                        stream_data = await get_message_and_annotations(event.item)
+                        stream_data['type'] = "completed_message"
+                        yield serialize_sse_event(stream_data)
+                    elif event.type == "response.completed":
+                        logger.info(f"Response completed with full message: {event.response.output_text}")
+                                                        
+            except Exception as e:
+                logger.exception(f"Exception in get_result: {e}")
+                error_data = {
+                    'content': str(e),
+                    'annotations': [],
+                    'type': "completed_message"
+                }
+                yield serialize_sse_event(error_data)
+            finally:
+                stream_data = {'type': "stream_end"}
+                await save_user_message_created_at(openai_client, conversation, input_created_at)
+                yield serialize_sse_event(stream_data)           
 
 
 
@@ -252,36 +253,37 @@ async def history(
 	_ = auth_dependency
 ):
     with tracer.start_as_current_span("chat_history"):
-        conversation_id = request.cookies.get('conversation_id')
-        agent_id = request.cookies.get('agent_id')
+        async with openai_client:
+            conversation_id = request.cookies.get('conversation_id')
+            agent_id = request.cookies.get('agent_id')
 
-        # Get or create conversation using the reusable function
-        conversation = await get_or_create_conversation(
-            openai_client, conversation_id, agent_id, agent.id
-        )
-        agent_id = agent.id
-        # Create a new message from the user's input.
-        try:
-            content = []
-            items = await openai_client.conversations.items.list(conversation_id=conversation.id, order="desc", limit=16)
-            async for item in items:
-                if item.type == "message":
-                    formatteded_message = await get_message_and_annotations(item)
-                    formatteded_message['role'] = item.role
-                    formatteded_message['created_at'] = conversation.metadata.get(get_created_at_label(item.id), "")
-                    content.append(formatteded_message)
+            # Get or create conversation using the reusable function
+            conversation = await get_or_create_conversation(
+                openai_client, conversation_id, agent_id, agent.id
+            )
+            agent_id = agent.id
+            # Create a new message from the user's input.
+            try:
+                content = []
+                items = await openai_client.conversations.items.list(conversation_id=conversation.id, order="desc", limit=16)
+                async for item in items:
+                    if item.type == "message":
+                        formatteded_message = await get_message_and_annotations(item)
+                        formatteded_message['role'] = item.role
+                        formatteded_message['created_at'] = conversation.metadata.get(get_created_at_label(item.id), "")
+                        content.append(formatteded_message)
 
 
-            logger.info(f"List message, conversation ID: {conversation_id}")
-            response = JSONResponse(content=content)
-        
-            # Update cookies to persist the conversation IDs.
-            response.set_cookie("conversation_id", conversation_id)
-            response.set_cookie("agent_id", agent_id)
-            return response
-        except Exception as e:
-            logger.error(f"Error listing message: {e}")
-            raise HTTPException(status_code=500, detail=f"Error list message: {e}")
+                logger.info(f"List message, conversation ID: {conversation_id}")
+                response = JSONResponse(content=content)
+            
+                # Update cookies to persist the conversation IDs.
+                response.set_cookie("conversation_id", conversation_id)
+                response.set_cookie("agent_id", agent_id)
+                return response
+            except Exception as e:
+                logger.error(f"Error listing message: {e}")
+                raise HTTPException(status_code=500, detail=f"Error list message: {e}")
 
 @router.get("/agent")
 async def get_chat_agent(
@@ -292,7 +294,7 @@ async def get_chat_agent(
 @router.post("/chat")
 async def chat(
     request: Request,
-    openai_client : AsyncOpenAI = Depends(get_openai_client),
+    project_client: AIProjectClient = Depends(get_project_client),
     agent: AgentVersionObject = Depends(get_agent_version_obj),
     
 	_ = auth_dependency
@@ -301,40 +303,41 @@ async def chat(
     conversation_id = request.cookies.get('conversation_id')
     agent_id = request.cookies.get('agent_id')    
 
+    carrier = {}        
+    TraceContextTextMapPropagator().inject(carrier)
+
     with tracer.start_as_current_span("chat_request"):
-        carrier = {}        
-        TraceContextTextMapPropagator().inject(carrier)
-
-        # if the connection no longer exist or agent is changed, create a new one
-        conversation = await get_or_create_conversation(
-            openai_client, conversation_id, agent_id, agent.id
-        )
-        conversation_id = conversation.id
-        agent_id = agent.id
+        async with project_client.get_openai_client() as openai_client:
+            # if the connection no longer exist or agent is changed, create a new one
+            conversation = await get_or_create_conversation(
+                openai_client, conversation_id, agent_id, agent.id
+            )
+            conversation_id = conversation.id
+            agent_id = agent.id
         
-        # Parse the JSON from the request.
-        try:
-            user_message = await request.json()
-        except Exception as e:
-            logger.error(f"Invalid JSON in request: {e}")
-            raise HTTPException(status_code=400, detail=f"Invalid JSON in request: {e}")
-        # Create a new message from the user's input.
+    # Parse the JSON from the request.
+    try:
+        user_message = await request.json()
+    except Exception as e:
+        logger.error(f"Invalid JSON in request: {e}")
+        raise HTTPException(status_code=400, detail=f"Invalid JSON in request: {e}")
+    # Create a new message from the user's input.
 
-        # Set the Server-Sent Events (SSE) response headers.
-        headers = {
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            "Content-Type": "text/event-stream"
-        }
-        logger.info(f"Starting streaming response for conversation ID {conversation_id}")
+    # Set the Server-Sent Events (SSE) response headers.
+    headers = {
+        "Cache-Control": "no-cache",
+        "Connection": "keep-alive",
+        "Content-Type": "text/event-stream"
+    }
+    logger.info(f"Starting streaming response for conversation ID {conversation_id}")
 
-        # Create the streaming response using the generator.
-        response = StreamingResponse(get_result(agent, conversation, user_message.get('message', ''), openai_client, carrier), headers=headers)
+    # Create the streaming response using the generator.
+    response = StreamingResponse(get_result(agent, conversation, user_message.get('message', ''), project_client, carrier), headers=headers)
 
-        # Update cookies to persist the conversation and agent IDs.
-        response.set_cookie("conversation_id", conversation_id)
-        response.set_cookie("agent_id", agent_id)
-        return response
+    # Update cookies to persist the conversation and agent IDs.
+    response.set_cookie("conversation_id", conversation_id)
+    response.set_cookie("agent_id", agent_id)
+    return response
 
 def read_file(path: str) -> str:
     with open(path, 'r') as file:

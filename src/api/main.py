@@ -30,7 +30,6 @@ async def lifespan(app: fastapi.FastAPI):
         async with (
             DefaultAzureCredential() as credential,
             AIProjectClient(endpoint=proj_endpoint, credential=credential) as project_client,
-            project_client.get_openai_client() as openai_client,
         ):
             logger.info("Created AIProjectClient")
 
@@ -73,7 +72,6 @@ async def lifespan(app: fastapi.FastAPI):
 
             app.state.ai_project = project_client
             app.state.agent_version_obj = agent_version_obj
-            app.state.openai_client = openai_client
             yield
 
     except Exception as e:
