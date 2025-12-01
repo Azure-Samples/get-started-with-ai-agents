@@ -6,6 +6,9 @@ WORKDIR /code
 
 COPY . .
 
+# Upgrade pip to fix security vulnerability GHSA-4xh5-x5gv-qwph
+RUN pip install --no-cache-dir --upgrade pip>=25.3
+
 RUN pip install --no-cache-dir --upgrade -r requirements.txt
 
 # Install Node.js and pnpm with specific versions
