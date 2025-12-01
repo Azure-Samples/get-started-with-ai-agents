@@ -1,5 +1,0 @@
-[tool.ruff]
-line-length = 120
-target-version = "py39"
-lint.select = ["E", "F", "I", "UP"]
-lint.ignore = ["D203"]
