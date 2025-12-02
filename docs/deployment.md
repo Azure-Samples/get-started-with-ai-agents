@@ -22,6 +22,36 @@ Check the [Azure Products by Region](https://azure.microsoft.com/explore/global-
 
 Here are some examples of the regions where the services are available: East US, East US2, Japan East, UK South, Sweden Central.
 
+### Install and verify the Bicep CLI
+
+`azd up` compiles every file under `infra/*.bicep`. To avoid network downloads during deployment, make sure the Bicep CLI is already available on your machine (or Codespace) through the Azure CLI:
+
+```bash
+az bicep install   # or az bicep upgrade
+az bicep version   # verify installation
+```
+
+If you prefer to use the standalone `bicep` binary, place it on your `PATH` before running `azd up`.
+
+### Quick prerequisite verification
+
+Run the validation script for your platform to confirm both environment variables and the Bicep CLI are ready:
+
+- Linux/macOS:
+
+  ```bash
+  chmod u+x ./scripts/validate_env_vars.sh
+  ./scripts/validate_env_vars.sh
+  ```
+
+- Windows PowerShell:
+
+  ```powershell
+  pwsh -File ./scripts/validate_env_vars.ps1
+  ```
+
+The script reports any missing Bicep installation or malformed environment variables so you can address them before provisioning.
+
 ### **Important Note for PowerShell Users**
 
 If you encounter issues running PowerShell scripts due to the policy of not being digitally signed, you can temporarily adjust the `ExecutionPolicy` by running the following command in an elevated PowerShell session:
