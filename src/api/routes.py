@@ -18,13 +18,15 @@ import logging
 from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
 from azure.ai.projects.models import AgentVersionObject, AgentReference
 from openai.types.conversations.message import Message
-from openai.types.responses import Response, ResponseOutputText, ResponseOutputMessage, ResponseInputText, ResponseInputMessageItem
+from openai.types.responses import ResponseOutputMessage
 from openai.types.conversations import Conversation
-from openai.types.responses.response_output_text import AnnotationFileCitation
 
 from azure.ai.projects.aio import AIProjectClient
 
-from openai.types.responses import ResponseTextDeltaEvent, ResponseCompletedEvent, ResponseTextDoneEvent, ResponseCreatedEvent, ResponseOutputItemDoneEvent
+from util import encode_project_resource_id
+
+from urllib.parse import quote
+
 
 from openai import AsyncOpenAI
 
@@ -289,7 +291,13 @@ async def history(
 async def get_chat_agent(
     agent: AgentVersionObject = Depends(get_agent_version_obj),
 ):
-    return JSONResponse(content={"name": agent.name, "metadata": agent.metadata})
+    wsid = os.environ.get("AZURE_EXISTING_AIPROJECT_RESOURCE_ID")
+    agent_id = os.environ.get("AZURE_EXISTING_AGENT_ID")
+    agent_name = agent_id.split(":")[0]
+    agent_version = agent_id.split(":")[1]
+    agent_playground_url = f"https://ai.azure.com/nextgen/r/{encode_project_resource_id(wsid)}/build/agents/{quote(agent_name)}/build?version={agent_version}"
+    return JSONResponse(content={"name": agent.name, "metadata": agent.metadata, "agentPlaygroundUrl": agent_playground_url})
+
 
 @router.post("/chat")
 async def chat(
@@ -338,40 +346,3 @@ async def chat(
     response.set_cookie("conversation_id", conversation_id)
     response.set_cookie("agent_id", agent_id)
     return response
-
-def read_file(path: str) -> str:
-    with open(path, 'r') as file:
-        return file.read()
-
-@router.get("/config/azure")
-async def get_azure_config(_ = auth_dependency):
-    """Get Azure configuration for frontend use"""
-    try:
-        subscription_id = os.environ.get("AZURE_SUBSCRIPTION_ID", "")
-        tenant_id = os.environ.get("AZURE_TENANT_ID", "")
-        resource_group = os.environ.get("AZURE_RESOURCE_GROUP", "")
-        ai_project_resource_id = os.environ.get("AZURE_EXISTING_AIPROJECT_RESOURCE_ID", "")
-        
-        # Extract resource name and project name from the resource ID
-        # Format: /subscriptions/{sub}/resourceGroups/{rg}/providers/Microsoft.CognitiveServices/accounts/{resource}/projects/{project}
-        resource_name = ""
-        project_name = ""
-        
-        if ai_project_resource_id:
-            parts = ai_project_resource_id.split("/")
-            if len(parts) >= 8:
-                resource_name = parts[8]  # accounts/{resource_name}
-            if len(parts) >= 10:
-                project_name = parts[10]  # projects/{project_name}
-        
-        return JSONResponse({
-            "subscriptionId": subscription_id,
-            "tenantId": tenant_id,
-            "resourceGroup": resource_group,
-            "resourceName": resource_name,
-            "projectName": project_name,
-            "wsid": ai_project_resource_id
-        })
-    except Exception as e:
-        logger.error(f"Error getting Azure config: {e}")
-        raise HTTPException(status_code=500, detail="Failed to get Azure configuration")

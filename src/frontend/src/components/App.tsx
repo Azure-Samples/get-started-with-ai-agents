@@ -14,6 +14,7 @@ const App: React.FC = () => {
     metadata: {
       logo: "robot",
     },
+    agentPlaygroundUrl: "",
   });
 
   // Fetch agent details when component mounts
@@ -52,6 +53,7 @@ const App: React.FC = () => {
             metadata: {
               logo: "robot",
             },
+            agentPlaygroundUrl: "",
           });
         }
       } catch (error) {
@@ -67,6 +69,7 @@ const App: React.FC = () => {
           metadata: {
             logo: "robot",
           },
+          agentPlaygroundUrl: "",
         });
       }
     };
