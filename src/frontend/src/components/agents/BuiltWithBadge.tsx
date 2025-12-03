@@ -59,14 +59,14 @@ export function BuiltWithBadge({
     >
       {" "}
       <span className={styles.logo}>
-        {/* Azure AI Foundry logo */}
+        {/* Microsoft Foundry logo */}
         <AIFoundryLogo />
       </span>
       <Caption1Strong className={styles.description}>
         Build & deploy AI agents with
       </Caption1Strong>
       <Caption1Strong className={styles.brand}>
-        Azure AI Foundry <ArrowRight16Filled aria-hidden={true} />
+        Microsoft Foundry <ArrowRight16Filled aria-hidden={true} />
       </Caption1Strong>
     </button>
   );

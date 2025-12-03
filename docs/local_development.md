@@ -148,9 +148,9 @@ To customize agent instructions or tools when creating **new agents**, modify th
 
 ### Modifying Existing Agents
 
-**Important**: If you want to modify an **existing agent** that's already deployed, it's recommended to use the **Azure AI Foundry UI** instead of the script:
+**Important**: If you want to modify an **existing agent** that's already deployed, it's recommended to use the **Microsoft Foundry UI** instead of the script:
 
-1. Go to your Azure AI Foundry project
+1. Go to your Microsoft Foundry project
 2. Navigate to the Agents section
 3. Select your agent
 4. Update instructions, tools, or settings directly in the UI
@@ -178,7 +178,7 @@ If you want to add new files to the `src/files/` folder or update the embedded d
 If you've already created an agent and need to add or update files or embeddings data, you have two options:
 
 #### Option 1: Delete and Recreate Agent (Recommended)
-1. Go to your **Azure AI Foundry UI**
+1. Go to your **Microsoft Foundry UI**
 2. Navigate to the **Agents** section
 3. **Delete the existing agent**
 4. Update files in `src/files/` directory and/or `src/data/embeddings.csv`

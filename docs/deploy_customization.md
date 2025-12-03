@@ -1,7 +1,7 @@
 
-# Getting Started with Agents Using Azure AI Foundry: Deployment customization
+# Getting Started with Agents Using Microsoft Foundry: Deployment customization
 
-This document describes how to customize the deployment of the Agents Chat with Azure AI Foundry. Once you follow the steps here, you can run `azd up` as described in the section below.
+This document describes how to customize the deployment of the Agents Chat with Microsoft Foundry. Once you follow the steps here, you can run `azd up` as described in the section below.
 
 * [Use existing resources](#use-existing-resources)
 * [Enabling and disabling resources provision](#enabling-and-disabling-resources-provision)
@@ -9,7 +9,7 @@ This document describes how to customize the deployment of the Agents Chat with 
 * [Customizing model deployments](#customizing-model-deployments)
 
 ## Use existing resources
-Be default, this template provisions a new resource group along with other resources.   If you already have provisioned Azure AI Foundry and Azure AI Foundry Project (not a hub based project), you might reuse these resources by setting:
+Be default, this template provisions a new resource group along with other resources.   If you already have provisioned Microsoft Foundry and Microsoft Foundry Project (not a hub based project), you might reuse these resources by setting:
 
 To find the value:
 
@@ -40,8 +40,8 @@ Once you disable these resources, they will not be deployed when you run `azd up
 By default, this template will use a naming convention with unique strings to prevent naming collisions within Azure.
 To override default naming conventions, the following keys can be set:
 
-* `AZURE_AIPROJECT_NAME` - The name of the Azure AI Foundry project
-* `AZURE_AISERVICES_NAME` - The name of the Azure AI Foundry
+* `AZURE_AIPROJECT_NAME` - The name of the Microsoft Foundry project
+* `AZURE_AISERVICES_NAME` - The name of the Microsoft Foundry
 * `AZURE_STORAGE_ACCOUNT_NAME` - The name of the Storage Account
 * `AZURE_APPLICATION_INSIGHTS_NAME` - The name of the Application Insights instance
 * `AZURE_LOG_ANALYTICS_WORKSPACE_NAME` - The name of the Log Analytics workspace used by Application Insights
