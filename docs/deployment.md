@@ -14,7 +14,7 @@ You can view the permissions for your account and subscription by going to Azure
 
 Check the [Azure Products by Region](https://azure.microsoft.com/explore/global-infrastructure/products-by-region/?products=all&regions=all) page and select a **region** where the following services are available:
 
-- [Azure AI Foundry](https://learn.microsoft.com/azure/ai-foundry/)
+- [Microsoft Foundry](https://learn.microsoft.com/azure/ai-foundry/)
 - [Azure Container Apps](https://learn.microsoft.com/azure/container-apps/)
 - [Azure Container Registry](https://learn.microsoft.com/azure/container-registry/)
 - [Azure AI Search](https://learn.microsoft.com/azure/search/)
@@ -184,7 +184,7 @@ When you start a deployment, most parameters will have default values. You can c
 
 | **Setting** | **Description** |  **Default value** |
 |------------|----------------|  ------------|
-| **Existing Project Resource ID** | Specify an existing project resource ID to be used instead of provisioning new Azure AI Foundry project and Foundry Tools. |   |
+| **Existing Project Resource ID** | Specify an existing project resource ID to be used instead of provisioning new Microsoft Foundry project and Foundry Tools. |   |
 | **Azure Region** | Select a region with quota which supports your selected model. |   |
 | **Model** | Choose from the [list of models supported by Foundry Agent Service](https://learn.microsoft.com/azure/ai-services/agents/concepts/model-region-support) for your selected region. | gpt-5-mini |  
 | **Model Format** | Choose from OpenAI or Microsoft, depending on your model. | OpenAI |  
@@ -228,7 +228,7 @@ To enable message contents to be included in the traces, set the following envir
 azd env set OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT true
 ```
 
-You can view the App Insights tracing in Azure AI Foundry. Select your project on the Azure AI Foundry page and then click 'Tracing'.
+You can view the App Insights tracing in Microsoft Foundry. Select your project on the Microsoft Foundry page and then click 'Tracing'.
 
 </details>
 
@@ -258,7 +258,7 @@ Once you've opened the project in [Codespaces](#github-codespaces) or in [Dev Co
     azd env set AZURE_AI_AGENT_DEPLOYMENT_CAPACITY 100
     ```
 
-    ⚠️ If you do not increase your quota, you may encounter rate limit issues. If needed, you can increase the quota after deployment by editing your model in the Models and Endpoints tab of the [Azure AI Foundry Portal](https://ai.azure.com/).
+    ⚠️ If you do not increase your quota, you may encounter rate limit issues. If needed, you can increase the quota after deployment by editing your model in the Models and Endpoints tab of the [Microsoft Foundry Portal](https://ai.azure.com/).
 
 2. Provision resources, build a docker image using `src` folder, and deploy:
 
@@ -284,9 +284,9 @@ Once you've opened the project in [Codespaces](#github-codespaces) or in [Dev Co
         azd show
         ```
 
-5. (Optional) Now that your app has deployed, you can view your resources in the Azure Portal and your deployments in Azure AI Foundry.
+5. (Optional) Now that your app has deployed, you can view your resources in the Azure Portal and your deployments in Microsoft Foundry.
     - In the [Azure Portal](https://portal.azure.com/), navigate to your environment's resource group. The name will be `rg-[your environment name]`. Here, you should see your container app, storage account, and all of the other [resources](#resources) that are created in the deployment.
-    - In the [Azure AI Foundry Portal](https://ai.azure.com/), select your project. If you navigate to the Agents tab, you should be able to view your new agent, named `agent-template-assistant`. If you navigate to the Models and Endpoints tab, you should see your AI Services connection with your model deployments.
+    - In the [Microsoft Foundry Portal](https://ai.azure.com/), select your project. If you navigate to the Agents tab, you should be able to view your new agent, named `agent-template-assistant`. If you navigate to the Models and Endpoints tab, you should see your AI Services connection with your model deployments.
 
 6. (Optional) You can use a local development server to test app changes locally. To do so, follow the steps in [local deployment server](#develop-with-local-development-server) after your app is deployed.
 

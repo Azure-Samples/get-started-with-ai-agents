@@ -55,14 +55,14 @@
       "type": "string",
       "defaultValue": "",
       "metadata": {
-        "description": "The Azure AI Foundry Hub resource name. If ommited will be generated"
+        "description": "The Microsoft Foundry Hub resource name. If ommited will be generated"
       }
     },
     "aiProjectName": {
       "type": "string",
       "defaultValue": "",
       "metadata": {
-        "description": "The Azure AI Foundry project name. If ommited will be generated"
+        "description": "The Microsoft Foundry project name. If ommited will be generated"
       }
     },
     "applicationInsightsName": {

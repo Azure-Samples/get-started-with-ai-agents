@@ -1,4 +1,4 @@
-# Getting Started with Agents Using Azure AI Foundry
+# Getting Started with Agents Using Microsoft Foundry
 
 The agent leverages Foundry Agent Service and utilizes file search for knowledge retrieval from uploaded files, enabling it to generate responses with citations. The solution also includes built-in monitoring capabilities with tracing to ensure easier troubleshooting and optimized performance.
 
@@ -144,7 +144,7 @@ For a more comprehensive list of best practices and security recommendations for
 
 ### Resources
 
-This template creates everything you need to get started with Azure AI Foundry:
+This template creates everything you need to get started with Microsoft Foundry:
 
 | Resource | Description |
 |----------|-------------|

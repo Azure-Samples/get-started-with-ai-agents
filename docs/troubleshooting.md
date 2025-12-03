@@ -50,7 +50,7 @@ This guide provides solutions to common issues you may encounter when deploying 
 **Cause**: Your model may have reached its rate limit
 **Solution**: 
 - Increase quota by adjusting the bicep configuration
-- Edit the model in the Azure AI Foundry page for your project's model deployments
+- Edit the model in the Microsoft Foundry page for your project's model deployments
 
 ### Agent Crashes
 
@@ -82,7 +82,7 @@ This guide provides solutions to common issues you may encounter when deploying 
 
 If you continue to experience issues after trying these solutions:
 
-1. Check the [Azure AI Foundry documentation](https://learn.microsoft.com/azure/ai-foundry/)
+1. Check the [Microsoft Foundry documentation](https://learn.microsoft.com/azure/ai-foundry/)
 2. Review the [Azure Container Apps troubleshooting guide](https://learn.microsoft.com/azure/container-apps/troubleshooting)
 3. Consult the [Azure Developer CLI reference](https://learn.microsoft.com/azure/developer/azure-developer-cli/reference)
 4. For agent-specific issues, refer to the [Azure AI Agents documentation](https://learn.microsoft.com/azure/ai-services/agents/)

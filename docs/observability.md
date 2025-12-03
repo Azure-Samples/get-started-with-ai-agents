@@ -8,9 +8,9 @@ In **post-deployment** stage, you can utilize [Tracing and monitoring](#tracing-
 
 ## Prequisites 
 
-Execute `azd up` to generate most of these environment variables in `.azure/.env`. To specify the Agent ID, navigate to the Azure AI Foundry Portal:
+Execute `azd up` to generate most of these environment variables in `.azure/.env`. To specify the Agent ID, navigate to the Microsoft Foundry Portal:
 
-  1. Go to [Azure AI Foundry Portal](https://ai.azure.com/) and sign in
+  1. Go to [Microsoft Foundry Portal](https://ai.azure.com/) and sign in
   2. Click on your project from the homepage
   3. In the top navigation, select **Build**
   4. In the left-hand menu, select **Agents**
@@ -21,7 +21,7 @@ Execute `azd up` to generate most of these environment variables in `.azure/.env
 
 ## Agent Evaluation
 
-Azure AI Foundry offers a number of [built-in evaluators](https://learn.microsoft.com/azure/ai-foundry/concepts/observability#what-are-evaluators) to measure the quality, efficiency, risk and safety of your agents. For example, intent resolution, tool call accuracy, and task adherence evaluators are targeted to assess the end-to-end and tool call process quality of agent workflow, while content safety evaluator checks for inappropriate content in the responses such as violence or hate. 
+Microsoft Foundry offers a number of [built-in evaluators](https://learn.microsoft.com/azure/ai-foundry/concepts/observability#what-are-evaluators) to measure the quality, efficiency, risk and safety of your agents. For example, intent resolution, tool call accuracy, and task adherence evaluators are targeted to assess the end-to-end and tool call process quality of agent workflow, while content safety evaluator checks for inappropriate content in the responses such as violence or hate. 
 You can also create custom evaluators tailored to your specific requirements, including custom prompt-based evaluators or code-based evaluators that implement your unique assessment criteria.
 
 In this template, we show how the evaluation of your agent can be intergrated into the test suite of your AI application.
@@ -49,7 +49,7 @@ You can use the [evaluation test script](../tests/test_evaluation.py) to validat
   pytest tests/test_evaluation.py -s
   ```
 
-  Upon completion, the test will display an URL in the output where you can review the detailed evaluation results in the Azure AI Foundry UI, including individual evaluator passing scores and explanations.
+  Upon completion, the test will display an URL in the output where you can review the detailed evaluation results in the Microsoft Foundry UI, including individual evaluator passing scores and explanations.
 
 ## AI Red Teaming Agent
 
@@ -71,7 +71,7 @@ python -m pip install -r src/requirements.txt
 pytest tests/test_red_teaming.py -s
 ```
 
-Upon completion, the test will display an URL in the output where you can review the detailed red teaming evaluation results in the Azure AI Foundry UI, including attack inputs, outcomes, and reasons.
+Upon completion, the test will display an URL in the output where you can review the detailed red teaming evaluation results in the Microsoft Foundry UI, including attack inputs, outcomes, and reasons.
 
 Read more on supported attack techniques and risk categories in our [documentation](https://learn.microsoft.com/azure/ai-foundry/how-to/develop/run-scans-ai-red-teaming-agent).
 
@@ -98,7 +98,7 @@ After accessing your resource group in Azure portal, choose your container app f
 
 ### Agent traces
 
-You can view both the server-side and client-side traces, cost and evaluation data in Azure AI Foundry. Go to the agent under your project on the Azure AI Foundry page and then click 'Tracing'.
+You can view both the server-side and client-side traces, cost and evaluation data in Microsoft Foundry. Go to the agent under your project on the Microsoft Foundry page and then click 'Tracing'.
 
 ![Tracing Tab](./images/tracing_tab.png)
 
@@ -114,9 +114,9 @@ Continuous evaluation is an automated monitoring capability that continuously as
 
 During container startup, continuous evaluation is `enabled` by default and pre-configured with a sample evaluator set to evaluate up to `5` agent responses per hour. Continuous evaluation does not generate test inputs—instead, it evaluates real user conversations as they occur. This means evaluation runs are triggered only when actual users interact with your agent, and if there are no user interactions, there will be no evaluation entries.
 
-To customize continuous evaluation from the Azure AI Foundry:
+To customize continuous evaluation from the Microsoft Foundry:
 
-1. Go to [Azure AI Foundry Portal](https://ai.azure.com/) and sign in
+1. Go to [Microsoft Foundry Portal](https://ai.azure.com/) and sign in
 2. Click on your project from the homepage
 3. In the top navigation, select **Build**
 4. In the left-hand menu, select **Agents**
