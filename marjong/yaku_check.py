@@ -267,12 +267,6 @@ def is_yakuhai(player):
         if meld[0] in winds_and_dragons and len(meld) >= 3:
             return True
     return False
-YAKU_FAN = {  
-    '七対子':2,  
-    '清一色':6, '混一色':3,  
-    '役牌(east)':1, '役牌(south)':1, '役牌(west)':1, '役牌(north)':1,  
-    '役牌(white)':1, '役牌(green)':1, '役牌(red)':1,  
-}  
 
 # 役牌
 def yakuhai_list(player):
