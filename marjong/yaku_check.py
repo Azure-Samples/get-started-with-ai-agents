@@ -216,7 +216,49 @@ def is_iipeikou(player):
         if seq_total >= 2:
             return True
     return False
-  
+
+def is_haitei(tile_mountain):
+    """
+    海底撈月 (ハイテイ) 判定 - 1翻役
+    
+    牌山の最後の牌をツモして和了した場合に成立。
+    tile_mountain の山牌状態を確認して判定する。
+    
+    条件: 山牌に残された牌がない、または最後の1枚のみ残っている
+    """
+    if tile_mountain is None:
+        return False
+    remaining_tiles = [tile for tile in tile_mountain.wall_tiles if not tile.get("is_dead_wall", False)]
+    return len(remaining_tiles) <= 1
+
+def is_houtei(tile_mountain):
+    """
+    河底撈魚 (ホウテイ) 判定 - 1翻役
+    
+    牌山が完全に枯れた状態で、捨て牌でロン和了した場合に成立。
+    tile_mountain の山牌状態を確認して判定する。
+    
+    条件: 山牌が完全に枯れている（王牌のみ残っている）
+    """
+    if tile_mountain is None:
+        return False
+    remaining_tiles = [tile for tile in tile_mountain.wall_tiles if not tile.get("is_dead_wall", False)]
+    return len(remaining_tiles) == 0
+
+def is_rinshan_tsumo(player, is_kang_tsumo=False):
+    """
+    林荘ツモ (リンシャンツモ) 判定 - 1翻役
+    
+    槓（カン）の直後に嶺上牌をツモして和了した場合に成立。
+    is_kang_tsumo フラグを受け取って判定する。
+    
+    条件: 槓の直後のツモで和了、かつ門前
+    """
+    if not is_kang_tsumo:
+        return False
+    # 槓後ツモは門前限定（副露がないか確認）
+    return len(player.melds) == 0 and player.tsumo_tile is not None
+
 def is_yakuhai(player):
     """役牌判定"""
     # 役牌の条件: 三元牌または場風牌・自風牌の刻子/槓子がある
@@ -344,43 +386,99 @@ def check_yakuman_first_turn(is_parent, is_first_draw, is_tsumo, is_ron):
     return yakuman_list
 
 # 通常役チェック
-def check_yaku(player):
+def check_yaku(player, tile_mountain=None, is_kang_tsumo=False, is_win_tsumo=False, is_ron=False):
+    """
+    通常役（1翻〜複数翻）をチェックして役名リストと飜数を返す。
+    
+    引数:
+      - player: Player オブジェクト
+      - tile_mountain: TileMountain オブジェクト（ハイテイ・ホウテイ判定用、オプション）
+      - is_kang_tsumo: 槓後ツモかどうか（林荘ツモ判定用）
+      - is_win_tsumo: ツモで和了したかどうか
+      - is_ron: ロンで和了したかどうか
+    
+    戻り値: (役名リスト, 飜数)
+    """
     result = []
     fan = 0
+    
+    # 1翻役チェック
+    if is_pinfu(player):
+        result.append('平和')
+        fan += 1
+    if is_tanyao(player):
+        result.append('断么九')
+        fan += 1
+    if is_iipeikou(player):
+        result.append('一盃口')
+        fan += 1
+    if is_win_tsumo and is_tsumo(player):
+        result.append('門前清自摸和')
+        fan += 1
+    if is_haitei(tile_mountain) and is_win_tsumo:
+        result.append('海底撈月')
+        fan += 1
+    if is_houtei(tile_mountain) and is_ron:
+        result.append('河底撈魚')
+        fan += 1
+    if is_rinshan_tsumo(player, is_kang_tsumo):
+        result.append('林荘ツモ')
+        fan += 1
+    
+    # 2翻役チェック
     if is_chiitoitsu(player):
         result.append('七対子')
         fan += 2
-    if is_chinitsu(player):
-        result.append('清一色')
-        fan += 6
+    
+    # 3翻役チェック
     if is_honitsu(player):
         result.append('混一色')
         fan += 3
-    # ...他の通常役...
+    
+    # 6翻役チェック
+    if is_chinitsu(player):
+        result.append('清一色')
+        fan += 6
+    
+    # 役牌チェック（1翻、複数の役牌は複数カウント）
     yakuhai = yakuhai_list(player)
     for honor in yakuhai:
         result.append(f'役牌({honor})')
         fan += 1
+    
+    # 役がない場合
     if not result:
         result.append('役なし')
+    
     return result, fan
 
 # 全役チェック
-def check_all_yaku(player_obj, is_parent=False, is_first_draw=False, is_tsumo=False, is_ron=False):
-    """player_obj を受け取り、役満優先で全役を返す
+def check_all_yaku(player_obj, tile_mountain=None, is_parent=False, is_first_draw=False, is_kang_tsumo=False, is_win_tsumo=False, is_ron=False):
+    """
+    player_obj を受け取り、役満優先で全役を返す。
+    
+    引数:
+      - player_obj: Player オブジェクト
+      - tile_mountain: TileMountain オブジェクト（ハイテイ・ホウテイ判定用、オプション）
+      - is_parent: 親かどうか
+      - is_first_draw: 第1ツモ直後かどうか
+      - is_kang_tsumo: 槓後ツモかどうか
+      - is_win_tsumo: ツモで和了したかどうか
+      - is_ron: ロンで和了したかどうか
+    
     戻り値: (役リスト, 飜数または役満換算ファン)
     """
     yakuman_list = check_yakuman(player_obj)
     fan = 0
     if yakuman_list:
         # 一巡目役満（天和/地和/人和）を追加でチェック
-        yakuman_list.extend(check_yakuman_first_turn(is_parent, is_first_draw, is_tsumo, is_ron))
+        yakuman_list.extend(check_yakuman_first_turn(is_parent, is_first_draw, is_win_tsumo, is_ron))
         fan = 13 * len(yakuman_list)
         return yakuman_list, fan
     else:
-        yaku_list, fan = check_yaku(player_obj)  # 通常役
+        yaku_list, fan = check_yaku(player_obj, tile_mountain, is_kang_tsumo, is_win_tsumo, is_ron)  # 通常役
         if fan > 0:
-            yakuman_list = check_yakuman_first_turn(is_parent, is_first_draw, is_tsumo, is_ron)
+            yakuman_list = check_yakuman_first_turn(is_parent, is_first_draw, is_win_tsumo, is_ron)
         if not yakuman_list:
             if fan >= 13:
                 yakuman_list.append('数え役満')
