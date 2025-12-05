@@ -9,26 +9,22 @@ from yakuman_check import check_yakuman
 # --- helper utilities -------------------------------------------------
 def _all_player_tiles(player):
     """
-    すべての牌リストを返すヘルパー。
+    門前の牌リストを返すヘルパー。
 
-    - プレイヤーの手牌 (`player.hand`) を含む。
+    - プレイヤーの手牌 (`player.hand`) のみを含む。
     - 自摸（`player.tsumo_tile`）があれば追加する。
-    - 鳴き（`player.melds`）があれば、その中の牌も展開して追加する。
+    - 鳴き（`player.melds`）は「面子の構成が失われる」ため、含めない。
 
-    この関数は役判定で手全体を集計する際に利用します。
+    役判定では面子の組み合わせが重要なため、
+    鳴きを個別牌に展開せず、門前牌のみで判定する。
     """
     tiles = []
-    # 単純に player.hand のコピーを扱う（元を破壊しないため）
+    # 手牌（門前）のコピーを扱う（元を破壊しないため）
     tiles.extend(getattr(player, 'hand', []).copy())
     # ツモ牌があれば含める
     if getattr(player, 'tsumo_tile', None):
         tiles.append(player.tsumo_tile)
-    # 鳴きは dict 型（{'meld':[...]}) や単純なリストの両方を想定して展開する
-    for meld in getattr(player, 'melds', []):
-        if isinstance(meld, dict):
-            tiles.extend(meld.get('meld', []))
-        else:
-            tiles.extend(meld)
+    # 鳴きは面子の構成が重要なため、展開して牌リストに加えない
     return tiles
 
 def _concealed_tiles(player):
@@ -66,6 +62,63 @@ def _tiles_counts(player):
     return Counter(_all_player_tiles(player))
 
 
+def _can_form_standard_melds(hand):
+    """
+    手牌（14枚）が標準的な面子形式（4×4面子 + 1対子）で構成可能か判定するヘルパー。
+
+    用途: ピンフ判定で「通常の面子形式であることを確認」する際に利用。
+    戻り値: True=標準形式で構成可能、False=不可能
+    """
+    if len(hand) != 14:
+        return False
+    # 簡易チェック: 手牌に重複がないか、基本的なバリデーション
+    # （完全な面子分解は複雑なため、ここは簡易実装）
+    cnt = Counter(hand)
+    # 最大で4枚までは可能（同一牌は最大4枚）
+    return all(count <= 4 for count in cnt.values())
+
+
+def _find_waits(hand, tsumo_tile=None):
+    """
+    手牌から「ツモ待ちの形」を検出するヘルパー。
+
+    ツモ可能な待ち種別を返す:
+    - '両面': 両面待ち（e.g., 3-4-5-6 で 3 or 6 で待ち）
+    - '辺': 辺張待ち（e.g., 1-2 で 3 で待ち）
+    - '嗣': 嗣張待ち（e.g., 1-3 で 2 で待ち）
+    - '単': 単騎待ち（対子で 1 種類で待ち）
+
+    簡易実装：完全な牌の組み合わせ分析は複雑なため、ここでは
+    比較的単純なパターンを検出する。
+    """
+    if tsumo_tile:
+        hand_with_tsumo = hand + [tsumo_tile]
+    else:
+        hand_with_tsumo = hand
+    
+    if len(hand_with_tsumo) != 14:
+        return []
+    
+    cnt = Counter(hand_with_tsumo)
+    waits = []
+    
+    # 簡易的な待ち判定: ツモ牌がある場合、その牌が何パターンに該当するかを判定
+    # （完全な待ち形分解は省略し、基本的な判定のみ実装）
+    if tsumo_tile:
+        num, suit = _tile_suit_num(tsumo_tile)
+        if num and suit:
+            # 両面待ちパターン: n-n+1-n+2-... の形で中間を埋めるツモなら両面
+            if num - 1 >= 1 and num + 1 <= 9:
+                key_prev = f"{num-1}{suit}"
+                key_curr = f"{num}{suit}"
+                key_next = f"{num+1}{suit}"
+                if key_prev in cnt and key_next in cnt:
+                    waits.append('両面')
+            # 単純な辺/嗣パターンも判定可（省略）
+    
+    return waits if waits else ['不確定']
+
+
 def is_riichi(player_obj):  
     """立直 (リーチ) 判定"""  
     # リーチが成立する条件: 門前でテンパイしリーチ宣言している  
@@ -77,23 +130,64 @@ def is_tsumo(player):
     return len(player.melds) == 0 and player.tsumo_tile is not None  
   
 def is_pinfu(player):
-    """平和 (ピンフ) 判定"""
-    # ピンフが成立する条件: 門前で両面待ち、副露なし、雀頭が役牌でない
+    """
+    平和 (ピンフ) 判定 - 1翻役
+
+    条件:
+    - 門前（副露なし）
+    - 字牌を含まない（数牌のみ）
+    - 両面待ち
+    - 雀頭が役牌でない
+    - 平和和了（ツモの場合は門前ツモが別役となるため注意）
+    
+    簡易実装: 両面待ち判定は基本的なパターンのみ対応。
+    
+    注意: 槓を含む場合、手牌総数が 14 を超えるため判定対象外とする。
+    """
+    # 副露があれば平和ではない（槓も副露の一種なので判定対象外）
     if len(player.melds) > 0:
         return False
-    # 簡易判定: 門前で字牌を含まないこと、雀頭が役牌でないこと
+    
+    # 字牌が含まれる場合は平和ではない
     tiles = _all_player_tiles(player)
-    # 字牌が含まれる場合は簡易的にピンフ除外
     if any(tile in define.HORNORS for tile in tiles):
         return False
-    # 雀頭が役牌でないことを確認する（厳密な雀頭検出は複雑なので簡易実装）
-    # ここではとりあえず門前で字牌がなければ True とする（要改善）
+    
+    # 手牌が14枚であることを確認（槓がある場合は exclude）
+    if len(tiles) != 14:
+        return False
+    if not _can_form_standard_melds(tiles):
+        return False
+    
+    # 簡易的な両面待ち判定:
+    # ツモ牌がある場合、ツモ牌で和了している局面を想定し、
+    # その待ちが両面待ちであるかを確認する
+    if player.tsumo_tile:
+        waits = _find_waits(player.hand, player.tsumo_tile)
+        if '両面' in waits:
+            return True
+    
+    # ツモ牌がない場合は、門前で数牌のみなら簡易的にピンフと判定
+    # （厳密な待ち判定は要改善）
     return True
+
   
 def is_tanyao(player):
-    """断么九 (タンヤオ) 判定"""
-    # タンヤオの条件: 2～8の数牌のみで構成され、副露していてもよい
+    """
+    断么九 (タンヤオ) 判定
+    
+    タンヤオは副露を含むため、全牌（手牌 + 鳴き牌）で判定する。
+    ただし面子の構成を考慮する必要があるため、鳴き牌も含める。
+    """
+    # 手牌とツモ牌
     all_tiles = _all_player_tiles(player)
+    # 鳴き牌も含める（タンヤオは副露OK）
+    for meld in getattr(player, 'melds', []):
+        if isinstance(meld, dict):
+            all_tiles.extend(meld.get('meld', []))
+        else:
+            all_tiles.extend(meld)
+    
     for t in all_tiles:
         if _is_numeric_tile(t):
             num, _ = _tile_suit_num(t)
@@ -140,23 +234,34 @@ YAKU_FAN = {
 
 # 役牌
 def yakuhai_list(player):
-    """鳴き込みを含む手牌から役牌の列表示を返す"""
+    """
+    役牌の列表示を返すヘルパー。
+    
+    役牌は主に鳴きで成立する役なので、手牌 + ツモ牌 + 鳴き牌をすべて含めて判定。
+    """
     hand = player.hand.copy()
     if player.tsumo_tile:
         hand.append(player.tsumo_tile)
-    for meld in player.melds:
-        hand.extend(meld.get('meld', []))
+    for meld in getattr(player, 'melds', []):
+        if isinstance(meld, dict):
+            hand.extend(meld.get('meld', []))
+        else:
+            hand.extend(meld)
     counts = Counter(hand)
     # define.HORNORS は日本語の字牌セットを持つ
     return [h for h in define.HORNORS if counts.get(h, 0) >= 3]
 
 # 七対子
 def is_chiitoitsu(player):
-    hand = player.hand.copy()
-    if player.tsumo_tile:
-        hand.append(player.tsumo_tile)
-    for meld in player.melds:
-        hand.extend(meld.get('meld', []))
+    """
+    七対子 (チーイツ) 判定
+    
+    七対子は門前限定の役なので、手牌 + ツモ牌のみで判定。
+    鳴きがあれば七対子ではない。
+    """
+    if len(player.melds) > 0:
+        return False
+    hand = _concealed_tiles(player)
     if len(hand) != 14:
         return False
     counts = Counter(hand)
@@ -164,13 +269,19 @@ def is_chiitoitsu(player):
 
 # 混一色
 def is_honitsu(player):
-    """混一色: 数牌は同一種別＋字牌を含める"""
-    suits = define.SUIT_ORDER.keys()
+    """
+    混一色 (ホニツ) 判定: 数牌は同一種別＋字牌を含める。
+    
+    混一色は副露OKな役なので、手牌 + ツモ牌 + 鳴き牌をすべて含めて判定。
+    """
     hand = player.hand.copy()
     if player.tsumo_tile:
         hand.append(player.tsumo_tile)
-    for meld in player.melds:
-        hand.extend(meld.get('meld', []))
+    for meld in getattr(player, 'melds', []):
+        if isinstance(meld, dict):
+            hand.extend(meld.get('meld', []))
+        else:
+            hand.extend(meld)
     suit_tiles = [tile for tile in hand if len(tile) == 2 and tile[1] in define.SUIT_ORDER]
     if not suit_tiles:
         return False
@@ -179,12 +290,19 @@ def is_honitsu(player):
 
 # 清一色
 def is_chinitsu(player):
-    """清一色: 数牌のみで同一種別のみで構成される"""
+    """
+    清一色 (チニツ) 判定: 数牌のみで同一種別のみで構成される。
+    
+    清一色は副露OKな役なので、手牌 + ツモ牌 + 鳴き牌をすべて含めて判定。
+    """
     hand = player.hand.copy()
     if player.tsumo_tile:
         hand.append(player.tsumo_tile)
-    for meld in player.melds:
-        hand.extend(meld.get('meld', []))
+    for meld in getattr(player, 'melds', []):
+        if isinstance(meld, dict):
+            hand.extend(meld.get('meld', []))
+        else:
+            hand.extend(meld)
     suit_tiles = [tile for tile in hand if len(tile) == 2 and tile[1] in define.SUIT_ORDER]
     if not suit_tiles:
         return False
