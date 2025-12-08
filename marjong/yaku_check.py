@@ -629,127 +629,117 @@ def check_yaku(player, tile_mountain=None, is_kang_tsumo=False, is_win_tsumo=Fal
     """
     result = []
     fan = 0
+    is_open = len(getattr(player, 'melds', [])) > 0
     
     # 1翻役チェック
     if is_pinfu(player):
         result.append('平和')
-        fan += 1
+        fan += define.YAKU_FAN.get('平和', 1)
     if is_tanyao(player):
         result.append('断么九')
-        fan += 1
+        fan += define.YAKU_FAN.get('断么九', 1)
     if is_iipeikou(player):
         result.append('一盃口')
-        fan += 1
+        fan += define.YAKU_FAN.get('一盃口', 1)
     if is_win_tsumo and is_tsumo(player):
         result.append('門前清自摸和')
-        fan += 1
+        fan += define.YAKU_FAN.get('門前清自摸和', 1)
     if is_haitei(tile_mountain) and is_win_tsumo:
         result.append('海底撈月')
-        fan += 1
+        fan += define.YAKU_FAN.get('海底撈月', 1)
     if is_houtei(tile_mountain) and is_ron:
         result.append('河底撈魚')
-        fan += 1
+        fan += define.YAKU_FAN.get('河底撈魚', 1)
     if is_rinshan_tsumo(player, is_kang_tsumo):
         result.append('林荘ツモ')
-        fan += 1
+        fan += define.YAKU_FAN.get('林荘ツモ', 1)
+    
     # 2翻役チェック（鳴きによる翻数変化に対応）
-    is_open = len(getattr(player, 'melds', [])) > 0
     # 対々和
     if is_toitoi(player):
-        # 対々和は鳴き可で常に2翻
         result.append('対々和')
         fan += define.YAKU_FAN.get('対々和', 2)
+    
     # 一気通貫（門前:2翻, 副露:1翻）
     if is_ikkitsuukan(player):
         result.append('一気通貫')
-        val = define.YAKU_FAN.get('一気通貫')
+        val = define.YAKU_FAN.get('一気通貫', 2)
         if isinstance(val, dict):
             fan += val['open'] if is_open else val['closed']
         else:
-            fan += val or 0
+            fan += val
+    
     # 三色同順（門前:2翻, 副露:1翻）
     if is_sanshoku_doujun(player):
         result.append('三色同順')
-        val = define.YAKU_FAN.get('三色同順')
+        val = define.YAKU_FAN.get('三色同順', 2)
         if isinstance(val, dict):
             fan += val['open'] if is_open else val['closed']
         else:
-            fan += val or 0
-
+            fan += val
+    
     # 三暗刻（門前で2翻）
     if is_sanankou(player):
         result.append('三暗刻')
-        val = define.YAKU_FAN.get('三暗刻')
+        val = define.YAKU_FAN.get('三暗刻', 2)
         if isinstance(val, dict):
             fan += val['open'] if is_open else val['closed']
         else:
-            fan += val or 0
-
+            fan += val
+    
     # 混全帯么九（門前で2翻、鳴きで1翻）
     if is_chanta(player):
         result.append('混全帯么九')
-        val = define.YAKU_FAN.get('混全帯么九')
+        val = define.YAKU_FAN.get('混全帯么九', 2)
         if isinstance(val, dict):
             fan += val['open'] if is_open else val['closed']
         else:
-            fan += val or 0
-
+            fan += val
+    
     # 三色同刻（門前で2翻）
     if is_sanshoku_doukou(player):
         result.append('三色同刻')
-        val = define.YAKU_FAN.get('三色同刻')
+        val = define.YAKU_FAN.get('三色同刻', 2)
         if isinstance(val, dict):
             fan += val['open'] if is_open else val['closed']
         else:
-            fan += val or 0
-
+            fan += val
+    
     # 三槓子
     if is_sankantsu(player):
         result.append('三槓子')
-        val = define.YAKU_FAN.get('三槓子')
-        if isinstance(val, dict):
-            fan += val['open'] if is_open else val['closed']
-        else:
-            fan += val or 0
-
+        fan += define.YAKU_FAN.get('三槓子', 2)
+    
     # 混老頭
     if is_honroutou(player):
         result.append('混老頭')
-        val = define.YAKU_FAN.get('混老頭')
-        if isinstance(val, dict):
-            fan += val['open'] if is_open else val['closed']
-        else:
-            fan += val or 0
-
+        fan += define.YAKU_FAN.get('混老頭', 2)
+    
     # ダブルリーチ（局進行情報に依存するため簡易判定）
     if is_double_riichi(player):
         result.append('ダブルリーチ')
-        val = define.YAKU_FAN.get('ダブルリーチ')
-        if isinstance(val, dict):
-            fan += val['open'] if is_open else val['closed']
-        else:
-            fan += val or 0
+        fan += define.YAKU_FAN.get('ダブルリーチ', 2)
     
     # 2翻役チェック
     if is_chiitoitsu(player):
         result.append('七対子')
-        fan += 2
+        fan += define.YAKU_FAN.get('七対子', 2)
     
     # 3翻役チェック
     if is_honitsu(player):
         result.append('混一色')
-        fan += 3
+        fan += define.YAKU_FAN.get('混一色', 3)
     
     # 6翻役チェック
     if is_chinitsu(player):
         result.append('清一色')
-        fan += 6
+        fan += define.YAKU_FAN.get('清一色', 6)
     
     # 役牌チェック（1翻、複数の役牌は複数カウント）
     yakuhai = yakuhai_list(player)
     for honor in yakuhai:
         result.append(f'役牌({honor})')
-        fan += 1
+        fan += define.YAKU_FAN.get('役牌', 1)
     
     # 役がない場合
     if not result:
