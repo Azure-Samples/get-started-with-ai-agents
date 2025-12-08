@@ -62,6 +62,25 @@ def _tiles_counts(player):
     return Counter(_all_player_tiles(player))
 
 
+def _all_tiles_with_melds(player):
+    """
+    鳴き牌を含めた全牌のリストを返すヘルパー。
+
+    - 手牌 (`player.hand`)
+    - ツモ牌 (`player.tsumo_tile`) があれば追加
+    - 鳴き (`player.melds`) があれば展開して追加
+    役によって鳴きを含めるかどうかを切り替えられるようにするための補助関数
+    """
+    tiles = _all_player_tiles(player).copy()
+    for meld in getattr(player, 'melds', []):
+        if isinstance(meld, dict):
+            tiles.extend(meld.get('meld', []))
+        else:
+            tiles.extend(meld)
+    return tiles
+
+
+
 def _can_form_standard_melds(hand):
     """
     手牌（14枚）が標準的な面子形式（4×4面子 + 1対子）で構成可能か判定するヘルパー。
@@ -216,6 +235,221 @@ def is_iipeikou(player):
         if seq_total >= 2:
             return True
     return False
+
+def is_ikkitsuukan(player):
+    """一気通貫 (イッキツウカン) 判定
+
+    門前・副露で翻数が変わる役（門前:2翻, 副露:1翻）。
+    手牌 + 鳴き牌を展開して、同一種別に 123,456,789 の順子がそれぞれ存在するかをチェックする。
+    簡易実装では、数牌ごとのカウントから逐次的に順子を取り除く方法で判定する。
+    """
+    all_tiles = _all_tiles_with_melds(player)
+    # 数牌のみを扱う
+    for suit in define.SUIT_ORDER:
+        nums = [int(t[0]) for t in all_tiles if _is_numeric_tile(t) and t[1] == suit]
+        if not nums:
+            continue
+        cnt = Counter(nums)
+        # Greedyで123,456,789を構成できるか確認
+        possible = True
+        for seq in [(1,2,3),(4,5,6),(7,8,9)]:
+            # それぞれの数が最低1枚ずつ必要
+            if not all(cnt.get(n,0) >= 1 for n in seq):
+                possible = False
+                break
+            # 消費
+            for n in seq:
+                cnt[n] -= 1
+        if possible:
+            return True
+    return False
+
+def is_sanshoku_doujun(player):
+    """三色同順 (サンショクドウジュン) 判定
+
+    同じ数字の順子が3種の数牌（萬/筒/索）に存在する場合成立。
+    門前/副露で翻数が変わることがあるため判定自体は鳴き牌を含めて行い、
+    翻数は `YAKU_FAN` の定義を参照して差分を適用する。
+    """
+    all_tiles = _all_tiles_with_melds(player)
+    # 各種別ごとに数字のカウントを作る
+    suit_counters = {suit: Counter(int(t[0]) for t in all_tiles if _is_numeric_tile(t) and t[1] == suit) for suit in define.SUIT_ORDER}
+    # n=1..7 の順子について、全ての種別に存在する n を探す
+    for n in range(1, 8):
+        if all(suit_counters[suit].get(n, 0) >= 1 and suit_counters[suit].get(n+1, 0) >= 1 and suit_counters[suit].get(n+2, 0) >= 1 for suit in define.SUIT_ORDER):
+            return True
+    return False
+
+
+def is_sanankou(player):
+    """三暗刻 (三つの暗刻) 判定
+
+    門前で成立することが条件となる役。簡易実装として、
+    門前部分（鳴きに含まれない牌群）に同一牌が3枚以上ある種類が
+    3種類以上存在する場合に成立と判定する。
+    七対子や明確に面子分解できないケースは別途除外する。
+    """
+    # 七対子なら三暗刻ではない
+    if is_chiitoitsu(player):
+        return False
+
+    concealed = _concealed_tiles(player)
+    # 門前牌が14枚でない場合でも、門前の刻子が存在すれば成立する可能性がある
+    cnt = Counter(concealed)
+    concealed_triplets = sum(1 for v in cnt.values() if v >= 3)
+    return concealed_triplets >= 3
+
+
+def is_chanta(player):
+    """混全帯么九 (チャンタ) 判定
+
+    条件（簡易実装）:
+    - すべての面子・雀頭に数牌の1/9または字牌が含まれていること
+    - 鳴きありでも成立（副露時は翻数が低くなる）
+
+    実装上の簡易化:
+    - 鳴き (player.melds) がある場合は各鳴き面子に端牌/字牌が含まれるか確認
+    - 門前部分については、雀頭に端牌/字牌があることを最低条件とする
+    - 完全な面子分解は行わないため一部の境界ケースは見逃す可能性がある
+    """
+    # 全牌（鳴き含む）を取得
+    all_tiles = _all_tiles_with_melds(player)
+
+    # 鳴きがある場合、各鳴き面子に端牌/字牌が含まれているか確認
+    for meld in getattr(player, 'melds', []):
+        meld_tiles = meld.get('meld', []) if isinstance(meld, dict) else meld
+        if not any((t in define.HORNORS) or ( _is_numeric_tile(t) and _tile_suit_num(t)[0] in (1,9) ) for t in meld_tiles):
+            return False
+
+    # 門前部分の雀頭が端牌/字牌であることを最低条件とする
+    concealed = _concealed_tiles(player)
+    if len(concealed) < 2:
+        return False
+    counts = Counter(concealed)
+    # 雀頭候補に端牌/字牌があるか
+    pair_ok = any((t in define.HORNORS or (_is_numeric_tile(t) and _tile_suit_num(t)[0] in (1,9))) and c >= 2 for t, c in counts.items())
+    if not pair_ok:
+        return False
+
+    # 全体に端牌/字牌がまったく含まれないなら否定
+    if not any((t in define.HORNORS) or (_is_numeric_tile(t) and _tile_suit_num(t)[0] in (1,9)) for t in all_tiles):
+        return False
+
+    return True
+
+
+def is_sanshoku_doukou(player):
+    """三色同刻 (同じ数字の刻子が3種の数牌で揃う) 判定
+
+    実装方針（簡易）:
+    - 鳴きのポン/カンはそのまま刻子とみなす
+    - 門前の刻子は同一牌が3枚以上あることで検出する
+    - ある数字について、萬/筒/索 の全てで刻子が存在すれば成立と判定する
+    """
+    # 構成する刻子の有無を suit->num->bool で管理
+    triplet_available = {suit: {n: False for n in range(1, 10)} for suit in define.SUIT_ORDER}
+
+    # 鳴きの刻子（ポン/カン）を反映
+    for meld in getattr(player, 'melds', []):
+        meld_tiles = meld.get('meld', []) if isinstance(meld, dict) else meld
+        # 同一牌が3枚以上なら刻子と判定
+        try:
+            if len(meld_tiles) >= 3 and all(t == meld_tiles[0] for t in meld_tiles[:3]):
+                tile = meld_tiles[0]
+                if _is_numeric_tile(tile):
+                    num, suit = _tile_suit_num(tile)
+                    triplet_available[suit][num] = True
+        except Exception:
+            pass
+
+    # 門前の刻子を牌カウントから検出
+    concealed = _concealed_tiles(player)
+    cnt = Counter(concealed)
+    for tile, c in cnt.items():
+        if _is_numeric_tile(tile):
+            num, suit = _tile_suit_num(tile)
+            if c >= 3:
+                triplet_available[suit][num] = True
+
+    # すべての種別で刻子が存在する数字を探す
+    for n in range(1, 10):
+        if all(triplet_available[suit].get(n, False) for suit in define.SUIT_ORDER):
+            return True
+    return False
+
+def is_toitoi(player):
+    """対々和 (トイトイ) 判定 - 刻子手 (鳴き可)
+
+    鳴きがある場合でも成立することが多いため、鳴き牌を含めた全牌で判定する。
+    簡易実装: 展開した全牌をカウントして、面子が刻子/槓子中心であることを確認する。
+    完全な面子分解は実装範囲外のため、鳴きにチーが含まれる場合は除外し、
+    鳴きがすべてポン/カンのみなら対々和判定を行う。
+    """
+    # 鳴きにチーが含まれる場合は対々和ではない
+    for meld in getattr(player, 'melds', []):
+        # meldがdict形式の場合は type キーを使う想定
+        if isinstance(meld, dict):
+            if meld.get('type') == define.MELD_TYPE_CHI:
+                return False
+        else:
+            # リスト形式で渡される鳴きは順子と仮定して除外
+            # ここでは単純に長さ3の順子をチーとみなす
+            # 実装保証されていない場合は安全側で除外
+            # 例: ['1萬','2萬','3萬'] など
+            # 判定は簡易なので、3つの数牌かつ連続している場合はチーとみなす
+            try:
+                nums = [int(t[0]) for t in meld if _is_numeric_tile(t)]
+                if len(nums) >= 3 and max(nums) - min(nums) == 2:
+                    return False
+            except Exception:
+                pass
+    # 鳴きがすべてポン/カンか、鳴きがない場合は対々和の可能性あり
+    # ここでは全牌を展開して、刻子中心か簡易判定
+    tiles = _all_tiles_with_melds(player)
+    cnt = Counter(tiles)
+    # 刻子系が少なくとも3つ（＋雀頭1つ）を満たすかを簡易判定
+    triplet_count = sum(1 for v in cnt.values() if v >= 3)
+    # 七対子と混同しないように最低限の判定
+    return triplet_count >= 4
+
+
+def is_sankantsu(player):
+    """三槓子 (三つの槓) 判定
+
+    鳴き・暗槓を問わず、カンの面子が3つ以上存在する場合に成立と判定します。
+    player.melds に格納された鳴き情報の 'type' を見て判定します。
+    """
+    kan_melds = [m for m in getattr(player, 'melds', []) if (isinstance(m, dict) and m.get('type') == define.MELD_TYPE_KAN) or (not isinstance(m, dict) and len(m) >= 4)]
+    return len(kan_melds) >= 3
+
+
+def is_honroutou(player):
+    """混老頭 (混老頭) 判定
+
+    全牌（手牌 + ツモ牌 + 鳴き牌）が端牌(1/9)または字牌のみで構成される場合に成立。
+    簡易実装で全牌を展開して判定します。
+    """
+    tiles = _all_tiles_with_melds(player)
+    allowed = set(define.CHINRO_TILES) | set(define.HORNORS)
+    return all(t in allowed for t in tiles)
+
+
+def is_double_riichi(player):
+    """ダブルリーチ判定（簡易）
+
+    実装上の簡易ルール:
+    - `player.riichi_kawa_tile_no` が -1 でない（リーチ済み）
+    - かつその捨て牌番号が最初の巡目（プレイヤー数以内）であることをもってダブルリーチと判定する
+
+    厳密なゲーム進行情報がないため、第一巡の捨て牌（1〜4）でのリーチをダブルリーチと見なします。
+    """
+    no = getattr(player, 'riichi_kawa_tile_no', -1)
+    if no is None or no < 0:
+        return False
+    try:
+        return no <= len(define.SEATS)
+    except Exception:
+        return False
 
 def is_haitei(tile_mountain):
     """
@@ -418,6 +652,83 @@ def check_yaku(player, tile_mountain=None, is_kang_tsumo=False, is_win_tsumo=Fal
     if is_rinshan_tsumo(player, is_kang_tsumo):
         result.append('林荘ツモ')
         fan += 1
+    # 2翻役チェック（鳴きによる翻数変化に対応）
+    is_open = len(getattr(player, 'melds', [])) > 0
+    # 対々和
+    if is_toitoi(player):
+        # 対々和は鳴き可で常に2翻
+        result.append('対々和')
+        fan += define.YAKU_FAN.get('対々和', 2)
+    # 一気通貫（門前:2翻, 副露:1翻）
+    if is_ikkitsuukan(player):
+        result.append('一気通貫')
+        val = define.YAKU_FAN.get('一気通貫')
+        if isinstance(val, dict):
+            fan += val['open'] if is_open else val['closed']
+        else:
+            fan += val or 0
+    # 三色同順（門前:2翻, 副露:1翻）
+    if is_sanshoku_doujun(player):
+        result.append('三色同順')
+        val = define.YAKU_FAN.get('三色同順')
+        if isinstance(val, dict):
+            fan += val['open'] if is_open else val['closed']
+        else:
+            fan += val or 0
+
+    # 三暗刻（門前で2翻）
+    if is_sanankou(player):
+        result.append('三暗刻')
+        val = define.YAKU_FAN.get('三暗刻')
+        if isinstance(val, dict):
+            fan += val['open'] if is_open else val['closed']
+        else:
+            fan += val or 0
+
+    # 混全帯么九（門前で2翻、鳴きで1翻）
+    if is_chanta(player):
+        result.append('混全帯么九')
+        val = define.YAKU_FAN.get('混全帯么九')
+        if isinstance(val, dict):
+            fan += val['open'] if is_open else val['closed']
+        else:
+            fan += val or 0
+
+    # 三色同刻（門前で2翻）
+    if is_sanshoku_doukou(player):
+        result.append('三色同刻')
+        val = define.YAKU_FAN.get('三色同刻')
+        if isinstance(val, dict):
+            fan += val['open'] if is_open else val['closed']
+        else:
+            fan += val or 0
+
+    # 三槓子
+    if is_sankantsu(player):
+        result.append('三槓子')
+        val = define.YAKU_FAN.get('三槓子')
+        if isinstance(val, dict):
+            fan += val['open'] if is_open else val['closed']
+        else:
+            fan += val or 0
+
+    # 混老頭
+    if is_honroutou(player):
+        result.append('混老頭')
+        val = define.YAKU_FAN.get('混老頭')
+        if isinstance(val, dict):
+            fan += val['open'] if is_open else val['closed']
+        else:
+            fan += val or 0
+
+    # ダブルリーチ（局進行情報に依存するため簡易判定）
+    if is_double_riichi(player):
+        result.append('ダブルリーチ')
+        val = define.YAKU_FAN.get('ダブルリーチ')
+        if isinstance(val, dict):
+            fan += val['open'] if is_open else val['closed']
+        else:
+            fan += val or 0
     
     # 2翻役チェック
     if is_chiitoitsu(player):
