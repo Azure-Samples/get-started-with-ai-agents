@@ -35,8 +35,8 @@ def is_kokushi(player):
     if kokushi_set.issubset(set(hand)):
         return False
 
-    if player.agari_tile:  
-        hand.append(player.agari_tile)  
+    if player.add_tile:  
+        hand.append(player.add_tile)  
     if len(hand) != 14:  
         return False  
   
@@ -54,8 +54,8 @@ def is_kokushi13(player):
     if not kokushi_set.issubset(set(hand)):
         return False
   
-    if player.agari_tile:  
-        hand.append(player.agari_tile)
+    if player.add_tile:  
+        hand.append(player.add_tile)
     if len(hand) != 14:  
         return False  
   
@@ -65,7 +65,7 @@ def is_kokushi13(player):
 
     # 十三面待ち判定：ロンorツモした牌が国士無双構成牌で、ペアがその牌  
     counts = Counter(hand)  
-    return player.agari_tile in kokushi_set and counts[player.agari_tile] == 2 
+    return player.add_tile in kokushi_set and counts[player.add_tile] == 2 
 
 # 大三元
 def is_daisangen(player):
@@ -80,8 +80,8 @@ def is_daisangen(player):
                         return True                        
 
     hand = player.hand.copy()  
-    if player.agari_tile:  
-        hand.append(player.agari_tile)        
+    if player.add_tile:  
+        hand.append(player.add_tile)        
 
     counts = Counter(hand)  
     return all(counts[h] == 3 for h in sangen_tiles)
@@ -99,8 +99,8 @@ def is_daisushi(player):
                         return True                        
 
     hand = player.hand.copy()  
-    if player.agari_tile:  
-        hand.append(player.agari_tile)        
+    if player.add_tile:  
+        hand.append(player.add_tile)        
 
     counts = Counter(hand)  
     return all(counts[h] == 3 for h in susi_tiles)
@@ -118,8 +118,8 @@ def is_shosuushi(player):
                         return False # 四喜牌を全てポン／カンしていたら大四喜                       
 
     hand = player.hand.copy()  
-    if player.agari_tile:  
-        hand.append(player.agari_tile)        
+    if player.add_tile:  
+        hand.append(player.add_tile)        
     
     counts = Counter(hand)  
 
@@ -146,12 +146,12 @@ def is_suukantsu(player):
         return False
 
     hand = player.hand.copy()  
-    if player.agari_tile:  
-        hand.append(player.agari_tile)        
+    if player.add_tile:  
+        hand.append(player.add_tile)        
 
     counts = Counter(hand)  
     # ツモ牌がペアであること
-    return player.agari_tile is not None and counts.get(player.agari_tile, 0) == 2 
+    return player.add_tile is not None and counts.get(player.add_tile, 0) == 2 
 
 # 清老頭
 def is_chinroutou(player):  
@@ -164,8 +164,8 @@ def is_chinroutou(player):
                     return False    # 清老頭不成立
 
     hand = player.hand.copy()  
-    if player.agari_tile:  
-        hand.append(player.agari_tile)        
+    if player.add_tile:  
+        hand.append(player.add_tile)        
     
     counts = Counter(hand)  
 
@@ -196,8 +196,8 @@ def is_tsuiso(player):
                     return False    # 字一色不成立
 
     hand = player.hand.copy()  
-    if player.agari_tile:  
-        hand.append(player.agari_tile)        
+    if player.add_tile:  
+        hand.append(player.add_tile)        
     
     counts = Counter(hand)  
 
@@ -221,8 +221,8 @@ def is_tsuiso(player):
 def is_ryuiiso(player):  
     """緑一色: 2索、3索、4索、6索、8索、発のみで構成"""
     hand = player.hand.copy()  
-    if player.agari_tile:  
-        hand.append(player.agari_tile)        
+    if player.add_tile:  
+        hand.append(player.add_tile)        
     
     # 鳴き牌も含める
     for meld in player.melds:
@@ -243,8 +243,8 @@ def is_suuankou(player):
             ankan_num = ankan_num + 1
 
     hand = player.hand.copy()  
-    if player.agari_tile:  
-        hand.append(player.agari_tile)        
+    if player.add_tile:  
+        hand.append(player.add_tile)        
     
     counts = Counter(hand)  
     if sum(1 for v in counts.values() if v == 3) < 4 - ankan_num:  
@@ -285,8 +285,8 @@ def is_churen_check(tiles):
 # 九蓮宝燈
 def is_churen(player):  
     tiles = player.hand.copy()  
-    if player.agari_tile:  
-        tiles.append(player.agari_tile)        
+    if player.add_tile:  
+        tiles.append(player.add_tile)        
 
     for meld in player.melds:
         if meld["type"] == define.MELD_TYPE_KAN:
@@ -298,14 +298,14 @@ def is_churen(player):
         return False    # 九蓮宝燈不成立
         
     counts = Counter(tiles)  
-    return counts[player.agari_tile] == 1
+    return counts[player.add_tile] == 1
 
 
 # 純正九蓮宝燈  
 def is_junsei_churen(player):  
     tiles = player.hand.copy()  
-    if player.agari_tile:  
-        tiles.append(player.agari_tile)        
+    if player.add_tile:  
+        tiles.append(player.add_tile)        
 
     for meld in player.melds:
         if meld["type"] == define.MELD_TYPE_KAN:
@@ -318,7 +318,7 @@ def is_junsei_churen(player):
         
     counts = Counter(tiles)  
     # ツモ牌が和了牌である場合のみ純正九蓮宝燈
-    return player.agari_tile is not None and counts.get(player.agari_tile, 0) == 2
+    return player.add_tile is not None and counts.get(player.add_tile, 0) == 2
 
 # 役満チェック
 def check_yakuman(player_obj):  

@@ -6,20 +6,19 @@ class Player:
         self.name = name                # プレイヤーの名前  
         self.wind = wind                # プレイヤーの風（東・南・西・北）  
         self.score = score              # プレイヤーの持ち点（初期値は25000点）  
-        self.hand = []                  # 手持ちの牌（鳴いた面子と和了牌を除く）
-        self.agari_tile = None          # 和了牌 (自摸またはロンで和了した牌)
-        self.is_agari_tsumo = False     # 和了牌が自摸かどうか（True=自摸、False=ロン）
-        # 互換性のため tsumo_tile はプロパティとしても提供
+        self.hand = []                  # 手持ちの牌（鳴いた面子を除く）
+        self.add_tile = None            # 追加された牌 (ツモ牌またはロン牌)
+        self.is_add_tsumo = False       # 追加牌が自摸かどうか（True=自摸、False=ロン）
         self.melds = []                 # 鳴いた面子 (ポン・チー・カンなど)  
         self.discard_tile = None        # 現在の捨て牌 (最後に捨てた牌)  
         self.riichi_kawa_tile_no = -1   # リーチしたときの河牌番号 (-1はリーチしていないことを示す)
 
-    # 手牌、鳴き、河、和了牌をリセット
+    # 手牌、鳴き、河、追加牌をリセット
     def clear_hand(self):
-        """手牌、鳴き、河、和了牌をリセット"""  
+        """手牌、鳴き、河、追加牌をリセット"""  
         self.hand = []  
-        self.agari_tile = None
-        self.is_agari_tsumo = False
+        self.add_tile = None
+        self.is_add_tsumo = False
         self.melds = []  
         self.discard_tile = None  
 
@@ -29,9 +28,9 @@ class Player:
         self.hand.extend(tiles)
   
     def draw_tile(self, tile):  
-        """牌を引く (和了牌として保持、自摸フラグを立てる)"""  
-        self.agari_tile = tile
-        self.is_agari_tsumo = True
+        """牌を引く (追加牌として保持、自摸フラグを立てる)"""  
+        self.add_tile = tile
+        self.is_add_tsumo = True
         print(f"{self.name}が{tile}をツモしました。")
 
     #手牌整理（ソート）
@@ -50,21 +49,29 @@ class Player:
       
         self.hand = sorted(self.hand, key=tile_key)
 
+    def add_tsumo_to_hand(self):  
+        """ツモ牌を手牌に追加"""  
+        if self.add_tile:  
+            self.hand.append(self.add_tile)  
+            self.sort_hand()
+            self.add_tile = None  # 追加牌をリセット
+            self.is_add_tsumo = False
+
     def discard_tile(self, tile, from_tsumo=False):  
         """  
-        牌を捨てる (手牌または和了牌から捨てる)  
+        牌を捨てる (手牌または追加牌から捨てる)  
         :param tile: 捨てる牌  
         :param from_tsumo: 自摸牌から捨てる場合は True, 手牌から捨てる場合は False  
         """  
         if from_tsumo:  
-            # 和了牌（自摸）から捨てる処理
-            if self.agari_tile == tile and self.is_agari_tsumo:  
+            # 追加牌（自摸）から捨てる処理
+            if self.add_tile == tile and self.is_add_tsumo:  
                 self.discard_tile = tile    # 捨て牌を更新
-                self.agari_tile = None
-                self.is_agari_tsumo = False
+                self.add_tile = None
+                self.is_add_tsumo = False
                 print(f"{self.name}が自摸牌 {tile} を捨てました。")  
             else:  
-                print(f"{self.name}の和了牌は {self.agari_tile} ですが、{tile} を捨てようとしています。処理を中断します。")  
+                print(f"{self.name}の追加牌は {self.add_tile} ですが、{tile} を捨てようとしています。処理を中断します。")  
         else:  
             # 手牌から捨てる処理  
             if tile in self.hand:  
@@ -146,13 +153,13 @@ class Player:
 
     def get_tiles(self, include_tsumo=False):  
         """  
-        手牌、和了牌、鳴いた面子を個別に取得  
-        :param include_tsumo: 和了牌を含めるかどうか (デフォルトは含めない)  
-        :return: 辞書形式で返す { "hand": [...], "agari_tile": ..., "melds": [...] }  
+        手牌、追加牌、鳴いた面子を個別に取得  
+        :param include_tsumo: 追加牌を含めるかどうか (デフォルトは含めない)  
+        :return: 辞書形式で返す { "hand": [...], "add_tile": ..., "melds": [...] }  
         """  
         return {  
             "hand": self.hand,  
-            "agari_tile": self.agari_tile if include_tsumo else None,  
+            "add_tile": self.add_tile if include_tsumo else None,  
             "melds": self.melds  
         }  
 
@@ -167,10 +174,10 @@ class Player:
             for meld in self.melds  
         ])  
 
-        agari_display = f" [和了牌: {self.agari_tile}({'自摸' if self.is_agari_tsumo else 'ロン'})]" if self.agari_tile else ""
+        add_display = f" [追加牌: {self.add_tile}({'自摸' if self.is_add_tsumo else 'ロン'})]" if self.add_tile else ""
   
         # 全体を1列で表示  
-        print(f"{self.name}の状態: {hand_display} {melds_display} {agari_display}") 
+        print(f"{self.name}の状態: {hand_display} {melds_display} {add_display}") 
 
     def update_score(self, points):  
         """スコアを更新するメソッド"""  

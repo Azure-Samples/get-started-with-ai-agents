@@ -59,14 +59,14 @@ class Kawa:
         return False
         
     # チョンボ牌チェック
-    def check_chonbo(self, player, agari_tile):
+    def check_chonbo(self, player, add_tile):
         """ チョンボ牌チェック """
         for kawa_tile in self.kawa_tiles:
             if not kawa_tile["player_id"] == player.id:
                 if kawa_tile["kawa_tiles_no"] < player.riichi_kawa_tile_no:
                     continue    # プレイヤー以外はリーチ前の捨て牌は無視
             # チョンボ牌かチェック
-            if kawa_tile["discard_tile"] == agari_tile:
+            if kawa_tile["discard_tile"] == add_tile:
                 return True
 
         return False
