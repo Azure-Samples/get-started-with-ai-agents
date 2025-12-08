@@ -12,7 +12,7 @@ def _all_player_tiles(player):
     門前の牌リストを返すヘルパー。
 
     - プレイヤーの手牌 (`player.hand`) のみを含む。
-    - 自摸（`player.tsumo_tile`）があれば追加する。
+    - 和了牌（`player.agari_tile`）があれば追加する。
     - 鳴き（`player.melds`）は「面子の構成が失われる」ため、含めない。
 
     役判定では面子の組み合わせが重要なため、
@@ -21,9 +21,9 @@ def _all_player_tiles(player):
     tiles = []
     # 手牌（門前）のコピーを扱う（元を破壊しないため）
     tiles.extend(getattr(player, 'hand', []).copy())
-    # ツモ牌があれば含める
-    if getattr(player, 'tsumo_tile', None):
-        tiles.append(player.tsumo_tile)
+    # 和了牌があれば含める
+    if getattr(player, 'agari_tile', None):
+        tiles.append(player.agari_tile)
     # 鳴きは面子の構成が重要なため、展開して牌リストに加えない
     return tiles
 
@@ -31,12 +31,12 @@ def _concealed_tiles(player):
     """
     門前（鳴きのない部分）の牌を返すヘルパー。
 
-    通常は `player.hand` と `player.tsumo_tile`（あれば）を結合した一覧を返す。
+    通常は `player.hand` と `player.agari_tile`（あれば）を結合した一覧を返す。
     ピンフや一盃口など「門前限定」判定に使うための補助関数です。
     """
     tiles = getattr(player, 'hand', []).copy()
-    if getattr(player, 'tsumo_tile', None):
-        tiles.append(player.tsumo_tile)
+    if getattr(player, 'agari_tile', None):
+        tiles.append(player.agari_tile)
     return tiles
 
 def _is_numeric_tile(tile):
@@ -67,7 +67,7 @@ def _all_tiles_with_melds(player):
     鳴き牌を含めた全牌のリストを返すヘルパー。
 
     - 手牌 (`player.hand`)
-    - ツモ牌 (`player.tsumo_tile`) があれば追加
+    - 和了牌 (`player.agari_tile`) があれば追加
     - 鳴き (`player.melds`) があれば展開して追加
     役によって鳴きを含めるかどうかを切り替えられるようにするための補助関数
     """
@@ -146,7 +146,7 @@ def is_riichi(player_obj):
 def is_tsumo(player):  
     """門前清自摸和 (ツモ) 判定"""  
     # ツモが成立する条件: 門前で自摸和了している  
-    return len(player.melds) == 0 and player.tsumo_tile is not None  
+    return len(player.melds) == 0 and player.agari_tile is not None and getattr(player, 'is_agari_tsumo', False)  
   
 def is_pinfu(player):
     """
@@ -181,8 +181,8 @@ def is_pinfu(player):
     # 簡易的な両面待ち判定:
     # ツモ牌がある場合、ツモ牌で和了している局面を想定し、
     # その待ちが両面待ちであるかを確認する
-    if player.tsumo_tile:
-        waits = _find_waits(player.hand, player.tsumo_tile)
+    if player.agari_tile:
+        waits = _find_waits(player.hand, player.agari_tile)
         if '両面' in waits:
             return True
     
@@ -491,7 +491,7 @@ def is_rinshan_tsumo(player, is_kang_tsumo=False):
     if not is_kang_tsumo:
         return False
     # 槓後ツモは門前限定（副露がないか確認）
-    return len(player.melds) == 0 and player.tsumo_tile is not None
+    return len(player.melds) == 0 and player.agari_tile is not None and getattr(player, 'is_agari_tsumo', False)
 
 def is_yakuhai(player):
     """役牌判定"""
@@ -510,8 +510,8 @@ def yakuhai_list(player):
     役牌は主に鳴きで成立する役なので、手牌 + ツモ牌 + 鳴き牌をすべて含めて判定。
     """
     hand = player.hand.copy()
-    if player.tsumo_tile:
-        hand.append(player.tsumo_tile)
+    if player.agari_tile:
+        hand.append(player.agari_tile)
     for meld in getattr(player, 'melds', []):
         if isinstance(meld, dict):
             hand.extend(meld.get('meld', []))
@@ -545,8 +545,8 @@ def is_honitsu(player):
     混一色は副露OKな役なので、手牌 + ツモ牌 + 鳴き牌をすべて含めて判定。
     """
     hand = player.hand.copy()
-    if player.tsumo_tile:
-        hand.append(player.tsumo_tile)
+    if player.agari_tile:
+        hand.append(player.agari_tile)
     for meld in getattr(player, 'melds', []):
         if isinstance(meld, dict):
             hand.extend(meld.get('meld', []))
@@ -566,8 +566,8 @@ def is_chinitsu(player):
     清一色は副露OKな役なので、手牌 + ツモ牌 + 鳴き牌をすべて含めて判定。
     """
     hand = player.hand.copy()
-    if player.tsumo_tile:
-        hand.append(player.tsumo_tile)
+    if player.agari_tile:
+        hand.append(player.agari_tile)
     for meld in getattr(player, 'melds', []):
         if isinstance(meld, dict):
             hand.extend(meld.get('meld', []))
