@@ -51,7 +51,7 @@ class Player:
 
     def add_tsumo_to_hand(self):  
         """ツモ牌を手牌に追加"""  
-        if self.add_tile:  
+        if self.add_tile and self.is_add_tsumo:  
             self.hand.append(self.add_tile)  
             self.sort_hand()
             self.add_tile = None  # 追加牌をリセット
