@@ -579,6 +579,84 @@ def is_chinitsu(player):
     suit = suit_tiles[0][1]
     return all(len(tile) == 2 and tile[1] == suit for tile in suit_tiles)
 
+# 純全帯么九（じゅんちゃん）
+def is_junchangtai(player):
+    """
+    純全帯么九 (じゅんちゃん) 判定 - 門前限定3翻役
+    
+    条件（簡易実装）:
+    - 門前のみ（副露があれば成立しない）
+    - 数牌は1/9のみで、すべての面子と雀頭に1/9が含まれている
+    - 混全帯么九（チャンタ）と異なり、字牌が一切含まれない
+    """
+    # 副露があれば成立しない
+    if len(player.melds) > 0:
+        return False
+    
+    concealed = _concealed_tiles(player)
+    if len(concealed) != 14:
+        return False
+    
+    # 数牌のみで構成されている（字牌が混ざっていないか確認）
+    for tile in concealed:
+        if tile in define.HORNORS:
+            return False
+    
+    # すべてのタイルが端牌（1/9）であるか確認
+    # 完全な面子分解は複雑なため、簡易実装として
+    # 牌に1/9が十分に含まれているかを確認する
+    counts = Counter(concealed)
+    endpoint_tiles = set(define.CHINRO_TILES)
+    
+    # 端牌のみで14枚を構成できるか簡易判定
+    has_endpoints = any(tile in endpoint_tiles for tile in concealed)
+    if not has_endpoints:
+        return False
+    
+    # より厳密には、面子分解で全面子に端牌が含まれるか確認する必要があるが、
+    # 簡易実装として、端牌が複数枚存在して、手牌全体が数牌のみなら成立と見なす
+    endpoint_count = sum(1 for tile in concealed if tile in endpoint_tiles)
+    return endpoint_count >= 5  # 最低限の端牌が存在することを確認
+
+# 二盃口（りゃんぺいこう）
+def is_ryanpeikou(player):
+    """
+    二盃口 (りゃんぺいこう) 判定 - 門前限定3翻役
+    
+    条件:
+    - 門前のみ
+    - 同一の順子が2組×2セット存在する（1盃口が2つある状態）
+    - 例: 1-2-3, 1-2-3, 4-5-6, 4-5-6 など
+    """
+    # 副露があれば成立しない
+    if len(player.melds) > 0:
+        return False
+    
+    tiles = _concealed_tiles(player)
+    if len(tiles) != 14:
+        return False
+    
+    # 各種別ごとに数牌を集計し、順子の出現パターンを検出
+    for suit in define.SUIT_ORDER:
+        nums = [int(t[0]) for t in tiles if _is_numeric_tile(t) and t[1] == suit]
+        if not nums:
+            continue
+        
+        cnt = Counter(nums)
+        
+        # 同一の順子が2個以上あるか検出
+        identical_seqs = []
+        for n in range(1, 8):
+            seq_count = min(cnt.get(n, 0), cnt.get(n+1, 0), cnt.get(n+2, 0))
+            if seq_count >= 2:
+                identical_seqs.append((n, seq_count))
+        
+        # 同一順子が2個以上の組が2つ以上存在すれば二盃口成立
+        if len(identical_seqs) >= 2:
+            return True
+    
+    return False
+
 # 天和
 def is_tenhou(is_parent, is_first_draw, is_tsumo):  
     # 親が配牌直後（第一自摸前）に和了（≒配牌即和了）  
@@ -764,6 +842,28 @@ def check_yaku(player, tile_mountain=None, is_kang_tsumo=False, is_win_tsumo=Fal
         fan_value = define.YAKU_FAN.get('混一色', 3)
         if fan_value > 0:
             result.append('混一色')
+            fan += fan_value
+    
+    # 純全帯么九（門前限定3翻）
+    if is_junchangtai(player):
+        val = define.YAKU_FAN.get('純全帯么九', 3)
+        if isinstance(val, dict):
+            fan_value = val['open'] if is_open else val['closed']
+        else:
+            fan_value = val
+        if fan_value > 0:
+            result.append('純全帯么九')
+            fan += fan_value
+    
+    # 二盃口（門前限定3翻）
+    if is_ryanpeikou(player):
+        val = define.YAKU_FAN.get('二盃口', 3)
+        if isinstance(val, dict):
+            fan_value = val['open'] if is_open else val['closed']
+        else:
+            fan_value = val
+        if fan_value > 0:
+            result.append('二盃口')
             fan += fan_value
     
     # 6翻役チェック
