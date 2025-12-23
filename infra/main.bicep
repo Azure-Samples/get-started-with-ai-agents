@@ -313,6 +313,7 @@ module api 'api.bicep' = {
     searchConnectionId: searchConnectionId_final
     storageAccountResourceId: ai!.outputs.storageAccountId
     blobContainerName: blobContainerName
+    useAzureAISearch: useSearchService
   }
 }
 
