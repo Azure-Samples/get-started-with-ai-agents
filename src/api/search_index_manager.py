@@ -1,14 +1,9 @@
-from typing import Any, Dict, Optional
-
-import csv
-import glob
-import json
-import os
-import time
+from typing import Any, Dict, Literal, Optional
+from enum import Enum
+import logging
 
 from azure.core.credentials_async import AsyncTokenCredential
-from azure.search.documents.aio import AsyncSearchItemPaged, SearchClient 
-from azure.search.documents.indexes.aio import SearchIndexClient
+from azure.search.documents.indexes.aio import SearchIndexClient, SearchIndexerClient
 from azure.core.exceptions import HttpResponseError
 from azure.search.documents.indexes.models import (
     AzureOpenAIVectorizer,
@@ -24,9 +19,32 @@ from azure.search.documents.indexes.models import (
     SimpleField,
     VectorSearch,
     VectorSearchProfile,
+    SearchIndexerDataSourceConnection,
+    SearchIndexerDataContainer,
+    SearchIndexer,
+    FieldMapping,
+    IndexingParameters,
+    InputFieldMappingEntry,
+    OutputFieldMappingEntry,
+    SearchIndexerSkillset,
+    AzureOpenAIEmbeddingSkill,
+    SplitSkill,
+    IndexingParametersConfiguration,
+    SearchIndexerIndexProjection,
+    SearchIndexerIndexProjectionSelector,
+    SearchIndexerIndexProjectionsParameters,
+    IndexProjectionMode,
 )
-from azure.search.documents.models import VectorizableTextQuery
 
+
+logger = logging.getLogger(__name__)
+
+
+class ResourceStatus(Enum):
+    """Status of a resource operation."""
+    CREATED = "created"
+    EXISTING = "existing"
+    FAILED = "failed"
 
 
 class SearchIndexManager:
@@ -80,53 +98,6 @@ class SearchIndexManager:
         self._client = None
         self._embedding_client = embedding_client
 
-    def _get_client(self):
-        """Get search client if it is absent."""
-        if self._client is None:
-            self._client = SearchClient(
-                endpoint=self._endpoint, index_name=self._index.name, credential=self._credential)
-        return self._client
-    
-    async def upload_documents(self, embeddings_file: str) -> None:
-        """
-        Upload the embeggings file to index search.
-
-        :param embeddings_file: The embeddings file to upload.
-        """
-        self._raise_if_no_index()
-        documents = []
-        index = 0
-        with open(embeddings_file, newline='') as fp:
-            reader = csv.DictReader(fp)
-            for row in reader:
-                documents.append(
-                    {
-                        'embedId': str(index),
-                        'token': row['token'],
-                        'embedding': json.loads(row['embedding']),
-                        'title': row['title'] 
-                    }
-                )
-                index += 1
-        await self._get_client().upload_documents(documents)
-
-    def _raise_if_no_index(self) -> None:
-        """
-        Raise the exception if the index was not created.
-
-        :raises: ValueError
-        """
-        if self._index is None:
-            raise ValueError(
-                "Unable to perform the operation as the index is absent. "
-                "To create index please call create_index")
-
-    async def delete_index(self):
-        """Delete the index from vector store."""
-        self._raise_if_no_index()
-        async with SearchIndexClient(endpoint=self._endpoint, credential=self._credential) as ix_client:
-            await ix_client.delete_index(self._index.name)
-        self._index = None
 
     def _check_dimensions(self, vector_index_dimensions: Optional[int] = None) -> int:
         """
@@ -145,111 +116,58 @@ class SearchIndexManager:
         if self._dimensions is not None and vector_index_dimensions != self._dimensions:
             raise ValueError("vector_index_dimensions is different from dimensions provided to constructor.")
         return vector_index_dimensions
-
-    async def _format_search_results(self, response: AsyncSearchItemPaged[Dict]) -> str:
+    
+    async def create_index_maybe(self, vector_index_dimensions: Optional[int] = None) -> ResourceStatus:
         """
-        Format the output of search.
+        Create index if not exists.
 
-        :param response: The search results.
-        :return: The formatted response string.
-        """
-        results = [f"{result['token']}, source: {result['title']}" async for result in response]
-        return "\n------\n".join(results)
-
-    async def semantic_search(self, message: str) -> str:
-        """
-        Perform the semantic search on the search resource.
-
-        :param message: The customer question.
-        :return: The context for the question.
-        """
-        self._raise_if_no_index()
-        response = await self._get_client().search(
-            search_text=message,
-            query_type="full",
-            search_fields=['token', 'title'],
-            semantic_configuration_name=SearchIndexManager._SEMANTIC_CONFIG,
-        )
-        return await self._format_search_results(response)
-        
-
-    async def search(self, message: str) -> str:
-        """
-        Search the message in the vector store.
-
-        :param message: The customer question.
-        :return: The context for the question.
-        """
-        self._raise_if_no_index()
-        vector_query = VectorizableTextQuery(
-            text=message,
-            k_nearest_neighbors=5,
-            fields="embedding"
-        )
-        response = await self._get_client().search(
-            vector_queries=[vector_query],
-            select=['token', 'title'],
-        )
-        # This lag is necessary, despite it is not described in documentation.
-        time.sleep(1)
-        return await self._format_search_results(response)
-
-    async def create_index(
-        self,
-        vector_index_dimensions: Optional[int] = None,
-        raise_on_error: bool=False
-        ) -> bool:
-        """
-        Create index or return false if it already exists.
-
-        :param vector_index_dimensions: The number of dimensions in the vector index. This parameter is
-               needed if the embedding parameter cannot be set for the given model. It can be
-               figured out by loading the embeddings file, generated by build_embeddings_file,
-               loading the contents of the first row and 'embedding' column as a JSON and calculating
-               the length of the list obtained.
-               Also please see the embedding model documentation
-               https://platform.openai.com/docs/models#embeddings
-        :param raise_on_error: Raise if index creation was not successful.
-        :return: True if index was created, False otherwise.
-        :raises: Value error if both dimensions of embedding model and vector_index_dimensions are not set
-                 or both of them are set and they do not equal each other.
+        :param vector_index_dimensions: The number of dimensions in the vector index.
+        :return: ResourceStatus.CREATED, ResourceStatus.EXISTING, or ResourceStatus.FAILED
         """
         vector_index_dimensions = self._check_dimensions(vector_index_dimensions)
         try:
             self._index = await self._index_create(vector_index_dimensions)
-            return True
+            logger.info(f"Search index '{self._index_name}' created successfully with {vector_index_dimensions} embedding dimensions.")
+            return ResourceStatus.CREATED
         except HttpResponseError:
-            if raise_on_error:
-                raise
-            async with SearchIndexClient(endpoint=self._endpoint, credential=self._credential) as ix_client:
-                self._index = await ix_client.get_index(self._index_name)
-            return False
+            try:
+                async with SearchIndexClient(endpoint=self._endpoint, credential=self._credential) as ix_client:
+                    self._index = await ix_client.get_index(self._index_name)
+                    logger.info(f"Search index '{self._index_name}' already exists. Using existing index with {vector_index_dimensions} embedding dimensions.")
+                    return ResourceStatus.EXISTING
+            except Exception as e:
+                logger.error(f"Failed to create or retrieve index '{self._index_name}': {e}")
+                return ResourceStatus.FAILED
         
     async def _index_create(self, vector_index_dimensions: int) -> SearchIndex:
         """
         Create the index.
 
         :param vector_index_dimensions: The number of dimensions in the vector index. This parameter is
-               needed if the embedding parameter cannot be set for the given model. It can be
-               figured out by loading the embeddings file, generated by build_embeddings_file,
-               loading the contents of the first row and 'embedding' column as a JSON and calculating
-               the length of the list obtained.
-               Also please see the embedding model documentation
+               needed if the embedding parameter cannot be set for the given model.
+               See the embedding model documentation:
                https://platform.openai.com/docs/models#embeddings
         :return: The newly created search index.
         """
         async with SearchIndexClient(endpoint=self._endpoint, credential=self._credential) as ix_client:
             fields = [
-                SimpleField(name="embedId", type=SearchFieldDataType.String, key=True),
                 SearchField(
-                    name="embedding",
+                    name="chunk_id",
+                    type=SearchFieldDataType.String,
+                    key=True,
+                    searchable=True,
+                    analyzer_name="keyword"
+                ),
+                SimpleField(name="parent_id", type=SearchFieldDataType.String, filterable=True),
+                SearchField(name="chunk", searchable=True, type=SearchFieldDataType.String, hidden=False),
+                SearchField(name="title", type=SearchFieldDataType.String, hidden=False),
+                SearchField(
+                    name="text_vector",
                     type=SearchFieldDataType.Collection(SearchFieldDataType.Single),
                     vector_search_dimensions=vector_index_dimensions,
                     searchable=True,
                     vector_search_profile_name=SearchIndexManager._EMBEDDING_CONFIG
                 ),
-                SearchField(name="token", searchable=True, type=SearchFieldDataType.String, hidden=False),
-                SearchField(name="title", type=SearchFieldDataType.String, hidden=False),
             ]
             vector_search = VectorSearch(
                 profiles=[
@@ -280,7 +198,7 @@ class SearchIndexManager:
                         prioritized_fields=SemanticPrioritizedFields(
                             title_field=SemanticField(field_name="title"),
                             content_fields=[
-                                SemanticField(field_name="token"),
+                                SemanticField(field_name="chunk"),
                             ]
                         )
                     )
@@ -293,70 +211,205 @@ class SearchIndexManager:
                 semantic_search=semantic_search)
             new_index = await ix_client.create_index(search_index)
         return new_index
-        
 
-    async def build_embeddings_file(
-            self,
-            input_directory: str,
-            output_file: str,
-            sentences_per_embedding: int=4,
-            ) -> None:
+    async def create_datasource_maybe(
+        self,
+        datasource_name: str,
+        container_name: str,
+        connection_string: str,
+    ) -> ResourceStatus:
         """
-        In this method we do lazy loading of nltk and download the needed data set to split
+        Create or get data source for blob storage.
 
-        document into tokens. This operation takes time that is why we hide import nltk under this
-        method. We also do not include nltk into requirements because this method is only used
-        during rag generation.
-        :param dimensions: The number of dimensions in the embeddings. Must be the same as
-               the one used for SearchIndexManager creation.
-        :param input_directory: The directory with the embedding files.
-        :param output_file: The file csv file to store embeddings.
-        :param embeddings_client: The embedding client, used to create embeddings. 
-                Must be the same as the one used for SearchIndexManager creation.
-        :param sentences_per_embedding: The number of sentences used to build embedding.
+        :param datasource_name: Name of the datasource to create or retrieve
+        :param storage_account_endpoint: Azure Storage account endpoint
+        :param container_name: Name of blob container
+        :param connection_string: Connection string for blob storage
+        :return: ResourceStatus.CREATED, ResourceStatus.EXISTING, or ResourceStatus.FAILED
         """
-        import nltk
-        nltk.download('punkt')
-        
-        from nltk.tokenize import sent_tokenize
-        # Split the data to sentence tokens.
-        sentence_tokens = []
-        references = []
-        globs = glob.glob(input_directory + '/*.md', recursive=True)
-        index = 0
-        for fle in globs:
-            with open(fle) as f:
-                for line in f:
-                    line = line.strip()
-                    # Skip non informative lines.
-                    if len(line) < SearchIndexManager.MIN_LINE_LENGTH or len(set(line)) < SearchIndexManager.MIN_DIFF_CHARACTERS_IN_LINE:
-                        continue
-                    for sentence in sent_tokenize(line):
-                        if index % sentences_per_embedding == 0:
-                            sentence_tokens.append(sentence)
-                            references.append(os.path.split(fle)[-1])
-                        else:
-                            sentence_tokens[-1] += ' '
-                            sentence_tokens[-1] += sentence
-                        index += 1
-        
-        
-        # For each token build the embedding, which will be used in the search.
-        batch_size = 2000
-        with open(output_file, 'w') as fp:
-            writer = csv.DictWriter(fp, fieldnames=['token', 'embedding', 'title'])
-            writer.writeheader()
-            for i in range(0, len(sentence_tokens), batch_size):
-                emedding = (await self._embedding_client.embed(
-                    input=sentence_tokens[i:i+min(batch_size, len(sentence_tokens))],
-                    dimensions=self._dimensions,
-                    model=self._embedding_model
-                ))["data"]
-                for token, float_data, reference in zip(sentence_tokens, emedding, references):
-                    writer.writerow({
-                        'token': token,
-                        'embedding': json.dumps(float_data['embedding']),
-                        'title': reference})
+        if not self._endpoint:
+            logger.error("Search endpoint is required.")
+            return ResourceStatus.FAILED
+
+        data_source = SearchIndexerDataSourceConnection(
+            name=datasource_name,
+            type="azureblob",
+            connection_string=connection_string,
+            container=SearchIndexerDataContainer(name=container_name),
+        )
+
+        async with SearchIndexerClient(endpoint=self._endpoint, credential=self._credential) as indexer_client:
+            try:
+                await indexer_client.get_data_source_connection(datasource_name)
+                logger.info(f"Data source '{datasource_name}' already exists. Using existing data source.")
+                return ResourceStatus.EXISTING
+            except HttpResponseError:
+                try:
+                    await indexer_client.create_data_source_connection(data_source)
+                    logger.info(f"Data source '{datasource_name}' created successfully.")
+                    return ResourceStatus.CREATED
+                except Exception as e:
+                    logger.error(f"Failed to create data source '{datasource_name}': {e}")
+                    return ResourceStatus.FAILED
+
+    async def create_skillset_maybe(
+        self,
+        skillset_name: str,
+        target_index_name: str,
+        split_mode: Literal["pages"] = "pages",
+        max_page_length: int = 2000,
+        page_overlap_length: int = 500,
+    ) -> ResourceStatus:
+        """
+        Create skillset with split and embedding skills.
+
+        :param skillset_name: Name of the skillset
+        :param target_index_name: Target index for projections
+        :param split_mode: Text split mode (pages)
+        :param max_page_length: Maximum page length for splitting
+        :param page_overlap_length: Page overlap length for splitting
+        :return: ResourceStatus.CREATED, ResourceStatus.EXISTING, or ResourceStatus.FAILED
+        """
+        if not self._endpoint:
+            logger.error("Search endpoint is required.")
+            return ResourceStatus.FAILED
+
+        split_skill = SplitSkill(
+            name="document_chunking_skill",
+            description="Chunks documents into overlapping text segments for embedding and indexing",
+            context="/document",
+            text_split_mode=split_mode,
+            maximum_page_length=max_page_length,
+            page_overlap_length=page_overlap_length,
+            inputs=[InputFieldMappingEntry(name="text", source="/document/content")],
+            outputs=[OutputFieldMappingEntry(name="textItems", target_name="pages")],
+        )
+
+        embedding_skill = AzureOpenAIEmbeddingSkill(
+            name="embedding_generation_skill",
+            description="Generates vector embeddings for document chunks using Azure OpenAI",
+            context="/document/pages/*",
+            resource_url=self._embeddings_endpoint,
+            deployment_name=self._embedding_deployment,
+            model_name=self._embedding_model,
+            inputs=[InputFieldMappingEntry(name="text", source="/document/pages/*")],
+            outputs=[OutputFieldMappingEntry(name="embedding", target_name="text_vector")],
+            dimensions=self._dimensions
+        )
+
+        index_projection = SearchIndexerIndexProjection(
+            selectors=[
+                SearchIndexerIndexProjectionSelector(
+                    target_index_name=target_index_name,
+                    parent_key_field_name="parent_id",
+                    source_context="/document/pages/*",
+                    mappings=[
+                        InputFieldMappingEntry(name="text_vector", source="/document/pages/*/text_vector"),
+                        InputFieldMappingEntry(name="chunk", source="/document/pages/*"),
+                        InputFieldMappingEntry(name="title", source="/document/title"),
+                    ]
+                )
+            ],
+            parameters=SearchIndexerIndexProjectionsParameters(
+                projection_mode=IndexProjectionMode.SKIP_INDEXING_PARENT_DOCUMENTS
+            )
+        )
+
+        skillset = SearchIndexerSkillset(
+            name=skillset_name,
+            description="Skillset to chunk documents and generate embeddings",
+            skills=[split_skill, embedding_skill],
+            index_projection=index_projection,
+        )
+
+        async with SearchIndexerClient(endpoint=self._endpoint, credential=self._credential) as indexer_client:
+            try:
+                await indexer_client.get_skillset(skillset_name)
+                logger.info(f"Skillset '{skillset_name}' already exists. Using existing skillset.")
+                return ResourceStatus.EXISTING
+            except HttpResponseError:
+                try:
+                    await indexer_client.create_or_update_skillset(skillset)
+                    logger.info(f"Skillset '{skillset_name}' created successfully with Split + Embedding skills and {self._dimensions} dimensions.")
+                    return ResourceStatus.CREATED
+                except Exception as e:
+                    logger.error(f"Failed to create skillset '{skillset_name}': {e}")
+                    return ResourceStatus.FAILED
+
+    async def create_indexer_maybe(
+        self,
+        indexer_name: str,
+        datasource_name: str,
+        target_index_name: str,
+        skillset_name: str,
+        file_extensions: str,
+        parsing_mode: str,
+    ) -> ResourceStatus:
+        """
+        Create a single indexer for specific file types.
+
+        :param indexer_name: Name of the indexer
+        :param datasource_name: Name of the datasource to use
+        :param target_index_name: Target index name
+        :param skillset_name: Skillset name to use
+        :param file_extensions: Comma-separated file extensions to index (e.g., '.pdf,.docx')
+        :param parsing_mode: Parsing mode (json, markdown, default)
+        :return: ResourceStatus.CREATED, ResourceStatus.EXISTING, or ResourceStatus.FAILED
+        """
+        if not self._endpoint:
+            logger.error("Search endpoint is required.")
+            return ResourceStatus.FAILED
+
+        async with SearchIndexerClient(endpoint=self._endpoint, credential=self._credential) as indexer_client:
+            try:
+                await indexer_client.get_indexer(indexer_name)
+                logger.info(f"Indexer '{indexer_name}' already exists. Using existing indexer.")
+                return ResourceStatus.EXISTING
+            except HttpResponseError:
+                pass
+
+            indexer_params = IndexingParameters(
+                batch_size=10,
+                max_failed_items_per_batch=5,
+                configuration=IndexingParametersConfiguration(
+                    parsing_mode=parsing_mode,
+                    indexed_file_name_extensions=file_extensions,
+                    allow_skillset_to_read_file_data=parsing_mode == "default",
+                    query_timeout=None
+                )
+            )
+
+            indexer = SearchIndexer(
+                name=indexer_name,
+                data_source_name=datasource_name,
+                target_index_name=target_index_name,
+                skillset_name=skillset_name,
+                field_mappings=[
+                    FieldMapping(source_field_name="metadata_storage_name", target_field_name="title"),
+                ],
+                output_field_mappings=[
+                    FieldMapping(source_field_name="/document/pages/*/text_vector", target_field_name="text_vector"),
+                ],
+                parameters=indexer_params,
+            )
+
+            try:
+                await indexer_client.create_indexer(indexer)
+                logger.info(f"Indexer '{indexer_name}' created for {file_extensions} files (parsing_mode: {parsing_mode}).")
+                return ResourceStatus.CREATED
+            except Exception as e:
+                logger.error(f"Failed to create indexer '{indexer_name}': {e}")
+                return ResourceStatus.FAILED
+
+
+    async def __aenter__(self):
+        """Async context manager entry."""
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        """Async context manager exit, ensures resources are cleaned up."""
+        await self.close()
+        return False
 
     async def close(self):
         """Close the closeable resources, associated with SearchIndexManager."""

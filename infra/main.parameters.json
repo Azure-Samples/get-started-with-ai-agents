@@ -96,7 +96,7 @@
       "value": "${AZURE_AI_EMBED_DEPLOYMENT_CAPACITY=50}"
     },
     "embeddingDeploymentDimensions": {
-      "value": "${AZURE_AI_EMBED_DIMENSIONS=100}"
+      "value": "${AZURE_AI_EMBED_DIMENSIONS=1536}"
     },
     "apiAppExists": {
       "value": "${SERVICE_API_RESOURCE_EXISTS=false}"
@@ -121,6 +121,9 @@
     },
     "searchConnectionId": {
       "value": "${SEARCH_CONNECTION_ID}"
+    },
+    "blobContainerName": {
+      "value": "${AZURE_BLOB_CONTAINER_NAME=documents}"
     }
   }
 }

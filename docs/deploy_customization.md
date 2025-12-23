@@ -100,3 +100,10 @@ Change the SKU of the embeddings deployment:
 
 ```shell
 azd env set AZURE_AI_EMBED_DEPLOYMENT_SKU Standard
+```
+
+Set the embedding model dimensionality (only when using AI Search):
+
+```shell
+azd env set AZURE_AI_EMBED_DIMENSIONS 1536
+```

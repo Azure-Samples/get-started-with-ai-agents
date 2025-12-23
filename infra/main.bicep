@@ -122,6 +122,9 @@ param seed string = newGuid()
 param searchServiceEndpoint string = ''
 param searchConnectionId string = ''
 
+@description('The name of the blob container for document storage')
+param blobContainerName string = 'documents'
+
 var runnerPrincipalType = templateValidationMode? 'ServicePrincipal' : 'User'
 
 var abbrs = loadJsonContent('./abbreviations.json')
@@ -299,7 +302,7 @@ module api 'api.bicep' = {
     agentDeploymentName: agentDeploymentName
     searchConnectionName: searchConnectionName
     aiSearchIndexName: aiSearchIndexName
-    searchServiceEndpoint: searchServiceEndpointFromAIOutput
+    searchServiceEndpoint: searchServiceEndpoint_final
     embeddingDeploymentName: embeddingDeploymentName
     embeddingDeploymentDimensions: embeddingDeploymentDimensions
     agentName: agentName
@@ -308,6 +311,8 @@ module api 'api.bicep' = {
     otelInstrumentationGenAICaptureMessageContent: otelInstrumentationGenAICaptureMessageContent
     projectEndpoint: projectEndpoint
     searchConnectionId: searchConnectionId_final
+    storageAccountResourceId: ai!.outputs.storageAccountId
+    blobContainerName: blobContainerName
   }
 }
 
@@ -404,6 +409,26 @@ module backendRoleSearchServiceContributorRG 'core/security/role.bicep' = if (us
   }
 }
 
+module backendRoleStorageAccountContributorRG 'core/security/role.bicep' = if (useSearchService) {
+  name: 'backend-role-storage-account-contributor-rg'
+  scope: rg
+  params: {
+    principalType: 'ServicePrincipal'
+    principalId: api.outputs.SERVICE_API_IDENTITY_PRINCIPAL_ID
+    roleDefinitionId: '17d1049b-9a84-46fb-8f53-869881c3d3ab'
+  }
+}
+
+module backendRoleStorageBlobDataContributorRG 'core/security/role.bicep' = if (useSearchService) {
+  name: 'backend-role-storage-blob-data-contributor-rg'
+  scope: rg
+  params: {
+    principalType: 'ServicePrincipal'
+    principalId: api.outputs.SERVICE_API_IDENTITY_PRINCIPAL_ID
+    roleDefinitionId: 'ba92f5b4-2d11-453d-a403-e96b0029c9fe'
+  }
+}
+
 module userRoleSearchIndexDataContributorRG 'core/security/role.bicep' = if (useSearchService) {
   name: 'user-role-azure-index-data-contributor-rg'
   scope: rg
@@ -434,6 +459,26 @@ module userRoleSearchServiceContributorRG 'core/security/role.bicep' = if (useSe
   }
 }
 
+module userRoleStorageAccountContributorRG 'core/security/role.bicep' = if (useSearchService) {
+  name: 'user-role-storage-account-contributor-rg'
+  scope: rg
+  params: {
+    principalType: runnerPrincipalType
+    principalId: principalId
+    roleDefinitionId: '17d1049b-9a84-46fb-8f53-869881c3d3ab'
+  }
+}
+
+module userRoleStorageBlobDataContributorRG 'core/security/role.bicep' = if (useSearchService) {
+  name: 'user-role-storage-blob-data-contributor-rg'
+  scope: rg
+  params: {
+    principalType: runnerPrincipalType
+    principalId: principalId
+    roleDefinitionId: 'ba92f5b4-2d11-453d-a403-e96b0029c9fe'
+  }
+}
+
 module backendRoleAzureAIDeveloperRG 'core/security/role.bicep' = {
   name: 'backend-role-azureai-developer-rg'
   scope: rg
@@ -460,6 +505,8 @@ output AZURE_EXISTING_AGENT_ID string = agentID
 output AZURE_EXISTING_AIPROJECT_ENDPOINT string = projectEndpoint
 output ENABLE_AZURE_MONITOR_TRACING bool = enableAzureMonitorTracing
 output OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT bool = otelInstrumentationGenAICaptureMessageContent
+output STORAGE_ACCOUNT_RESOURCE_ID string = ai!.outputs.storageAccountId
+output AZURE_BLOB_CONTAINER_NAME string = blobContainerName
 
 // Outputs required by azd for ACA
 output AZURE_CONTAINER_ENVIRONMENT_NAME string = containerApps.outputs.environmentName
