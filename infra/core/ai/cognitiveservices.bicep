@@ -52,12 +52,9 @@ resource aiServiceConnection 'Microsoft.CognitiveServices/accounts/connections@2
   parent: account
   properties: {
     category: 'AzureOpenAI'
-    authType: 'ApiKey'
+    authType: 'AAD'
     isSharedToAll: true
     target: account.properties.endpoints['OpenAI Language Model Instance API']
-    credentials: {
-      key: account.listKeys().key1
-    }
     metadata: {
       ApiType: 'azure'
       ResourceId: account.id
@@ -142,3 +139,5 @@ output projectEndpoint string = aiProject.properties.endpoints['AI Foundry API']
 output PrincipalId string = account.identity.principalId
 output accountPrincipalId string = account.identity.principalId
 output projectPrincipalId string = aiProject.identity.principalId
+output storageConnectionId string = storageAccountConnection.id
+output storageConnectionName string = storageAccountConnection.name

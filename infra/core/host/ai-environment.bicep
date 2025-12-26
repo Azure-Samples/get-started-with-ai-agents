@@ -91,7 +91,7 @@ module cognitiveServices '../ai/cognitiveservices.bicep' = {
     appInsightConnectionName: appInsightConnectionName
     appInsightConnectionString: applicationInsights.outputs.connectionString
     storageAccountId: storageAccount.outputs.id
-    storageAccountConnectionName: storageAccount.outputs.name
+    storageAccountConnectionName: 'storageAccount'
     storageAccountBlobEndpoint: storageAccount.outputs.primaryEndpoints.blob
     aoaiConnectionName: aoaiConnectionName
   }
@@ -140,10 +140,22 @@ module searchService '../search/search-services.bicep' =
     }
   }
 
+module searchServiceStorageRoleAssignment '../../core/security/role.bicep' =
+  if (!empty(searchServiceName)) {
+    name: 'search-service-role-storage-blob-data-reader'
+    params: {
+      principalType: 'ServicePrincipal'
+      principalId: !empty(searchServiceName) ? searchService.outputs.principalId : ''
+      roleDefinitionId: '2a2b9908-6ea1-4ae2-8e65-a410df84e7d1' // Storage Blob Data Reader
+    }
+  }
+
 
 // Outputs
 output storageAccountId string = storageAccount.outputs.id
 output storageAccountName string = storageAccount.outputs.name
+output storageConnectionId string = cognitiveServices.outputs.storageConnectionId
+output storageConnectionName string = cognitiveServices.outputs.storageConnectionName
 
 output applicationInsightsId string = !empty(applicationInsightsName) ? applicationInsights.outputs.id : ''
 output applicationInsightsName string = !empty(applicationInsightsName) ? applicationInsights.outputs.name : ''
