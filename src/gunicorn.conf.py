@@ -42,20 +42,6 @@ else:
     logger.info("Loaded environment variables from default location")
 
 
-import logging
-import os
-
-
-# Raise Azure SDK loggers to DEBUG
-logging.getLogger("azure").setLevel(logging.DEBUG)
-logging.getLogger("azure.core.pipeline.policies.http_logging_policy").setLevel(logging.DEBUG)
-
-# If you want less noise from retry + transport:
-logging.getLogger("azure.core.pipeline.policies.retry").setLevel(logging.INFO)
-logging.getLogger("azure.core.pipeline.transport").setLevel(logging.INFO)
-
-
-
 def list_files_in_files_directory() -> List[str]:    
     # Get the absolute path of the 'files' directory
     files_directory = os.path.abspath(os.path.join(os.path.dirname(__file__), 'files'))
@@ -389,9 +375,9 @@ async def create_agent(ai_project: AIProjectClient,
     tool = await get_available_tool(ai_project, openai_client, creds)
 
     instructions = "You are a helpful assistant."
-    tools = []
-    
-    if tool is not None:
+    tools: List[Tool] = []
+
+    if tool:
         tools = [tool]
         if isinstance(tool, AzureAISearchAgentTool):
             instructions = (
