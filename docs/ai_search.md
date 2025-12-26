@@ -2,76 +2,62 @@
 
 # Azure AI Search Setup Guide
 ## Overview
-The Azure AI Search feature helps improve the responses from your application by combining the power of large language models (LLMs) with extra context retrieved from an external data source. Simply put, when you ask a question, the agent first searches through a set of relevant documents (stored as embeddings) and then uses this context to provide a more accurate and relevant response. If no relevant context is found, the agent returns the LLM response directly and informs customer that there is no relevant information in the documents.
-This AI Search feature is optional and is disabled by default. If you prefer to use it, simply set the environment variable `USE_AZURE_AI_SEARCH_SERVICE` to `true`. Doing so will also trigger the deployment of Azure AI Search resources.
+The Azure AI Search feature improves responses by letting the agent pull context from indexed documents. It is optional and disabled by default; set `USE_AZURE_AI_SEARCH_SERVICE=true` **before your first `azd up`** so that run will provision the search resources.
 
 ## How does Azure AI Search works?
-In our provided example, the application includes a sample dataset containing information about Contoso products. This data was split by 10 sentences, and each chunk of text was transformed into numerical representations called embeddings. These embeddings were created using OpenAI's `text-embedding-3-small` model with `dimensions=100`. The resulting embeddings file (`embeddings.csv`) is located in the `api/data` folder. The agent requires index, capable of both semantic and index search i.e. it can use LLM to search for context in the text fields as well as it can search by embedding vector similarity. The built index also must have the configured vectorizer, which will build the embedding when the agent will apply hybrid search. For search to provide the correct reference, the index must contain the field called "title" and optionally "url" to provide the link, however it is not shown in our sample as we have generated index using files located in `api/files` and there are no links available.
+When enabled, the app uploads the `.md` and `.pdf` files in `src/files` to your Azure Storage account and indexes them for hybrid search. Files go into the `documents` container (override with `AZURE_BLOB_CONTAINER_NAME`). The search index is created automatically and includes semantic + vector search with a `title` field for references.
+
+## Environment variables (set before first `azd up`)
+- `USE_AZURE_AI_SEARCH_SERVICE`: Set to `true` to enable AI Search; must be set before the first `azd up` to provision search resources.
+- `AZURE_AI_SEARCH_INDEX_NAME`: Name of the search index to create/use (default `index_sample`).
+- `AZURE_AI_EMBED_DEPLOYMENT_NAME`: Embedding deployment name used for vectorization.
+- `AZURE_BLOB_CONTAINER_NAME`: Optional override for the blob container name (default `documents`).
+
+## Indexing pipeline (what happens on startup)
+When `USE_AZURE_AI_SEARCH_SERVICE=true` and the app sees no agent yet, it builds the AI Search tool in these steps. Each step is skipped if the resource already exists; nothing is overwritten unless missing:
+
+1) Blob container
+	- Check for the `documents` container; create it if missing.
+
+2) Upload seed files
+	- If the container is empty, upload everything under `src/files`.
+	- If blobs already exist, skip upload to avoid overwriting user content.
+
+3) Search index
+	- Create the search index with semantic + vector config if it doesn’t exist; otherwise reuse it.
+
+4) Datasource
+	- Create the blob datasource pointing to `documents`; reuse it if already present.
+
+5) Skillset
+	- Create the split + embedding skillset; reuse it if already present.
+
+6) Indexers
+	- Create two indexers if missing: one for `.md` (markdown parsing) and one for `.pdf,.docx,.pptx,.xlsx,.txt` (default parsing).
+	- Both indexers write chunks, vectors, and set `title` from the blob file name (`metadata_storage_name`).
+
+## Resource naming from the index name
+- The index name comes from `AZURE_AI_SEARCH_INDEX_NAME` (default to: `index_sample`).
+- Names are sanitized (lowercase, underscores → hyphens) to comply with Azure Search resource naming rules (example: `index-sample`).
+- Skillset: `<sanitized>-skillset`.
+- Datasource: `<sanitized>-datasource`.
+- Indexers: `<sanitized>-markdown-indexer` and `<sanitized>-documents-indexer`.
+
+## Viewing resources in Azure Portal (with screenshots)
+- Blob container/files: In Storage **Containers**, open `documents` (or your override). ![Blob container](./images/blob_store_containers.png)
+- Datasource: In AI Search **Data sources**, open `<sanitized>-datasource`. ![AI Search datasource](./images/ai_search_datasource.png)
+- Skillset: In **Skillsets**, open `<sanitized>-skillset` to see split + embedding skills. ![AI Search skillsets](./images/ai_search_skillsets.png)
+- Indexers: In **Indexers**, find `<sanitized>-markdown-indexer` and `<sanitized>-documents-indexer`; check run history here. ![AI Search indexers](./images/ai_search_indexers.png)
+- Index: In **Indexes**, open `AZURE_AI_SEARCH_INDEX_NAME` to review fields, vector, and semantic settings. ![AI Search indexes](./images/ai_search_indexes.png)
+
+## Deployment and drift
+- Changes you make directly in Azure (index, indexers, skillset, or files in the `documents` container) are kept; `azd up`/`azd deploy` will only recreate these if they are missing.
+- If the agent resource used by the web app is deleted, a subsequent `azd up` or `azd deploy` will provision a new agent and recreate any missing AI Search assets (index, indexers, datasource, skillset).
 
 
 ## If you want to use your own dataset
-To create a custom embeddings file with your own data, you can use the provided helper class `SearchIndexManager`. Below is a straightforward way to build your own embeddings:
-```python
-from .api.search_index_manager import SearchIndexManager
+- Drop your `.md` and `.pdf` files into `src/files` (or point the upload step to your folder).
+- If you already ran `azd up` and the `documents` container exists, delete that container to clear old files before redeploying.
+- Run `azd up` or `azd deploy` to recreate the container and upload your files.
+- After deployment, run the indexers (from the Azure Portal or CLI) so the new content is processed into the search index.
 
-search_index_manager = SearchIndexManager(
-    endpoint=your_search_endpoint,
-    credential=your_credentials,
-    index_name=your_index_name,
-    dimensions=100,
-    model=your_embedding_model,
-    deployment_name=your_embedding_model,
-    embedding_endpoint=your_search_endpoint_url,
-    embed_api_key=embed_api_key,
-    embedding_client=embedding_client
-)
-search_index_manager.build_embeddings_file(
-    input_directory=input_directory,
-    output_file=output_directory,
-    sentences_per_embedding=10
-)
-```
-- Make sure to replace `your_search_endpoint`, `your_credentials`, `your_index_name`, and `embedding_client` with your own Azure service details.
-- `your_embedding_model` is the model, used to build embeddings.
-- `your_search_endpoint_url` is the url of emedding endpoint, which will be used to create the vectorizer, and `embed_api_key` is the API key to access it.
-- Your input data should be placed in the folder specified by `input_directory`.
-- `sentences_per_embedding`  parameter specifies the number of sentences used to construct the embedding. The larger this number, the broader the context that will be identified during the similarity search.
-
-## Deploying the Application with AI index search enabled
-To deploy your application using the AI index search feature, set the following environment variables locally:
-In power shell:
-```
-$env:USE_AZURE_AI_SEARCH_SERVICE="true"
-$env:AZURE_AI_SEARCH_INDEX_NAME="index_sample"
-$env:AZURE_AI_EMBED_DEPLOYMENT_NAME="text-embedding-3-small"
-```
-
-In bash:
-```
-export USE_AZURE_AI_SEARCH_SERVICE="true"
-export AZURE_AI_SEARCH_INDEX_NAME="index_sample"
-export AZURE_AI_EMBED_DEPLOYMENT_NAME="text-embedding-3-small"
-```
-
-In cmd:
-```
-set USE_AZURE_AI_SEARCH_SERVICE=true
-set AZURE_AI_SEARCH_INDEX_NAME=index_sample
-set AZURE_AI_EMBED_DEPLOYMENT_NAME=text-embedding-3-small
-```
-
-- `USE_AZURE_AI_SEARCH_SERVICE`: Enables or disables (default) index search.
-- `AZURE_AI_SEARCH_INDEX_NAME`: The Azure Search Index the application will use.
-- `AZURE_AI_EMBED_DEPLOYMENT_NAME`: The Azure embedding deployment used to create embeddings.
-
-## Creating the Azure Search Index
- 
-To utilize index search, you must have an Azure search index. By default, the application uses `index_sample` as the index name. You can create an index either by following these official Azure [instructions](https://learn.microsoft.com/azure/ai-services/agents/how-to/tools/azure-ai-search?tabs=azurecli%2Cpython&pivots=overview-azure-ai-search), or programmatically with the provided helper methods:
-```python
-# Create Azure Search Index (if it does not yet exist)
-await search_index_manager.create_index(raise_on_error=True)
-
-# Upload embeddings to the index
-await search_index_manager.upload_documents(embeddings_path)
-```
-**Important:** If you have already created the index before deploying your application, the system will skip this step and directly use your existing Azure Search Index. The parameter `vector_index_dimensions` is only required if dimension information was not already provided when initially constructing the `SearchIndexManager` object.
