@@ -203,7 +203,7 @@ For a detailed description of customizable fields and instructions, view the [de
 
 ### Configurable Agents Knowledge Retrieval
 
-By default, the template deploys OpenAI's [file search](https://learn.microsoft.com/azure/ai-services/agents/how-to/tools/file-search?tabs=python&pivots=overview) for agent's knowledge retrieval. An agent also can perform search using the search index, deployed in Azure AI Search resource. The semantic index search represents so-called hybrid search i.e. it uses LLM to search for the relevant context in the provided index as well as embedding similarity search. This index is built from the `embeddings.csv` file, containing the embeddings vectors, followed by the contexts.
+By default, the template deploys OpenAI's [file search](https://learn.microsoft.com/azure/ai-services/agents/how-to/tools/file-search?tabs=python&pivots=overview) for agent's knowledge retrieval. An agent also can perform search using the search index, deployed in Azure AI Search resource. The semantic index search represents so-called hybrid search i.e. it uses LLM to search for the relevant context in the provided index as well as embedding similarity search. This index is built from the files in `src/files`, which are uploaded to blob storage and chunked/embedded automatically.
 To use index search, please set the local environment variable `USE_AZURE_AI_SEARCH_SERVICE` to `true` during the `azd up` command. In this case the Azure AI Search resource will be deployed and used. For more information on Azure AI serach, please see the [Azure AI Search Setup Guide](ai_search.md)
 
 To specify the model (e.g. gpt-5-mini, gpt-5) that is deployed for the agent when `azd up` is called, set the following environment variables:
