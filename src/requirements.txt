@@ -13,4 +13,3 @@ azure-search-documents
 setuptools==80.9.0
 starlette>=0.47.2 # fix GHSA-2c2j-9gv5-cj73 (CVE-2025-54121) - DoS when parsing large multipart forms
 jinja2 # new dependent of fastapi
-pypdf2
