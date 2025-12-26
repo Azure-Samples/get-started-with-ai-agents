@@ -197,7 +197,6 @@ async def create_ai_search_tool_maybe(
     sanitized_name = search_index_name.lower().replace("_", "-")
     datasource_name = f"{sanitized_name}-datasource"
     skillset_name = f"{sanitized_name}-skillset"
-    
     # Define steps in execution order
     steps_order = [
         "blob_container",
@@ -205,7 +204,6 @@ async def create_ai_search_tool_maybe(
         "search_index",
         "search_datasource",
         "search_skillset",
-        "indexer_json",
         "indexer_markdown",
         "indexer_documents",
     ]
@@ -260,20 +258,7 @@ async def create_ai_search_tool_maybe(
     
     await execute_step("search_skillset", skillset_step, resources, steps_order)
     
-    # Step 6: Create JSON indexer
-    async def json_indexer_step():
-        return await search_mgr.create_indexer_maybe(
-            indexer_name=f"{sanitized_name}-json-indexer",
-            datasource_name=datasource_name,
-            target_index_name=search_index_name,
-            skillset_name=skillset_name,
-            file_extensions=".json",
-            parsing_mode="json"
-        )
-    
-    await execute_step("indexer_json", json_indexer_step, resources, steps_order)
-    
-    # Step 7: Create Markdown indexer
+    # Step 6: Create Markdown indexer
     async def markdown_indexer_step():
         return await search_mgr.create_indexer_maybe(
             indexer_name=f"{sanitized_name}-markdown-indexer",
@@ -286,7 +271,7 @@ async def create_ai_search_tool_maybe(
     
     await execute_step("indexer_markdown", markdown_indexer_step, resources, steps_order)
     
-    # Step 8: Create Documents indexer
+    # Step 7: Create Documents indexer
     async def documents_indexer_step():
         return await search_mgr.create_indexer_maybe(
             indexer_name=f"{sanitized_name}-documents-indexer",

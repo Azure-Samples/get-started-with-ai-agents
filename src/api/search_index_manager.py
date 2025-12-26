@@ -156,7 +156,7 @@ class SearchIndexManager:
                     type=SearchFieldDataType.String,
                     key=True,
                     searchable=True,
-                    analyzer_name="keyword"
+                    analyzer_name="keyword",
                 ),
                 SimpleField(name="parent_id", type=SearchFieldDataType.String, filterable=True),
                 SearchField(name="chunk", searchable=True, type=SearchFieldDataType.String, hidden=False),
@@ -251,7 +251,7 @@ class SearchIndexManager:
                 except Exception as e:
                     logger.error(f"Failed to create data source '{datasource_name}': {e}")
                     return ResourceStatus.FAILED
-
+                
     async def create_skillset_maybe(
         self,
         skillset_name: str,
@@ -335,7 +335,6 @@ class SearchIndexManager:
                 except Exception as e:
                     logger.error(f"Failed to create skillset '{skillset_name}': {e}")
                     return ResourceStatus.FAILED
-
     async def create_indexer_maybe(
         self,
         indexer_name: str,
@@ -353,7 +352,7 @@ class SearchIndexManager:
         :param target_index_name: Target index name
         :param skillset_name: Skillset name to use
         :param file_extensions: Comma-separated file extensions to index (e.g., '.pdf,.docx')
-        :param parsing_mode: Parsing mode (json, markdown, default)
+        :param parsing_mode: Parsing mode (markdown or default)
         :return: ResourceStatus.CREATED, ResourceStatus.EXISTING, or ResourceStatus.FAILED
         """
         if not self._endpoint:
@@ -368,28 +367,33 @@ class SearchIndexManager:
             except HttpResponseError:
                 pass
 
+            config_kwargs = dict(
+                parsing_mode=parsing_mode,
+                indexed_file_name_extensions=file_extensions,
+                allow_skillset_to_read_file_data=parsing_mode == "default",
+                query_timeout=None,
+            )
+
             indexer_params = IndexingParameters(
                 batch_size=10,
                 max_failed_items_per_batch=5,
-                configuration=IndexingParametersConfiguration(
-                    parsing_mode=parsing_mode,
-                    indexed_file_name_extensions=file_extensions,
-                    allow_skillset_to_read_file_data=parsing_mode == "default",
-                    query_timeout=None
-                )
+                configuration=IndexingParametersConfiguration(**config_kwargs)
             )
+
+            output_mappings = [
+                FieldMapping(source_field_name="/document/pages/*/text_vector", target_field_name="text_vector")
+            ]
+            field_mappings = [
+                FieldMapping(source_field_name="metadata_storage_name", target_field_name="title"),
+            ]
 
             indexer = SearchIndexer(
                 name=indexer_name,
                 data_source_name=datasource_name,
                 target_index_name=target_index_name,
                 skillset_name=skillset_name,
-                field_mappings=[
-                    FieldMapping(source_field_name="metadata_storage_name", target_field_name="title"),
-                ],
-                output_field_mappings=[
-                    FieldMapping(source_field_name="/document/pages/*/text_vector", target_field_name="text_vector"),
-                ],
+                field_mappings=field_mappings,
+                output_field_mappings=output_mappings,
                 parameters=indexer_params,
             )
 
