@@ -505,7 +505,7 @@ async def initialize_resources():
 
             os.environ["AZURE_EXISTING_AGENT_ID"] = agent_obj.id
 
-            # await initialize_eval(project_client, openai_client, agent_obj, credential)
+            await initialize_eval(project_client, openai_client, agent_obj, credential)
     except Exception as e:
         logger.info("Error creating agent: {e}", exc_info=True)
         raise RuntimeError(f"Failed to create the agent: {e}")  
