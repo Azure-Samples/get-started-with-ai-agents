@@ -4,7 +4,7 @@ version = "1.0.0"
 description = "Create a simple chat app using Quart and Azure AI Agents"
 dependencies = [
     "fastapi==0.111.0",
-    "gunicorn==22.0.0",
+    "gunicorn==23.0.0",
     "uvicorn[standard]==0.29.0",
     "opentelemetry-sdk",
     "azure-identity==1.19.0",
