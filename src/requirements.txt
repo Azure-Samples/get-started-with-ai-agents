@@ -2,7 +2,7 @@ fastapi==0.122.0
 uvicorn[standard]==0.30.0
 gunicorn==23.0.0
 azure-identity==1.19.0
-aiohttp==3.13.2
+aiohttp==3.13.3
 openai
 azure_ai_projects==2.0.0b2
 azure-core==1.36.0  # other versions might not compatible
