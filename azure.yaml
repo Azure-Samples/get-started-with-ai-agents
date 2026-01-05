@@ -4,7 +4,7 @@
 
 name: azd-get-started-with-ai-agents
 metadata:
-  template: azd-get-started-with-ai-agents@2.0.3
+  template: azd-get-started-with-ai-agents@2.1.0
 requiredVersions:
   azd: ">=1.14.0"
 

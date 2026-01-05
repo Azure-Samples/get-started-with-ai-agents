@@ -18,6 +18,9 @@ param enableAzureMonitorTracing bool
 param otelInstrumentationGenAICaptureMessageContent bool
 param projectEndpoint string
 param searchConnectionId string
+param storageAccountResourceId string
+param blobContainerName string
+param useAzureAISearch bool = false
 
 resource apiIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
   name: identityName
@@ -84,6 +87,18 @@ var env = [
   {
     name: 'SEARCH_CONNECTION_ID'
     value: searchConnectionId
+  }
+  {
+    name: 'STORAGE_ACCOUNT_RESOURCE_ID'
+    value: storageAccountResourceId
+  }
+  {
+    name: 'AZURE_BLOB_CONTAINER_NAME'
+    value: blobContainerName
+  }
+  {
+    name: 'USE_AZURE_AI_SEARCH_SERVICE'
+    value: string(useAzureAISearch)
   }
 ]
 
