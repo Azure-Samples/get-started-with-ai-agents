@@ -15,8 +15,7 @@ import { AgentPreviewChatBot } from "./AgentPreviewChatBot";
 import { MenuButton } from "../core/MenuButton/MenuButton";
 import { IChatItem } from "./chatbot/types";
 import { Waves } from "./Waves";
-/* temporarily disable BuiltWithBadge */
-// import { BuiltWithBadge } from "./BuiltWithBadge";
+import { BuiltWithBadge } from "./BuiltWithBadge";
 
 import styles from "./AgentPreview.module.css";
 
@@ -39,6 +38,7 @@ interface IAgent {
   };
   metadata?: Record<string, any>;
   response_format?: "auto" | string;
+  agentPlaygroundUrl: string;
 }
 
 interface IAgentPreviewProps {
@@ -601,8 +601,11 @@ export function AgentPreview({ agentDetails }: IAgentPreviewProps): ReactNode {
           )}
         </div>
 
-        {/* temporarily disable BuiltWithBadge */}
-        {/* <BuiltWithBadge className={styles.builtWithBadge} /> */}
+        {agentDetails.agentPlaygroundUrl && agentDetails.agentPlaygroundUrl.length > 0 ? (
+          <BuiltWithBadge className={styles.builtWithBadge} agentPlaygroundUrl={agentDetails.agentPlaygroundUrl} />
+        ) : (
+          <></>
+        )}
       </div>
 
       {/* Settings Panel */}
