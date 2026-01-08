@@ -12,7 +12,8 @@ dependencies = [
     "azure-ai-projects",
     "azure-core-tracing-opentelemetry",
     "azure-monitor-opentelemetry>=1.6.9",
-    "azure-search-documents"
+    "azure-search-documents",
+    "urllib3==2.3.0"
     ]
 
 [build-system]
