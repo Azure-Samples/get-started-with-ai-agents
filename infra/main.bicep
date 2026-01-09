@@ -48,8 +48,12 @@ param aiSearchIndexName string = ''
 param storageAccountName string = ''
 @description('The log analytics workspace name. If ommited will be generated')
 param logAnalyticsWorkspaceName string = ''
-@description('Id of the user or app to assign application roles')
+@description('Type of the user or app to assign application roles')
+param principalTypeOverride string = 'User'
+@description('The runner principal id (that automatically assigned by azd)')
 param principalId string = ''
+@description('Id of the user or app to assign application roles')
+param principalIdOverride string = principalId
 
 // Chat completion model
 @description('Format of the chat model to deploy')
@@ -124,8 +128,6 @@ param searchConnectionId string = ''
 
 @description('The name of the blob container for document storage')
 param blobContainerName string = 'documents'
-
-var runnerPrincipalType = templateValidationMode? 'ServicePrincipal' : 'User'
 
 var abbrs = loadJsonContent('./abbreviations.json')
 
@@ -323,8 +325,8 @@ module userRoleAzureAIDeveloper 'core/security/role.bicep' = {
   name: 'user-role-azureai-developer'
   scope: rg
   params: {
-    principalType: runnerPrincipalType
-    principalId: principalId
+    principalType: principalTypeOverride
+    principalId: principalIdOverride
     roleDefinitionId: '64702f94-c441-49e6-a78b-ef80e0188fee'
   }
 }
@@ -333,8 +335,8 @@ module userCognitiveServicesUser  'core/security/role.bicep' = if (empty(azureEx
   name: 'user-role-cognitive-services-user'
   scope: rg
   params: {
-    principalType: runnerPrincipalType
-    principalId: principalId
+    principalType: principalTypeOverride
+    principalId: principalIdOverride
     roleDefinitionId: 'a97b65f3-24c7-4388-baec-2e87135dc908'
   }
 }
@@ -343,8 +345,8 @@ module userAzureAIUser  'core/security/role.bicep' = if (empty(azureExistingAIPr
   name: 'user-role-azure-ai-user'
   scope: rg
   params: {
-    principalType: runnerPrincipalType
-    principalId: principalId
+    principalType: principalTypeOverride
+    principalId: principalIdOverride
     roleDefinitionId: '53ca6127-db72-4b80-b1b0-d745d6d5456d'
   }
 }
@@ -434,8 +436,8 @@ module userRoleSearchIndexDataContributorRG 'core/security/role.bicep' = if (use
   name: 'user-role-azure-index-data-contributor-rg'
   scope: rg
   params: {
-    principalType: runnerPrincipalType
-    principalId: principalId
+    principalType: principalTypeOverride
+    principalId: principalIdOverride
     roleDefinitionId: '8ebe5a00-799e-43f5-93ac-243d3dce84a7'
   }
 }
@@ -444,8 +446,8 @@ module userRoleSearchIndexDataReaderRG 'core/security/role.bicep' = if (useSearc
   name: 'user-role-azure-index-data-reader-rg'
   scope: rg
   params: {
-    principalType: runnerPrincipalType
-    principalId: principalId
+    principalType: principalTypeOverride
+    principalId: principalIdOverride
     roleDefinitionId: '1407120a-92aa-4202-b7e9-c0e197c71c8f'
   }
 }
@@ -454,8 +456,8 @@ module userRoleSearchServiceContributorRG 'core/security/role.bicep' = if (useSe
   name: 'user-role-azure-search-service-contributor-rg'
   scope: rg
   params: {
-    principalType: runnerPrincipalType
-    principalId: principalId
+    principalType: principalTypeOverride
+    principalId: principalIdOverride
     roleDefinitionId: '7ca78c08-252a-4471-8644-bb5ff32d4ba0'
   }
 }
@@ -464,8 +466,8 @@ module userRoleStorageAccountContributorRG 'core/security/role.bicep' = if (useS
   name: 'user-role-storage-account-contributor-rg'
   scope: rg
   params: {
-    principalType: runnerPrincipalType
-    principalId: principalId
+    principalType: principalTypeOverride
+    principalId: principalIdOverride
     roleDefinitionId: '17d1049b-9a84-46fb-8f53-869881c3d3ab'
   }
 }
@@ -474,8 +476,8 @@ module userRoleStorageBlobDataContributorRG 'core/security/role.bicep' = if (use
   name: 'user-role-storage-blob-data-contributor-rg'
   scope: rg
   params: {
-    principalType: runnerPrincipalType
-    principalId: principalId
+    principalType: principalTypeOverride
+    principalId: principalIdOverride
     roleDefinitionId: 'ba92f5b4-2d11-453d-a403-e96b0029c9fe'
   }
 }

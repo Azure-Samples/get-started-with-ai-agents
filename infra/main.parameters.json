@@ -8,8 +8,11 @@
     "location": {
       "value": "${AZURE_LOCATION}"
     },
-    "principalId": {
-      "value": "${AZURE_PRINCIPAL_ID}"
+    "principalTypeOverride": {
+      "value": "${PRINCIPAL_TYPE_OVERRIDE=User}"
+    },
+    "principalIdOverride": {
+      "value": "${PRINCIPAL_ID_OVERRIDE}"
     },
     "resourceGroupName": {
       "value": "${AZURE_RESOURCE_GROUP}"
