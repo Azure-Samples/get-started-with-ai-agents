@@ -8,6 +8,9 @@
     "location": {
       "value": "${AZURE_LOCATION}"
     },
+    "principalId": {
+      "value": "${AZURE_PRINCIPAL_ID}"
+    },    
     "principalTypeOverride": {
       "value": "${PRINCIPAL_TYPE_OVERRIDE=User}"
     },

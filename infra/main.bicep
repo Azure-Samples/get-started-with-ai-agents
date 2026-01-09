@@ -50,7 +50,7 @@ param storageAccountName string = ''
 param logAnalyticsWorkspaceName string = ''
 @description('Type of the user or app to assign application roles')
 param principalTypeOverride string = 'User'
-@description('The runner principal id (that automatically assigned by azd)')
+@description('The runner principal id')
 param principalId string = ''
 @description('Id of the user or app to assign application roles')
 param principalIdOverride string = principalId
