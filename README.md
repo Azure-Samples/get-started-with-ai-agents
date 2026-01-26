@@ -1,14 +1,3 @@
----
-page_type: sample
-name: Getting Started with AI Agents Using Microsoft Foundry
-urlFragment: get-started-with-ai-agents
-description: Deploy a Microsoft Foundry agent-powered chat app on Azure Container Apps with knowledge retrieval, monitoring, and evaluation tooling.
-azureDeploy: https://raw.githubusercontent.com/Azure-Samples/get-started-with-ai-agents/main/infra/main.json
-languages:
-- python
-products:
-- azure-ai-foundry-sdk
----
 # Getting Started with Agents Using Microsoft Foundry
 
 The agent leverages Foundry Agent Service and utilizes file search for knowledge retrieval from uploaded files, enabling it to generate responses with citations. The solution also includes built-in monitoring capabilities with tracing to ensure easier troubleshooting and optimized performance.
