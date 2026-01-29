@@ -14,6 +14,27 @@ param aoaiConnectionName string
 param storageAccountId string
 param storageAccountConnectionName string
 param storageAccountBlobEndpoint string
+param sharepointConnectionTarget string = ''
+@secure()
+param bingConnectionKey string = ''
+param bingConnectionTarget string = ''
+param bingConnectionResourceId string = ''
+@secure()
+param bingCustomConnectionKey string = ''
+param bingCustomConnectionTarget string = ''
+param bingCustomConnectionResourceId string = ''
+@secure()
+param browserAutomationConnectionKey string = ''
+param browserAutomationConnectionTarget string = ''
+@secure()
+param openApiConnectionKey string = ''
+@secure()
+param fabricConnectionWorkspaceId string = ''
+@secure()
+param fabricConnectionArtifactId string = ''
+@secure()
+param mcpConnectionKey string = ''
+param a2aConnectionTarget string = ''
 
 @allowed([ 'Enabled', 'Disabled' ])
 param publicNetworkAccess string = 'Enabled'
@@ -94,6 +115,181 @@ resource storageAccountConnection 'Microsoft.CognitiveServices/accounts/connecti
     metadata: {
       ApiType: 'Azure'
       ResourceId: storageAccountId
+    }
+  }
+}
+
+module sharepointConnection './connection.bicep' = if (!empty(sharepointConnectionTarget)) {
+  name: 'sharepoint-connection'
+  dependsOn: [aiProject]
+  params: {
+    aiServicesAccountName: aiServiceName
+    aiProjectName: aiProjectName
+    connectionConfig: {
+      name: 'sharepoint'
+      category: 'CustomKeys'
+      target: '_'
+      authType: 'CustomKeys'
+      isSharedToAll: true
+      metadata: {
+        type: 'sharepoint_grounding'
+      }
+      credentials: {
+        site_url: sharepointConnectionTarget
+      }
+    }
+  }
+}
+
+module bingConnection './connection.bicep' = if (!empty(bingConnectionKey) && !empty(bingConnectionTarget)) {
+  name: 'bing-connection'
+  dependsOn: [aiProject]
+  params: {
+    aiServicesAccountName: aiServiceName
+    aiProjectName: aiProjectName
+    connectionConfig: {
+      name: 'bing'
+      category: 'GroundingWithBingSearch'
+      target: bingConnectionTarget
+      authType: 'ApiKey'
+      isSharedToAll: false
+      metadata: {
+        ApiType: 'Azure'
+        ResourceId: bingConnectionResourceId
+        type: 'bing_grounding'
+      }
+    }
+    apiKey: bingConnectionKey
+  }
+}
+
+module bingCustomConnection './connection.bicep' = if (!empty(bingCustomConnectionKey) && !empty(bingCustomConnectionTarget)) {
+  name: 'bing-custom-connection'
+  dependsOn: [aiProject]
+  params: {
+    aiServicesAccountName: aiServiceName
+    aiProjectName: aiProjectName
+    connectionConfig: {
+      name: 'bing-custom'
+      category: 'GroundingWithCustomSearch'
+      target: bingCustomConnectionTarget
+      authType: 'ApiKey'
+      isSharedToAll: false
+      metadata: {
+        ApiType: 'Azure'
+        ResourceId: bingCustomConnectionResourceId
+        type: 'bing_custom_search'
+      }
+    }
+    apiKey: bingCustomConnectionKey
+  }
+}
+
+module browserAutomationConnection './connection.bicep' = if (!empty(browserAutomationConnectionKey) && !empty(browserAutomationConnectionTarget)) {
+  name: 'browser-automation-connection'
+  dependsOn: [aiProject]
+  params: {
+    aiServicesAccountName: aiServiceName
+    aiProjectName: aiProjectName
+    connectionConfig: {
+      name: 'browser-automation'
+      category: 'Serverless'
+      target: browserAutomationConnectionTarget
+      authType: 'ApiKey'
+      isSharedToAll: false
+      metadata: {
+        type: 'browser_automation_preview'
+      }
+    }
+    apiKey: browserAutomationConnectionKey
+  }
+}
+
+module openApiConnection './connection.bicep' = if (!empty(openApiConnectionKey)) {
+  name: 'openapi-connection'
+  dependsOn: [aiProject]
+  params: {
+    aiServicesAccountName: aiServiceName
+    aiProjectName: aiProjectName
+    connectionConfig: {
+      name: 'openapi'
+      category: 'CustomKeys'
+      target: '_'
+      authType: 'CustomKeys'
+      isSharedToAll: false
+      metadata: {
+        type: 'openapi'
+      }
+      credentials: {
+        Authorization: openApiConnectionKey
+      }      
+    }
+  }
+}
+
+module fabricConnection './connection.bicep' = if (!empty(fabricConnectionWorkspaceId) && !empty(fabricConnectionArtifactId)) {
+  name: 'fabric-connection'
+  dependsOn: [aiProject]
+  params: {
+    aiServicesAccountName: aiServiceName
+    aiProjectName: aiProjectName
+    connectionConfig: {
+      name: 'fabric'
+      category: 'CustomKeys'
+      target: '_'
+      authType: 'CustomKeys'
+      isSharedToAll: false
+      metadata: {
+        type: 'fabric_dataagent_preview'
+      }
+      credentials: {
+        'workspace-id': fabricConnectionWorkspaceId
+        'artifact-id': fabricConnectionArtifactId
+        workspaceId: fabricConnectionWorkspaceId
+        artifactId: fabricConnectionArtifactId
+      } 
+      sharedUserList: []
+    }
+  }
+}
+
+module mcpConnection './connection.bicep' = if (!empty(mcpConnectionKey)) {
+  name: 'mcp-connection'
+  dependsOn: [aiProject]
+  params: {
+    aiServicesAccountName: aiServiceName
+    aiProjectName: aiProjectName
+    connectionConfig: {
+      name: 'mcp'
+      category: 'RemoteTool'
+      target: 'https://api.githubcopilot.com/mcp'
+      authType: 'CustomKeys'
+      isSharedToAll: false
+      metadata: {
+        type: 'custom_MCP'
+      }
+      credentials: {
+        Authorization: 'Bearer ${mcpConnectionKey}'
+      }
+    }
+  }
+}
+
+module a2aConnection './connection.bicep' = if (!empty(a2aConnectionTarget)) {
+  name: 'a2a-connection'
+  dependsOn: [aiProject]
+  params: {
+    aiServicesAccountName: aiServiceName
+    aiProjectName: aiProjectName
+    connectionConfig: {
+      name: 'a2a'
+      category: 'RemoteA2A'
+      target: a2aConnectionTarget
+      authType: 'None'
+      isSharedToAll: false
+      metadata: {
+        type: 'custom_A2A'
+      }
     }
   }
 }

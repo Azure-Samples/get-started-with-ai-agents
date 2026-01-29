@@ -17,7 +17,7 @@ hooks:
       continueOnError: false
     windows:
       shell: pwsh
-      run: ./scripts/validate_env_vars.ps1
+      run: ./scripts/prompt_sub_reg_mod.ps1
       interactive: true
       continueOnError: false      
   postdeploy:
@@ -75,3 +75,12 @@ pipeline:
     - AZURE_EXISTING_AGENT_ID
     - ENABLE_AZURE_MONITOR_TRACING
     - OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT
+    - PROJ_CONN_SHAREPOINT_KEY
+    - PROJ_CONN_SHAREPOINT_TARGET
+    - PROJ_CONN_BROWSER_AUTOMATION_KEY
+    - PROJ_CONN_BROWSER_AUTOMATION_TARGET
+    - PROJ_CONN_OPEN_API_KEY
+    - PROJ_CONN_FABRIC_WORKSPACE_ID
+    - PROJ_CONN_FABRIC_ARTIFACT_ID
+    - PROJ_CONN_MCP_KEY
+    - PROJ_CONN_A2A_TARGET
