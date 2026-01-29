@@ -128,6 +128,28 @@ param searchConnectionId string = ''
 
 @description('The name of the blob container for document storage')
 param blobContainerName string = 'documents'
+@secure()
+@description('Target URL for SharePoint connection')
+param sharepointConnectionTarget string = ''
+@secure()
+@description('API key for Browser Automation connection')
+param browserAutomationConnectionKey string = ''
+@description('Target URL for Browser Automation connection')
+param browserAutomationConnectionTarget string = ''
+@secure()
+@description('API key for OpenAPI connection')
+param openApiConnectionKey string = ''
+@secure()
+@description('API key for Fabric connection')
+param fabricConnectionWorkspaceId string = ''
+@secure()
+@description('Target URL for Fabric connection')
+param fabricConnectionArtifactId string = ''
+@secure()
+@description('API key for MCP connection')
+param mcpConnectionKey string = ''
+@description('Target URL for A2A connection')
+param a2aConnectionTarget string = ''
 
 var abbrs = loadJsonContent('./abbreviations.json')
 
@@ -209,6 +231,14 @@ module ai 'core/host/ai-environment.bicep' = if (empty(azureExistingAIProjectRes
     searchServiceName: resolvedSearchServiceName
     appInsightConnectionName: 'appinsights-connection'
     aoaiConnectionName: 'aoai-connection'
+    sharepointConnectionTarget: sharepointConnectionTarget
+    browserAutomationConnectionKey: browserAutomationConnectionKey
+    browserAutomationConnectionTarget: browserAutomationConnectionTarget
+    openApiConnectionKey: openApiConnectionKey
+    fabricConnectionWorkspaceId: fabricConnectionWorkspaceId
+    fabricConnectionArtifactId: fabricConnectionArtifactId
+    mcpConnectionKey: mcpConnectionKey
+    a2aConnectionTarget: a2aConnectionTarget
   }
 }
 
