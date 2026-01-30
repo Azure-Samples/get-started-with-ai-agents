@@ -151,6 +151,9 @@ param mcpConnectionKey string = ''
 @description('Target URL for A2A connection')
 param a2aConnectionTarget string = ''
 
+@description('Allowed domains for Bing Custom Search configuration')
+param bingCustomSearchAllowedDomains string = '[]'
+
 var abbrs = loadJsonContent('./abbreviations.json')
 
 var resourceToken = templateValidationMode? toLower(uniqueString(subscription().id, environmentName, location, seed)) :  toLower(uniqueString(subscription().id, environmentName, location))
@@ -258,6 +261,7 @@ module ai 'core/host/ai-environment.bicep' = if (empty(azureExistingAIProjectRes
     fabricConnectionArtifactId: fabricConnectionArtifactId
     mcpConnectionKey: mcpConnectionKey
     a2aConnectionTarget: a2aConnectionTarget
+    allowedDomains: json(bingCustomSearchAllowedDomains)
   }
 }
 

@@ -34,6 +34,8 @@ param fabricConnectionArtifactId string = ''
 param mcpConnectionKey string = ''
 param a2aConnectionTarget string = ''
 
+param allowedDomains array = []
+
 var bingLocation = 'global'
 var bingSearchAccountName = '${aiServicesName}-bing'
 var bingCustomSearchAccountName = '${aiServicesName}-bingcustom'
@@ -63,13 +65,6 @@ resource bingCustomSearch 'Microsoft.Bing/accounts@2020-06-10' = {
     statisticsEnabled: false
   }
 }
-
-param allowedDomains array = [
-  {domain: 'https://learn.microsoft.com/en-us/azure/ai-foundry/agents/overview', includeSubPages: false, boostLevel: 'Default'}
-  {domain: 'https://learn.microsoft.com/en-us/azure/ai-foundry/agents/how-to/tools/overview', includeSubPages: false, boostLevel: 'Default'}
-  {domain: 'https://learn.microsoft.com/en-us/azure/ai-foundry/agents/how-to/tools/bing-grounding', includeSubPages: false, boostLevel: 'Default'}
-  {domain: 'https://learn.microsoft.com/en-us/azure/ai-foundry/agents/how-to/tools/bing-custom-search', includeSubPages: false, boostLevel: 'Default'}
-]
 
 resource bingCustomSearchConfig 'Microsoft.Bing/accounts/customSearchConfigurations@2025-05-01-preview' = {
   parent: bingCustomSearch
