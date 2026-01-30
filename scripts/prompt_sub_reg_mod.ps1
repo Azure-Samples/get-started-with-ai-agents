@@ -6,6 +6,12 @@
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
+
+# for any unhandled errors or ctrl-c, exit with code 1
+trap {
+	exit 1
+}
+
 function Ensure-Command {
 	param(
 		[Parameter(Mandatory)] [string] $Name
@@ -15,8 +21,173 @@ function Ensure-Command {
 	}
 }
 
+function Show-InteractiveMenu {
+	param(
+		[Parameter(Mandatory)] [array] $Items,
+		[Parameter(Mandatory)] [string] $Title,
+		[Parameter(Mandatory)] [scriptblock] $DisplayProperty,
+		[scriptblock] $FilterProperty,
+		[scriptblock] $ColorProperty,
+		[string[]] $ContextLines,
+		[bool] $AllowSkip = $false
+	)
+	
+	if (-not $Items -or $Items.Count -eq 0) {
+		throw "No items to display"
+	}
+	
+	$filteredItems = $Items
+	$selected = 0
+	$filterText = ""
+	$escape = $false
+	$previousFilteredCount = $filteredItems.Count
+	$needsFullRedraw = $true
+	
+	while (-not $escape) {
+		# Only clear screen when filter changes (different result count) or first draw
+		if ($needsFullRedraw -or $filteredItems.Count -ne $previousFilteredCount) {
+			Clear-Host
+			$previousFilteredCount = $filteredItems.Count
+			$needsFullRedraw = $false
+		} else {
+			# Just reposition cursor for navigation
+			[Console]::SetCursorPosition(0, 0)
+		}
+		
+		# Display context/previous selections at the top
+		if ($ContextLines -and $ContextLines.Count -gt 0) {
+			Write-Host "Selected so far:" -ForegroundColor DarkGray
+			foreach ($line in $ContextLines) {
+				Write-Host "  $line" -ForegroundColor DarkGray
+			}
+			Write-Host ""
+		}
+		
+		Write-Host $Title -ForegroundColor Cyan
+		
+		# Show filter text if active
+		if ($filterText) {
+			Write-Host "Filter: $filterText" -ForegroundColor Yellow
+		}
+		
+		Write-Host ""
+		
+		$displayCount = [Math]::Min(20, $filteredItems.Count)
+		$startIdx = [Math]::Max(0, $selected - 10)
+		$endIdx = [Math]::Min($filteredItems.Count - 1, $startIdx + $displayCount - 1)
+		
+		if ($filteredItems.Count -eq 0) {
+			Write-Host "  No matches found." -ForegroundColor Yellow
+		}
+		
+		for ($i = $startIdx; $i -le $endIdx; $i++) {
+			$displayText = & $DisplayProperty $filteredItems[$i] $i
+			
+			$color = if ($ColorProperty) { & $ColorProperty $filteredItems[$i] } else { $null }
+			
+			if ($i -eq $selected) {
+				if ($color -eq 'Red') {
+					Write-Host "  > $displayText" -ForegroundColor DarkRed
+				} else {
+					Write-Host "  > $displayText" -ForegroundColor Green
+				}
+			} elseif ($color) {
+				Write-Host "    $displayText" -ForegroundColor $color
+			} else {
+				Write-Host "    $displayText"
+			}
+		}
+		
+		Write-Host ""
+		if ($AllowSkip) {
+			Write-Host "↑↓: Navigate | Enter: Select | Type: Filter | Esc: Skip" -ForegroundColor DarkGray
+		} else {
+			Write-Host "↑↓: Navigate | Enter: Select | Type: Filter | Esc: Clear" -ForegroundColor DarkGray
+		}
+		
+		$key = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+		
+		# Check for Ctrl+C (VirtualKeyCode 3 when TreatControlCAsInput is true)
+		if ($key.VirtualKeyCode -eq 3 -or
+		    (($key.VirtualKeyCode -eq 67) -and 
+		     (($key.ControlKeyState -band [System.Management.Automation.Host.ControlKeyStates]::LeftCtrlPressed) -or
+		      ($key.ControlKeyState -band [System.Management.Automation.Host.ControlKeyStates]::RightCtrlPressed)))) {
+			[Console]::TreatControlCAsInput = $false
+			Clear-Host
+			Write-Host ""
+			Write-Host "Operation cancelled by user." -ForegroundColor Yellow
+			Write-Host ""
+			exit 1
+		}
+		
+		switch ($key.VirtualKeyCode) {
+			38 { # Up arrow
+				if ($selected -gt 0) {
+					$selected--
+				}
+			}
+			40 { # Down arrow
+				if ($selected -lt $filteredItems.Count - 1) {
+					$selected++
+				}
+			}
+			13 { # Enter
+				$escape = $true
+			}
+			27 { # Escape - skip or clear filter
+				if ($AllowSkip -and -not $filterText) {
+					# Skip selection
+					$escape = $true
+					$selected = -1
+				} elseif ($filterText) {
+					# Clear filter
+					$filterText = ""
+					$filteredItems = $Items
+					$selected = 0
+					$needsFullRedraw = $true
+				}
+			}
+			8 { # Backspace
+				if ($filterText.Length -gt 0) {
+					$filterText = $filterText.Substring(0, $filterText.Length - 1)
+					if ($FilterProperty) {
+						$filteredItems = $Items | Where-Object { & $FilterProperty $_ $filterText }
+					}
+					if (-not $filteredItems -or $filteredItems.Count -eq 0) {
+						$filteredItems = $Items
+						$filterText = ""
+					}
+					$selected = 0
+					$needsFullRedraw = $true
+				}
+			}
+			default {
+				if ($key.Character -match '[a-zA-Z0-9\-\s\.\|:\(\)_]') {
+					$filterText += $key.Character
+					if ($FilterProperty) {
+						$filteredItems = $Items | Where-Object { & $FilterProperty $_ $filterText }
+					}
+					if (-not $filteredItems -or $filteredItems.Count -eq 0) {
+						$filteredItems = @()
+					}
+					$selected = 0
+					$needsFullRedraw = $true
+				}
+			}
+		}
+	}
+	
+	if ($selected -eq -1) {
+		return $null
+	}
+	return $filteredItems[$selected]
+}
+
 Ensure-Command -Name az
 Ensure-Command -Name azd
+
+# Initialize context tracking for all selections
+$contextLines = @()
 
 # Check if subscription and region are already set
 $existingSubId = $null
@@ -58,49 +229,15 @@ if (-not [string]::IsNullOrWhiteSpace($existingSubId) -and -not [string]::IsNull
 	if (-not $subscriptions -or $subscriptions.Count -eq 0) {
 		throw 'No subscriptions found for the signed-in account.'
 	}
-
-	Write-Host 'Subscriptions:'
-	for ($i = 0; $i -lt $subscriptions.Count; $i++) {
-		$sub = $subscriptions[$i]
-		Write-Host ("{0,2}. {1} ({2})" -f $i, $sub.name, $sub.id)
-	}
-
-
-	# Combined filter/selection loop for subscriptions (single prompt)
-	$subIndex = $null
-	$currentSubs = $subscriptions
-	do {
-		$subInput = Read-Host 'Please enter a number for your selection or substring for filter'
-		if ([string]::IsNullOrWhiteSpace($subInput)) {
-			continue
-		}
-
-		$parsedSubIndex = 0
-		$parsedIsInt = [int]::TryParse($subInput, [ref]$parsedSubIndex)
-		if (-not $parsedIsInt) {
-			# treat as filter text; show filtered list then re-prompt using the same input message
-			$currentSubs = $subscriptions | Where-Object { $_.name -like "*${subInput}*" -or $_.id -like "*${subInput}*" }
-			if (-not $currentSubs -or $currentSubs.Count -eq 0) {
-				Write-Host 'No subscriptions match that filter. Try again.' -ForegroundColor Yellow
-				$currentSubs = $subscriptions
-				continue
-			}
-			Write-Host 'Filtered subscriptions:'
-			for ($i = 0; $i -lt $currentSubs.Count; $i++) {
-				$sub = $currentSubs[$i]
-				Write-Host ("{0,2}. {1} ({2})" -f $i, $sub.name, $sub.id)
-			}
-			continue
-		}
-		if ($parsedSubIndex -lt 0 -or $parsedSubIndex -ge $currentSubs.Count) {
-			Write-Host 'Invalid subscription number. Try again.' -ForegroundColor Yellow
-			continue
-		}
-		$subIndex = $parsedSubIndex
-	} while ($null -eq $subIndex)
-
-	$selectedSub = $currentSubs[[int]$subIndex]
+	
+	$selectedSub = Show-InteractiveMenu -Items $subscriptions -Title "Select Azure Subscription" `
+		-DisplayProperty { param($sub, $idx) "$($sub.name) ($($sub.id))" } `
+		-FilterProperty { param($sub, $filter) $sub.name -like "*$filter*" -or $sub.id -like "*$filter*" } `
+		-ContextLines $contextLines
+	
+	Clear-Host
 	Write-Host "Selected subscription: $($selectedSub.name) ($($selectedSub.id))"
+	$contextLines += "Subscription: $($selectedSub.name)"
 
 	Write-Host 'Fetching regions for the subscription...'
 	$locations = $null
@@ -138,47 +275,33 @@ if (-not [string]::IsNullOrWhiteSpace($existingSubId) -and -not [string]::IsNull
 		throw 'No regions found for the selected subscription.'
 	}
 
-	Write-Host 'Regions:'
-	for ($i = 0; $i -lt $locations.Count; $i++) {
-		$loc = $locations[$i]
-		Write-Host ("{0,2}. {1} ({2})" -f $i, $loc.displayName, $loc.name)
-	}
-
-	# Combined filter/selection loop for regions (single prompt)
-	$locIndex = $null
-	$currentLocs = $locations
-	do {
-		$locInput = Read-Host 'Please enter a number for your selection or substring for filter (e.g., eastus)'
-		if ([string]::IsNullOrWhiteSpace($locInput)) {
-			continue
-		}
-
-		$parsedLocIndex = 0
-		$parsedIsInt = [int]::TryParse($locInput, [ref]$parsedLocIndex)
-		if (-not $parsedIsInt) {
-			# treat as filter text; show filtered list then re-prompt using the same input message
-			$currentLocs = $locations | Where-Object { $_.displayName -like "*${locInput}*" -or $_.name -like "*${locInput}*" }
-			if (-not $currentLocs -or $currentLocs.Count -eq 0) {
-				Write-Host 'No regions match that filter. Try again.' -ForegroundColor Yellow
-				$currentLocs = $locations
-				continue
-			}
-			Write-Host 'Filtered regions:'
-			for ($i = 0; $i -lt $currentLocs.Count; $i++) {
-				$loc = $currentLocs[$i]
-				Write-Host ("{0,2}. {1} ({2})" -f $i, $loc.displayName, $loc.name)
-			}
-			continue
-		}
-		if ($parsedLocIndex -lt 0 -or $parsedLocIndex -ge $currentLocs.Count) {
-			Write-Host 'Invalid region number. Try again.' -ForegroundColor Yellow
-			continue
-		}
-		$locIndex = $parsedLocIndex
-	} while ($null -eq $locIndex)
-
-	$selectedLoc = $currentLocs[[int]$locIndex].name
+	$selectedLocObj = Show-InteractiveMenu -Items $locations -Title "Select Azure Region" `
+		-DisplayProperty { param($loc, $idx) "$($loc.displayName) ($($loc.name))" } `
+		-FilterProperty { param($loc, $filter) $loc.displayName -like "*$filter*" -or $loc.name -like "*$filter*" } `
+		-ContextLines $contextLines
+	
+	Clear-Host
+	Write-Host "Selected subscription: $($selectedSub.name)"
+	$selectedLoc = $selectedLocObj.name
 	Write-Host "Selected region: $selectedLoc"
+	$contextLines += "Region: $selectedLoc"
+	
+	# Get the azd environment name
+	$envName = azd env get-value AZURE_ENV_NAME 2>$null
+	if ([string]::IsNullOrWhiteSpace($envName)) {
+		$envName = (Get-Location | Split-Path -Leaf)
+	}
+	
+	# Prompt for resource group name with default suggestion
+	$defaultRgName = "rg-$envName"
+	Write-Host ""
+	Write-Host "Resource Group Name" -ForegroundColor Cyan
+	$rgName = Read-Host "Enter resource group name (press Enter to use default: $defaultRgName)"
+	if ([string]::IsNullOrWhiteSpace($rgName)) {
+		$rgName = $defaultRgName
+	}
+	Write-Host "Resource group: $rgName"
+	$contextLines += "Resource Group: $rgName"
 }
 
 # Show quota/usage for the selected region
@@ -207,12 +330,15 @@ if (-not $usages -or $usages.Count -eq 0) {
 }
 
 if (-not $usages -or $usages.Count -eq 0) {
+	Write-Host ''
 	Write-Host 'No quota/usage data returned (or not supported by your CLI/permissions). You can verify with:' -ForegroundColor Yellow
 	Write-Host "  az cognitiveservices usage list --subscription $($selectedSub.id) --location $selectedLoc -o table" -ForegroundColor Yellow
 	Write-Host "  az cognitiveservices usage list --subscription $($selectedSub.id) --location $selectedLoc --kind OpenAI -o table" -ForegroundColor Yellow
 	Write-Host "  az cognitiveservices usage list --subscription $($selectedSub.id) --location $selectedLoc --kind AIServices -o table" -ForegroundColor Yellow
-	Write-Host 'Subscription and region saved. Exiting.'
-	exit 0
+	Write-Host ''
+	Write-Host 'No models available in this region. Please select a different region.' -ForegroundColor Red
+	Write-Host ''
+	exit 1
 }
 
 function Show-ModelList {
@@ -231,7 +357,7 @@ function Show-ModelList {
 		$limit = if ($hasLimit) { [decimal]$u.limit } else { $null }
 		$available = if ($current -ne $null -and $limit -ne $null) { $limit - $current } else { $null }
 		if ($current -ne $null -or $limit -ne $null) {
-			$line = "{0,2}. {1} | used: {2} | limit: {3}" -f ($i + $StartIndex), $name, ($current ?? 'n/a'), ($limit ?? 'n/a')
+			$line = "{0} | used: {1} | limit: {2}" -f $name, ($current ?? 'n/a'), ($limit ?? 'n/a')
 			if ($available -ne $null) { $line += " | available: $available" }
 			
 			# Show in red if available is 0
@@ -243,7 +369,7 @@ function Show-ModelList {
 		} else {
 			# Fallback: emit raw usage object when expected fields are absent
 			$raw = $u | ConvertTo-Json -Compress
-			Write-Host ("{0,2}. {1} | raw: {2}" -f ($i + $StartIndex), $name, $raw)
+			Write-Host ("{0} | raw: {1}" -f $name, $raw)
 		}
 	}
 }
@@ -251,49 +377,53 @@ function Show-ModelList {
 function Select-Model {
 	param(
 		[Parameter(Mandatory)] [array] $Models,
-		[Parameter(Mandatory)] [string] $Prompt,
-		[bool] $AllowSkip = $false
+		[Parameter(Mandatory)] [string] $Title,
+		[bool] $AllowSkip = $false,
+		[string[]] $ContextLines
 	)
 	
-	$modelIndex = $null
-	$currentModels = $Models
-	do {
-		$modelInput = Read-Host $Prompt
-		if ([string]::IsNullOrWhiteSpace($modelInput)) {
-			if ($AllowSkip) {
-				return $null
-			}
-			Write-Host 'Please enter a valid number or filter string.' -ForegroundColor Yellow
-			continue
-		}
-
-		$parsedModelIndex = 0
-		$parsedIsInt = [int]::TryParse($modelInput, [ref]$parsedModelIndex)
-		if (-not $parsedIsInt) {
-			# treat as filter text; show filtered list then re-prompt
-			$currentModels = $Models | Where-Object { 
-				$modelName = if ($_.PSObject.Properties['name']) {
-					if ($_.name.PSObject.Properties['value']) { $_.name.value } else { $_.name }
-				} else { 'unknown' }
-				$modelName -like "*${modelInput}*"
-			}
-			if (-not $currentModels -or $currentModels.Count -eq 0) {
-				Write-Host 'No models match that filter. Try again.' -ForegroundColor Yellow
-				$currentModels = $Models
-				continue
-			}
-			Write-Host 'Filtered models:'
-			Show-ModelList -Models $currentModels
-			continue
-		}
-		if ($parsedModelIndex -lt 0 -or $parsedModelIndex -ge $currentModels.Count) {
-			Write-Host 'Invalid model number. Try again.' -ForegroundColor Yellow
-			continue
-		}
-		$modelIndex = $parsedModelIndex
-	} while ($null -eq $modelIndex)
+	# Add display text to each model for filtering
+	$modelsWithDisplay = $Models | ForEach-Object {
+		$u = $_
+		$name = if ($u.PSObject.Properties['name']) {
+			if ($u.name.PSObject.Properties['value']) { $u.name.value } else { $u.name }
+		} else { 'unknown' }
+		$hasCurrent = $u.PSObject.Properties['currentValue']
+		$hasLimit = $u.PSObject.Properties['limit']
+		$current = if ($hasCurrent) { [decimal]$u.currentValue } else { $null }
+		$limit = if ($hasLimit) { [decimal]$u.limit } else { $null }
+		$available = if ($current -ne $null -and $limit -ne $null) { $limit - $current } else { $null }
+		
+		$displayText = "$name | used: $($current ?? 'n/a') | limit: $($limit ?? 'n/a')"
+		if ($available -ne $null) { $displayText += " | available: $available" }
+		
+		# Add DisplayText property to the object
+		$u | Add-Member -NotePropertyName 'DisplayText' -NotePropertyValue $displayText -Force -PassThru
+	}
 	
-	return $currentModels[[int]$modelIndex]
+	$selectedModel = Show-InteractiveMenu -Items $modelsWithDisplay -Title $Title `
+		-ContextLines $ContextLines `
+		-AllowSkip $AllowSkip `
+		-DisplayProperty { 
+			param($u, $idx)
+			$u.DisplayText
+		} `
+		-FilterProperty { 
+			param($u, $filter)
+			$u.DisplayText -like "*$filter*"
+		} `
+		-ColorProperty {
+			param($u)
+			$hasCurrent = $u.PSObject.Properties['currentValue']
+			$hasLimit = $u.PSObject.Properties['limit']
+			$current = if ($hasCurrent) { [decimal]$u.currentValue } else { $null }
+			$limit = if ($hasLimit) { [decimal]$u.limit } else { $null }
+			$available = if ($current -ne $null -and $limit -ne $null) { $limit - $current } else { $null }
+			
+			if ($available -eq 0) { 'Red' } else { $null }
+		}
+	
+	return $selectedModel
 }
 
 function Parse-ModelName {
@@ -327,10 +457,18 @@ function Parse-ModelName {
 }
 
 Write-Host 'Quota/Usage (Available Models):'
-Show-ModelList -Models $usages
+
+# Sort models by name for display
+$sortedUsages = $usages | Sort-Object { 
+	if ($_.PSObject.Properties['name']) {
+		if ($_.name.PSObject.Properties['value']) { $_.name.value } else { $_.name }
+	} else { 'unknown' }
+}
+
+Show-ModelList -Models $sortedUsages
 
 # Agent model selection
-$selectedModel = Select-Model -Models $usages -Prompt 'Please enter a number to select an agent model or substring to filter (e.g., gpt-5)'
+$selectedModel = Select-Model -Models $sortedUsages -Title "Select Agent Model (hint: filter by 'gpt')" -ContextLines $contextLines
 
 $modelName = if ($selectedModel.PSObject.Properties['name']) {
 	if ($selectedModel.name.PSObject.Properties['value']) { $selectedModel.name.value } else { $selectedModel.name }
@@ -341,6 +479,7 @@ if ($parsed.Format -or $parsed.Sku) {
 	Write-Host "Parsed model - Format: $($parsed.Format), SKU: $($parsed.Sku), Name: $($parsed.Name)"
 }
 Write-Host "Selected model: $($parsed.Name)"
+$contextLines += "Agent Model: $($parsed.Name)"
 
 # Fetch available versions for the selected model
 Write-Host "Fetching available versions for $($parsed.Name) with SKU $($parsed.Sku)..."
@@ -354,7 +493,7 @@ try {
 			$_.model.format -eq $parsed.Format -and
 			@($_.model.skus | Where-Object { $_.name -eq $parsed.Sku }).Count -gt 0
 		}
-		$modelVersions = $modelVersions | Sort-Object { $_.model.version } -Unique
+		$modelVersions = $modelVersions | Sort-Object { $_.model.version } -Descending -Unique
 	}
 } catch {
 	$modelVersions = @()
@@ -362,34 +501,14 @@ try {
 
 $selectedVersion = ''
 if ($modelVersions -and $modelVersions.Count -gt 0) {
-	Write-Host "Available versions for $($parsed.Name):"
-	for ($i = 0; $i -lt $modelVersions.Count; $i++) {
-		$ver = $modelVersions[$i].model.version
-		Write-Host ("{0,2}. {1}" -f $i, $ver)
-	}
+	$selectedVersionObj = Show-InteractiveMenu -Items $modelVersions -Title "Select Version for $($parsed.Name)" `
+		-DisplayProperty { param($v, $idx) $v.model.version } `
+		-FilterProperty { param($v, $filter) $v.model.version -like "*$filter*" } `
+		-ContextLines $contextLines
 	
-	$versionIndex = $null
-	do {
-		$versionInput = Read-Host 'Please enter a number to select a version'
-		if ([string]::IsNullOrWhiteSpace($versionInput)) {
-			Write-Host 'Please enter a valid number.' -ForegroundColor Yellow
-			continue
-		}
-		
-		$parsedVerIndex = 0
-		if ([int]::TryParse($versionInput, [ref]$parsedVerIndex)) {
-			if ($parsedVerIndex -ge 0 -and $parsedVerIndex -lt $modelVersions.Count) {
-				$selectedVersion = $modelVersions[$parsedVerIndex].model.version
-				$versionIndex = $parsedVerIndex
-			} else {
-				Write-Host 'Invalid version number. Try again.' -ForegroundColor Yellow
-			}
-		} else {
-			Write-Host 'Please enter a valid number.' -ForegroundColor Yellow
-		}
-	} while ($null -eq $versionIndex)
-	
+	$selectedVersion = $selectedVersionObj.model.version
 	Write-Host "Selected version: $selectedVersion"
+	$contextLines += "Agent Version: $selectedVersion"
 } else {
 	Write-Host "No version information available for this model." -ForegroundColor Yellow
 }
@@ -397,9 +516,9 @@ if ($modelVersions -and $modelVersions.Count -gt 0) {
 # Embedding model selection
 Write-Host ''
 Write-Host 'Embedding Model Selection (for AI Search):'
-Show-ModelList -Models $usages
+Show-ModelList -Models $sortedUsages
 
-$selectedEmbedModel = Select-Model -Models $usages -Prompt 'Please enter a number to select an embedding model or substring to filter (or press Enter to skip provisioning AI Search)' -AllowSkip $true
+$selectedEmbedModel = Select-Model -Models $sortedUsages -Title "Select Embedding Model for AI Search (hint: filter by 'embedding' or press Esc to skip)" -AllowSkip $true -ContextLines $contextLines
 
 if ($null -ne $selectedEmbedModel) {
 	$embedModelName = if ($selectedEmbedModel.PSObject.Properties['name']) {
@@ -411,6 +530,7 @@ if ($null -ne $selectedEmbedModel) {
 		Write-Host "Parsed embedding model - Format: $($embedParsed.Format), SKU: $($embedParsed.Sku), Name: $($embedParsed.Name)$(if($embedParsed.Version){", Version: $($embedParsed.Version)"})"
 	}
 	Write-Host "Selected embedding model: $($embedParsed.Name)"
+	$contextLines += "Embedding Model: $($embedParsed.Name)"
 
 	# Fetch available versions for the selected embedding model
 	Write-Host "Fetching available versions for $($embedParsed.Name) with SKU $($embedParsed.Sku)..."
@@ -424,7 +544,7 @@ if ($null -ne $selectedEmbedModel) {
 				$_.model.format -eq $embedParsed.Format -and
 				@($_.model.skus | Where-Object { $_.name -eq $embedParsed.Sku }).Count -gt 0
 			}
-			$embedVersions = $embedVersions | Sort-Object { $_.model.version } -Unique
+			$embedVersions = $embedVersions | Sort-Object { $_.model.version } -Descending -Unique
 		}
 	} catch {
 		$embedVersions = @()
@@ -432,34 +552,14 @@ if ($null -ne $selectedEmbedModel) {
 
 	$selectedEmbedVersion = ''
 	if ($embedVersions -and $embedVersions.Count -gt 0) {
-		Write-Host "Available versions for $($embedParsed.Name):"
-		for ($i = 0; $i -lt $embedVersions.Count; $i++) {
-			$ver = $embedVersions[$i].model.version
-			Write-Host ("{0,2}. {1}" -f $i, $ver)
-		}
+		$selectedEmbedVersionObj = Show-InteractiveMenu -Items $embedVersions -Title "Select Version for $($embedParsed.Name)" `
+			-DisplayProperty { param($v, $idx) $v.model.version } `
+			-FilterProperty { param($v, $filter) $v.model.version -like "*$filter*" } `
+			-ContextLines $contextLines
 		
-		$embedVerIndex = $null
-		do {
-			$embedVerInput = Read-Host 'Please enter a number to select a version'
-			if ([string]::IsNullOrWhiteSpace($embedVerInput)) {
-				Write-Host 'Please enter a valid number.' -ForegroundColor Yellow
-				continue
-			}
-			
-			$parsedEmbedVerIndex = 0
-			if ([int]::TryParse($embedVerInput, [ref]$parsedEmbedVerIndex)) {
-				if ($parsedEmbedVerIndex -ge 0 -and $parsedEmbedVerIndex -lt $embedVersions.Count) {
-					$selectedEmbedVersion = $embedVersions[$parsedEmbedVerIndex].model.version
-					$embedVerIndex = $parsedEmbedVerIndex
-				} else {
-					Write-Host 'Invalid version number. Try again.' -ForegroundColor Yellow
-				}
-			} else {
-				Write-Host 'Please enter a valid number.' -ForegroundColor Yellow
-			}
-		} while ($null -eq $embedVerIndex)
-		
+		$selectedEmbedVersion = $selectedEmbedVersionObj.model.version
 		Write-Host "Selected version: $selectedEmbedVersion"
+		$contextLines += "Embedding Version: $selectedEmbedVersion"
 	} else {
 		Write-Host "No version information available for this model." -ForegroundColor Yellow
 	}
@@ -471,9 +571,10 @@ if ($null -ne $selectedEmbedModel) {
 Write-Host ''
 Write-Host 'Saving all selections to azd environment...'
 
-# Save subscription and region
+# Save subscription, region, and resource group
 azd env set AZURE_SUBSCRIPTION_ID $selectedSub.id | Out-Null
 azd env set AZURE_LOCATION $selectedLoc | Out-Null
+azd env set AZURE_RESOURCE_GROUP $rgName | Out-Null
 
 # Save agent model
 azd env set AZURE_AI_AGENT_MODEL_NAME $parsed.Name | Out-Null
