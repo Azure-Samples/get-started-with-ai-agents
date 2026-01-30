@@ -157,6 +157,9 @@ var resourceToken = templateValidationMode? toLower(uniqueString(subscription().
 
 var tags = { 'azd-env-name': environmentName }
 
+@description('Additional AI models to deploy as an array of objects with name, format, version, sku, and capacity')
+param additionalAiModels string = '[]'
+
 var tempAgentID = !empty(aiAgentID) ? aiAgentID : ''
 var agentID = !empty(azureExistingAgentId) ? azureExistingAgentId : tempAgentID
 
@@ -189,9 +192,25 @@ var aiEmbeddingModel = [
   }
 ]
 
+// Transform additional models to deployment format
+param additionalAiModelArray array = json(additionalAiModels)
+var additionalModelsTransformed = [for model in additionalAiModelArray: {
+  name: model.name
+  model: {
+    format: model.format
+    name: model.name
+    version: model.version
+  }
+  sku: {
+    name: model.sku
+    capacity: contains(model, 'capacity') ? model.capacity : 10
+  }
+}]
+
 var aiDeployments = concat(
   aiChatModel,
-  useSearchService ? aiEmbeddingModel : [])
+  useSearchService ? aiEmbeddingModel : [],
+  additionalModelsTransformed)
 
 
 // Organize resources in a resource group
