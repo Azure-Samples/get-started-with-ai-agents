@@ -157,6 +157,9 @@
     },
     "additionalAiModels": {
       "value": "${AZURE_AI_MODELS}"
+    },
+    "bingCustomSearchAllowedDomains": {
+      "value": "${BING_CUSTOM_SEARCH_ALLOWED_DOMAINS}"
     }
   }
 }
