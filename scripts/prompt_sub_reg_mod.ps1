@@ -44,6 +44,9 @@ function Show-InteractiveMenu {
 	$needsFullRedraw = $true
 	
 	while (-not $escape) {
+		# Get console width for padding
+		$consoleWidth = $Host.UI.RawUI.WindowSize.Width
+		
 		# Only clear screen when filter changes (different result count) or first draw
 		if ($needsFullRedraw -or $filteredItems.Count -ne $previousFilteredCount) {
 			Clear-Host
@@ -85,17 +88,36 @@ function Show-InteractiveMenu {
 			
 			$color = if ($ColorProperty) { & $ColorProperty $filteredItems[$i] } else { $null }
 			
+			# Pad line to console width to overwrite old content
+			$prefix = if ($i -eq $selected) { "  > " } else { "    " }
+			$fullLine = "$prefix$displayText"
+			if ($fullLine.Length -lt $consoleWidth) {
+				$fullLine = $fullLine.PadRight($consoleWidth)
+			}
+			
 			if ($i -eq $selected) {
 				if ($color -eq 'Red') {
-					Write-Host "  > $displayText" -ForegroundColor DarkRed
+					Write-Host $fullLine -ForegroundColor DarkRed -NoNewline
 				} else {
-					Write-Host "  > $displayText" -ForegroundColor Green
+					Write-Host $fullLine -ForegroundColor Green -NoNewline
 				}
 			} elseif ($color) {
-				Write-Host "    $displayText" -ForegroundColor $color
+				Write-Host $fullLine -ForegroundColor $color -NoNewline
 			} else {
-				Write-Host "    $displayText"
+				Write-Host $fullLine -NoNewline
 			}
+			Write-Host "" # Newline
+		}
+		
+		# Pad empty lines to fill the display area
+		$linesShown = $endIdx - $startIdx + 1
+		$maxLines = [Math]::Min(20, $filteredItems.Count)
+		if ($filteredItems.Count -eq 0) {
+			$linesShown = 1
+			$maxLines = 20
+		}
+		for ($i = $linesShown; $i -lt $maxLines; $i++) {
+			Write-Host ("".PadRight($consoleWidth))
 		}
 		
 		Write-Host ""
@@ -284,7 +306,7 @@ if (-not [string]::IsNullOrWhiteSpace($existingSubId) -and -not [string]::IsNull
 	Write-Host "Selected subscription: $($selectedSub.name)"
 	$selectedLoc = $selectedLocObj.name
 	Write-Host "Selected region: $selectedLoc"
-	$contextLines += "Region: $selectedLoc"
+	$contextLines[0] = "Subscription: $($selectedSub.name) | Region: $selectedLoc"
 	
 	# Get the azd environment name
 	$envName = azd env get-value AZURE_ENV_NAME 2>$null
@@ -301,7 +323,7 @@ if (-not [string]::IsNullOrWhiteSpace($existingSubId) -and -not [string]::IsNull
 		$rgName = $defaultRgName
 	}
 	Write-Host "Resource group: $rgName"
-	$contextLines += "Resource Group: $rgName"
+	$contextLines[0] += " | RG: $rgName"
 }
 
 # Show quota/usage for the selected region
@@ -356,8 +378,20 @@ function Show-ModelList {
 		$current = if ($hasCurrent) { [decimal]$u.currentValue } else { $null }
 		$limit = if ($hasLimit) { [decimal]$u.limit } else { $null }
 		$available = if ($current -ne $null -and $limit -ne $null) { $limit - $current } else { $null }
+		
+		# Parse model name to extract format, sku, and model name
+		$displayName = $name
+		$sku = ''
+		if ($name -match '^([^.]+)\.([^.]+)\.(.+)$') {
+			# Format: OpenAI.GlobalStandard.gpt-5
+			$displayName = $Matches[3]
+			$sku = $Matches[2]
+		}
+		
 		if ($current -ne $null -or $limit -ne $null) {
-			$line = "{0} | used: {1} | limit: {2}" -f $name, ($current ?? 'n/a'), ($limit ?? 'n/a')
+			$line = "{0}" -f $displayName
+			if ($sku) { $line += " | $sku" }
+			$line += " | used: {0} | limit: {1}" -f ($current ?? 'n/a'), ($limit ?? 'n/a')
 			if ($available -ne $null) { $line += " | available: $available" }
 			
 			# Show in red if available is 0
@@ -369,7 +403,7 @@ function Show-ModelList {
 		} else {
 			# Fallback: emit raw usage object when expected fields are absent
 			$raw = $u | ConvertTo-Json -Compress
-			Write-Host ("{0} | raw: {1}" -f $name, $raw)
+			Write-Host ("{0} | raw: {1}" -f $displayName, $raw)
 		}
 	}
 }
@@ -382,26 +416,7 @@ function Select-Model {
 		[string[]] $ContextLines
 	)
 	
-	# Add display text to each model for filtering
-	$modelsWithDisplay = $Models | ForEach-Object {
-		$u = $_
-		$name = if ($u.PSObject.Properties['name']) {
-			if ($u.name.PSObject.Properties['value']) { $u.name.value } else { $u.name }
-		} else { 'unknown' }
-		$hasCurrent = $u.PSObject.Properties['currentValue']
-		$hasLimit = $u.PSObject.Properties['limit']
-		$current = if ($hasCurrent) { [decimal]$u.currentValue } else { $null }
-		$limit = if ($hasLimit) { [decimal]$u.limit } else { $null }
-		$available = if ($current -ne $null -and $limit -ne $null) { $limit - $current } else { $null }
-		
-		$displayText = "$name | used: $($current ?? 'n/a') | limit: $($limit ?? 'n/a')"
-		if ($available -ne $null) { $displayText += " | available: $available" }
-		
-		# Add DisplayText property to the object
-		$u | Add-Member -NotePropertyName 'DisplayText' -NotePropertyValue $displayText -Force -PassThru
-	}
-	
-	$selectedModel = Show-InteractiveMenu -Items $modelsWithDisplay -Title $Title `
+	$selectedModel = Show-InteractiveMenu -Items $Models -Title $Title `
 		-ContextLines $ContextLines `
 		-AllowSkip $AllowSkip `
 		-DisplayProperty { 
@@ -458,17 +473,38 @@ function Parse-ModelName {
 
 Write-Host 'Quota/Usage (Available Models):'
 
-# Sort models by name for display
-$sortedUsages = $usages | Sort-Object { 
-	if ($_.PSObject.Properties['name']) {
-		if ($_.name.PSObject.Properties['value']) { $_.name.value } else { $_.name }
+# Add display text to models and sort by display text
+$finalUsage = $usages | ForEach-Object {
+	$u = $_
+	$name = if ($u.PSObject.Properties['name']) {
+		if ($u.name.PSObject.Properties['value']) { $u.name.value } else { $u.name }
 	} else { 'unknown' }
-}
-
-Show-ModelList -Models $sortedUsages
+	$hasCurrent = $u.PSObject.Properties['currentValue']
+	$hasLimit = $u.PSObject.Properties['limit']
+	$current = if ($hasCurrent) { [decimal]$u.currentValue } else { $null }
+	$limit = if ($hasLimit) { [decimal]$u.limit } else { $null }
+	$available = if ($current -ne $null -and $limit -ne $null) { $limit - $current } else { $null }
+	
+	# Parse model name to extract display name and sku
+	$displayName = $name
+	$sku = ''
+	if ($name -match '^([^.]+)\.([^.]+)\.(.+)$') {
+		$displayName = $Matches[3]
+		$sku = $Matches[2]
+	}
+	
+	# Build display text
+	$displayText = "$displayName"
+	if ($sku) { $displayText += " | $sku" }
+	$displayText += " | used: $($current ?? 'n/a') | limit: $($limit ?? 'n/a')"
+	if ($available -ne $null) { $displayText += " | available: $available" }
+	
+	# Add DisplayText property to the object
+	$u | Add-Member -NotePropertyName 'DisplayText' -NotePropertyValue $displayText -Force -PassThru
+} | Sort-Object DisplayText
 
 # Agent model selection
-$selectedModel = Select-Model -Models $sortedUsages -Title "Select Agent Model (hint: filter by 'gpt')" -ContextLines $contextLines
+$selectedModel = Select-Model -Models $finalUsage -Title "Select Agent Model (hint: filter by 'gpt')" -ContextLines $contextLines
 
 $modelName = if ($selectedModel.PSObject.Properties['name']) {
 	if ($selectedModel.name.PSObject.Properties['value']) { $selectedModel.name.value } else { $selectedModel.name }
@@ -478,8 +514,9 @@ $parsed = Parse-ModelName -ModelName $modelName
 if ($parsed.Format -or $parsed.Sku) {
 	Write-Host "Parsed model - Format: $($parsed.Format), SKU: $($parsed.Sku), Name: $($parsed.Name)"
 }
-Write-Host "Selected model: $($parsed.Name)"
-$contextLines += "Agent Model: $($parsed.Name)"
+
+# Add placeholder to context
+$contextLines += "Agent Model: ..."
 
 # Fetch available versions for the selected model
 Write-Host "Fetching available versions for $($parsed.Name) with SKU $($parsed.Sku)..."
@@ -507,18 +544,30 @@ if ($modelVersions -and $modelVersions.Count -gt 0) {
 		-ContextLines $contextLines
 	
 	$selectedVersion = $selectedVersionObj.model.version
-	Write-Host "Selected version: $selectedVersion"
-	$contextLines += "Agent Version: $selectedVersion"
 } else {
 	Write-Host "No version information available for this model." -ForegroundColor Yellow
 }
 
+# Get quota available for agent model
+$agentCurrent = if ($selectedModel.PSObject.Properties['currentValue']) { [decimal]$selectedModel.currentValue } else { 0 }
+$agentLimit = if ($selectedModel.PSObject.Properties['limit']) { [decimal]$selectedModel.limit } else { 0 }
+$agentAvailable = if ($agentLimit -gt 0) { $agentLimit - $agentCurrent } else { 'n/a' }
+
+# Prompt for agent capacity
+Write-Host ""
+$agentCapacity = Read-Host "Enter capacity for agent model (quota available: $agentAvailable, press Enter for default: 80)"
+if ([string]::IsNullOrWhiteSpace($agentCapacity)) {
+	$agentCapacity = "80"
+}
+
+Write-Host "Selected: $($parsed.Name) v$selectedVersion | capacity: $agentCapacity" -ForegroundColor Green
+$contextLines[-1] = "Agent Model: $($parsed.Name) v$selectedVersion | capacity: $agentCapacity"
+
 # Embedding model selection
 Write-Host ''
 Write-Host 'Embedding Model Selection (for AI Search):'
-Show-ModelList -Models $sortedUsages
 
-$selectedEmbedModel = Select-Model -Models $sortedUsages -Title "Select Embedding Model for AI Search (hint: filter by 'embedding' or press Esc to skip)" -AllowSkip $true -ContextLines $contextLines
+$selectedEmbedModel = Select-Model -Models $finalUsage -Title "Select Embedding Model for AI Search (hint: filter by 'embedding' or press Esc to skip)" -AllowSkip $true -ContextLines $contextLines
 
 if ($null -ne $selectedEmbedModel) {
 	$embedModelName = if ($selectedEmbedModel.PSObject.Properties['name']) {
@@ -530,7 +579,7 @@ if ($null -ne $selectedEmbedModel) {
 		Write-Host "Parsed embedding model - Format: $($embedParsed.Format), SKU: $($embedParsed.Sku), Name: $($embedParsed.Name)$(if($embedParsed.Version){", Version: $($embedParsed.Version)"})"
 	}
 	Write-Host "Selected embedding model: $($embedParsed.Name)"
-	$contextLines += "Embedding Model: $($embedParsed.Name)"
+	$contextLines += "Embedding Model: ..."
 
 	# Fetch available versions for the selected embedding model
 	Write-Host "Fetching available versions for $($embedParsed.Name) with SKU $($embedParsed.Sku)..."
@@ -558,13 +607,110 @@ if ($null -ne $selectedEmbedModel) {
 			-ContextLines $contextLines
 		
 		$selectedEmbedVersion = $selectedEmbedVersionObj.model.version
-		Write-Host "Selected version: $selectedEmbedVersion"
-		$contextLines += "Embedding Version: $selectedEmbedVersion"
 	} else {
 		Write-Host "No version information available for this model." -ForegroundColor Yellow
 	}
+	
+	# Get quota available for embedding model
+	$embedCurrent = if ($selectedEmbedModel.PSObject.Properties['currentValue']) { [decimal]$selectedEmbedModel.currentValue } else { 0 }
+	$embedLimit = if ($selectedEmbedModel.PSObject.Properties['limit']) { [decimal]$selectedEmbedModel.limit } else { 0 }
+	$embedAvailable = if ($embedLimit -gt 0) { $embedLimit - $embedCurrent } else { 'n/a' }
+	
+	# Prompt for embedding capacity
+	Write-Host ""
+	$embedCapacity = Read-Host "Enter capacity for embedding model (quota available: $embedAvailable, press Enter for default: 50)"
+	if ([string]::IsNullOrWhiteSpace($embedCapacity)) {
+		$embedCapacity = "50"
+	}
+	
+	Write-Host "Selected: $($embedParsed.Name) v$selectedEmbedVersion | capacity: $embedCapacity" -ForegroundColor Green
+	$contextLines[-1] = "Embedding Model: $($embedParsed.Name) v$selectedEmbedVersion | capacity: $embedCapacity"
 } else {
 	Write-Host 'Skipping embedding model selection. AI Search will not be provisioned.' -ForegroundColor Yellow
+}
+
+# Additional models selection (loop until ESC)
+Write-Host ''
+Write-Host 'Additional Models Selection:'
+Write-Host 'You can now select additional models to provision. Press ESC when done.' -ForegroundColor Cyan
+$additionalModels = @()
+
+while ($true) {
+	Write-Host ''
+	
+	$selectedAdditionalModel = Select-Model -Models $finalUsage -Title "Select Additional Model (or press Esc to finish)" -AllowSkip $true -ContextLines $contextLines
+	
+	if ($null -eq $selectedAdditionalModel) {
+		Write-Host 'No more models to add. Proceeding...' -ForegroundColor Yellow
+		break
+	}
+	
+	$additionalModelName = if ($selectedAdditionalModel.PSObject.Properties['name']) {
+		if ($selectedAdditionalModel.name.PSObject.Properties['value']) { $selectedAdditionalModel.name.value } else { $selectedAdditionalModel.name }
+	} else { 'unknown' }
+	
+	$additionalParsed = Parse-ModelName -ModelName $additionalModelName
+	if ($additionalParsed.Format -or $additionalParsed.Sku) {
+		Write-Host "Parsed additional model - Format: $($additionalParsed.Format), SKU: $($additionalParsed.Sku), Name: $($additionalParsed.Name)"
+	}
+	Write-Host "Selected additional model: $($additionalParsed.Name)"
+	$contextLines += "Additional Model: ..."
+	
+	# Fetch available versions for the additional model
+	Write-Host "Fetching available versions for $($additionalParsed.Name) with SKU $($additionalParsed.Sku)..."
+	$additionalVersions = @()
+	try {
+		$raw = az cognitiveservices model list --subscription $selectedSub.id --location $selectedLoc 2>$null
+		if (-not [string]::IsNullOrWhiteSpace($raw)) {
+			$allModels = $raw | ConvertFrom-Json
+			$additionalVersions = $allModels | Where-Object { 
+				$_.model.name -eq $additionalParsed.Name -and 
+				$_.model.format -eq $additionalParsed.Format -and
+				@($_.model.skus | Where-Object { $_.name -eq $additionalParsed.Sku }).Count -gt 0
+			}
+			$additionalVersions = $additionalVersions | Sort-Object { $_.model.version } -Descending -Unique
+		}
+	} catch {
+		$additionalVersions = @()
+	}
+	
+	$selectedAdditionalVersion = ''
+	if ($additionalVersions -and $additionalVersions.Count -gt 0) {
+		$selectedAdditionalVersionObj = Show-InteractiveMenu -Items $additionalVersions -Title "Select Version for $($additionalParsed.Name)" `
+			-DisplayProperty { param($v, $idx) $v.model.version } `
+			-FilterProperty { param($v, $filter) $v.model.version -like "*$filter*" } `
+			-ContextLines $contextLines
+		
+		$selectedAdditionalVersion = $selectedAdditionalVersionObj.model.version
+	} else {
+		Write-Host "No version information available for this model." -ForegroundColor Yellow
+	}
+	
+	# Get quota available for additional model
+	$additionalCurrent = if ($selectedAdditionalModel.PSObject.Properties['currentValue']) { [decimal]$selectedAdditionalModel.currentValue } else { 0 }
+	$additionalLimit = if ($selectedAdditionalModel.PSObject.Properties['limit']) { [decimal]$selectedAdditionalModel.limit } else { 0 }
+	$additionalAvailable = if ($additionalLimit -gt 0) { $additionalLimit - $additionalCurrent } else { 'n/a' }
+	
+	# Prompt for capacity
+	Write-Host ""
+	$capacity = Read-Host "Enter capacity for this model (quota available: $additionalAvailable, press Enter for default: 10)"
+	if ([string]::IsNullOrWhiteSpace($capacity)) {
+		$capacity = "10"
+	}
+	
+	# Create model object
+	$modelObj = [ordered]@{
+		name = $additionalParsed.Name
+		version = $selectedAdditionalVersion
+		sku = $additionalParsed.Sku
+		format = $additionalParsed.Format
+		capacity = $capacity
+	}
+	
+	$additionalModels += $modelObj
+	
+	Write-Host "Selected: $($additionalParsed.Name) v$selectedAdditionalVersion | capacity: $capacity" -ForegroundColor Green
+	$contextLines[-1] = "Additional Model: $($additionalParsed.Name) v$selectedAdditionalVersion | capacity: $capacity"
 }
 
 # Save all selections at the end
@@ -580,17 +726,34 @@ azd env set AZURE_RESOURCE_GROUP $rgName | Out-Null
 azd env set AZURE_AI_AGENT_MODEL_NAME $parsed.Name | Out-Null
 if ($parsed.Format) { azd env set AZURE_AI_AGENT_MODEL_FORMAT $parsed.Format | Out-Null }
 if ($parsed.Sku) { azd env set AZURE_AI_AGENT_DEPLOYMENT_SKU $parsed.Sku | Out-Null }
-if ($selectedVersion) { azd env set AZURE_AI_AGENT_MODEL_VERSION $selectedVersion | Out-Null }
+azd env set AZURE_AI_AGENT_MODEL_VERSION $selectedVersion | Out-Null
+if ($agentCapacity) { azd env set AZURE_AI_AGENT_DEPLOYMENT_CAPACITY $agentCapacity | Out-Null }
 
 # Save embedding model (if selected)
 if ($null -ne $selectedEmbedModel) {
 	azd env set AZURE_AI_EMBED_MODEL_NAME $embedParsed.Name | Out-Null
 	if ($embedParsed.Format) { azd env set AZURE_AI_EMBED_MODEL_FORMAT $embedParsed.Format | Out-Null }
 	if ($embedParsed.Sku) { azd env set AZURE_AI_EMBED_DEPLOYMENT_SKU $embedParsed.Sku | Out-Null }
-	if ($selectedEmbedVersion) { azd env set AZURE_AI_EMBED_MODEL_VERSION $selectedEmbedVersion | Out-Null }
+	azd env set AZURE_AI_EMBED_MODEL_VERSION $selectedEmbedVersion | Out-Null
+	if ($embedCapacity) { azd env set AZURE_AI_EMBED_DEPLOYMENT_CAPACITY $embedCapacity | Out-Null }
 	azd env set USE_AZURE_AI_SEARCH_SERVICE 'true' | Out-Null
 } else {
 	azd env set USE_AZURE_AI_SEARCH_SERVICE 'false' | Out-Null
+}
+
+# Save additional models as JSON array (always save, even if empty)
+if ($additionalModels.Count -gt 0) {
+	$jsonArray = $additionalModels | ConvertTo-Json -Compress -Depth 10 -AsArray
+} else {
+	$jsonArray = '[]'
+}
+# Escape quotes for environment variable
+$escapedJson = $jsonArray -replace '"', '\"'
+azd env set AZURE_AI_MODELS $escapedJson | Out-Null
+if ($additionalModels.Count -gt 0) {
+	Write-Host "Saved $($additionalModels.Count) additional model(s) to AZURE_AI_MODELS"
+} else {
+	Write-Host "No additional models selected (saved empty array to AZURE_AI_MODELS)"
 }
 
 Write-Host "Done. All selections saved."
