@@ -413,10 +413,31 @@ function Select-Model {
 		[Parameter(Mandatory)] [array] $Models,
 		[Parameter(Mandatory)] [string] $Title,
 		[bool] $AllowSkip = $false,
-		[string[]] $ContextLines
+		[string[]] $ContextLines,
+		[string[]] $ExcludedModelNames = @()
 	)
+
+	$filteredModels = $Models
+	if ($ExcludedModelNames -and $ExcludedModelNames.Count -gt 0) {
+		# Exclude any usage rows whose parsed base model name is already selected,
+		# regardless of SKU or format.
+		$filteredModels = @($Models | Where-Object {
+			$u = $_
+			$name = if ($u.PSObject.Properties['name']) {
+				if ($u.name.PSObject.Properties['value']) { $u.name.value } else { $u.name }
+			} else { '' }
+			if ([string]::IsNullOrWhiteSpace($name)) { return $true }
+			$parsedName = (Parse-ModelName -ModelName $name).Name
+			-not ($ExcludedModelNames -contains $parsedName)
+		})
+	}
+
+	if (-not $filteredModels -or $filteredModels.Count -eq 0) {
+		if ($AllowSkip) { return $null }
+		throw "No models available to select (all models were filtered out)."
+	}
 	
-	$selectedModel = Show-InteractiveMenu -Items $Models -Title $Title `
+	$selectedModel = Show-InteractiveMenu -Items $filteredModels -Title $Title `
 		-ContextLines $ContextLines `
 		-AllowSkip $AllowSkip `
 		-DisplayProperty { 
@@ -429,11 +450,18 @@ function Select-Model {
 		} `
 		-ColorProperty {
 			param($u)
-			$hasCurrent = $u.PSObject.Properties['currentValue']
-			$hasLimit = $u.PSObject.Properties['limit']
-			$current = if ($hasCurrent) { [decimal]$u.currentValue } else { $null }
-			$limit = if ($hasLimit) { [decimal]$u.limit } else { $null }
-			$available = if ($current -ne $null -and $limit -ne $null) { $limit - $current } else { $null }
+			# Prefer precomputed availability from $finalUsage.
+			# Convention: Available == -1 means "n/a" (no limit returned).
+			$available = -1
+			if ($u.PSObject.Properties['Available']) {
+				$available = [decimal]$u.Available
+			} else {
+				$hasCurrent = $u.PSObject.Properties['currentValue']
+				$hasLimit = $u.PSObject.Properties['limit']
+				$current = if ($hasCurrent) { [decimal]$u.currentValue } else { 0 }
+				$limit = if ($hasLimit) { [decimal]$u.limit } else { $null }
+				$available = if ($limit -ne $null) { $limit - $current } else { -1 }
+			}
 			
 			if ($available -eq 0) { 'Red' } else { $null }
 		}
@@ -471,6 +499,58 @@ function Parse-ModelName {
 	return $result
 }
 
+# Cache for the (potentially large) Azure model catalog so we only call `az` once
+$script:CognitiveModelCatalog = $null
+
+function Get-CognitiveModelCatalog {
+	param(
+		[Parameter(Mandatory)] [string] $SubscriptionId,
+		[Parameter(Mandatory)] [string] $Location
+	)
+
+	if ($null -ne $script:CognitiveModelCatalog) {
+		return $script:CognitiveModelCatalog
+	}
+
+	Write-Host "Fetching Azure Cognitive Services model catalog..."
+	try {
+		$raw = az cognitiveservices model list --subscription $SubscriptionId --location $Location 2>$null
+		if ([string]::IsNullOrWhiteSpace($raw)) {
+			$script:CognitiveModelCatalog = @()
+		} else {
+			$script:CognitiveModelCatalog = @($raw | ConvertFrom-Json)
+		}
+	} catch {
+		$script:CognitiveModelCatalog = @()
+	}
+
+	return $script:CognitiveModelCatalog
+}
+
+function Get-ModelVersionsForParsedModel {
+	param(
+		[Parameter(Mandatory)] [array] $Catalog,
+		[Parameter(Mandatory)] $ParsedModel
+	)
+
+	if (-not $Catalog -or $Catalog.Count -eq 0) {
+		return @()
+	}
+
+	$matches = $Catalog | Where-Object {
+		$_.model.name -eq $ParsedModel.Name -and
+		$_.model.format -eq $ParsedModel.Format -and
+		@($_.model.skus | Where-Object { $_.name -eq $ParsedModel.Sku }).Count -gt 0
+	}
+
+	if (-not $matches -or $matches.Count -eq 0) {
+		return @()
+	}
+
+	# Sort versions descending and de-dupe by the version string (no Group-Object)
+	return @($matches | Sort-Object { [string]$_.model.version } -Descending -Unique)
+}
+
 Write-Host 'Quota/Usage (Available Models):'
 
 # Add display text to models and sort by display text
@@ -481,9 +561,13 @@ $finalUsage = $usages | ForEach-Object {
 	} else { 'unknown' }
 	$hasCurrent = $u.PSObject.Properties['currentValue']
 	$hasLimit = $u.PSObject.Properties['limit']
-	$current = if ($hasCurrent) { [decimal]$u.currentValue } else { $null }
+	$current = if ($hasCurrent) { [decimal]$u.currentValue } else { 0 }
 	$limit = if ($hasLimit) { [decimal]$u.limit } else { $null }
-	$available = if ($current -ne $null -and $limit -ne $null) { $limit - $current } else { $null }
+	# Convention: Available == -1 means "n/a" (no limit returned).
+	$available = if ($limit -ne $null) { $limit - $current } else { -1 }
+	$currentDisplay = if ($hasCurrent) { $current } else { 'n/a' }
+	$limitDisplay = if ($hasLimit) { $limit } else { 'n/a' }
+	$availableDisplay = if ($available -ge 0) { $available } else { 'n/a' }
 	
 	# Parse model name to extract display name and sku
 	$displayName = $name
@@ -496,14 +580,23 @@ $finalUsage = $usages | ForEach-Object {
 	# Build display text
 	$displayText = "$displayName"
 	if ($sku) { $displayText += " | $sku" }
-	$displayText += " | used: $($current ?? 'n/a') | limit: $($limit ?? 'n/a')"
-	if ($available -ne $null) { $displayText += " | available: $available" }
+	$displayText += " | used: $currentDisplay | limit: $limitDisplay"
+	$displayText += " | available: $availableDisplay"
 	
 	# Add DisplayText property to the object
-	$u | Add-Member -NotePropertyName 'DisplayText' -NotePropertyValue $displayText -Force -PassThru
+	$u | Add-Member -NotePropertyName 'DisplayText' -NotePropertyValue $displayText -Force
+	$u | Add-Member -NotePropertyName 'Current' -NotePropertyValue $current -Force
+	$u | Add-Member -NotePropertyName 'Limit' -NotePropertyValue ($limit ?? 0) -Force
+	$u | Add-Member -NotePropertyName 'Available' -NotePropertyValue $available -Force
+	$u | Add-Member -NotePropertyName 'CurrentDisplay' -NotePropertyValue $currentDisplay -Force
+	$u | Add-Member -NotePropertyName 'LimitDisplay' -NotePropertyValue $limitDisplay -Force
+	$u | Add-Member -NotePropertyName 'AvailableDisplay' -NotePropertyValue $availableDisplay -Force
+	$u
 } | Sort-Object DisplayText
 
 # Agent model selection
+$excludedModelNames = @()
+
 $selectedModel = Select-Model -Models $finalUsage -Title "Select Agent Model (hint: filter by 'gpt')" -ContextLines $contextLines
 
 $modelName = if ($selectedModel.PSObject.Properties['name']) {
@@ -511,30 +604,17 @@ $modelName = if ($selectedModel.PSObject.Properties['name']) {
 } else { 'unknown' }
 
 $parsed = Parse-ModelName -ModelName $modelName
-if ($parsed.Format -or $parsed.Sku) {
-	Write-Host "Parsed model - Format: $($parsed.Format), SKU: $($parsed.Sku), Name: $($parsed.Name)"
+
+if (-not ($excludedModelNames -contains $parsed.Name)) {
+	$excludedModelNames += $parsed.Name
 }
 
 # Add placeholder to context
 $contextLines += "Agent Model: ..."
 
-# Fetch available versions for the selected model
-Write-Host "Fetching available versions for $($parsed.Name) with SKU $($parsed.Sku)..."
-$modelVersions = @()
-try {
-	$raw = az cognitiveservices model list --subscription $selectedSub.id --location $selectedLoc 2>$null
-	if (-not [string]::IsNullOrWhiteSpace($raw)) {
-		$allModels = $raw | ConvertFrom-Json
-		$nameMatches = $allModels | Where-Object { $_.model.name -eq $parsed.Name }
-		$modelVersions = $nameMatches | Where-Object { 
-			$_.model.format -eq $parsed.Format -and
-			@($_.model.skus | Where-Object { $_.name -eq $parsed.Sku }).Count -gt 0
-		}
-		$modelVersions = $modelVersions | Sort-Object { $_.model.version } -Descending -Unique
-	}
-} catch {
-	$modelVersions = @()
-}
+# Fetch available versions for the selected model (uses one-time cached catalog)
+$catalog = Get-CognitiveModelCatalog -SubscriptionId $selectedSub.id -Location $selectedLoc
+$modelVersions = Get-ModelVersionsForParsedModel -Catalog $catalog -ParsedModel $parsed
 
 $selectedVersion = ''
 if ($modelVersions -and $modelVersions.Count -gt 0) {
@@ -548,10 +628,8 @@ if ($modelVersions -and $modelVersions.Count -gt 0) {
 	Write-Host "No version information available for this model." -ForegroundColor Yellow
 }
 
-# Get quota available for agent model
-$agentCurrent = if ($selectedModel.PSObject.Properties['currentValue']) { [decimal]$selectedModel.currentValue } else { 0 }
-$agentLimit = if ($selectedModel.PSObject.Properties['limit']) { [decimal]$selectedModel.limit } else { 0 }
-$agentAvailable = if ($agentLimit -gt 0) { $agentLimit - $agentCurrent } else { 'n/a' }
+# Get quota available for agent model (precomputed in $finalUsage)
+$agentAvailable = $selectedModel.AvailableDisplay
 
 # Prompt for agent capacity
 Write-Host ""
@@ -567,7 +645,7 @@ $contextLines[-1] = "Agent Model: $($parsed.Name) v$selectedVersion | capacity: 
 Write-Host ''
 Write-Host 'Embedding Model Selection (for AI Search):'
 
-$selectedEmbedModel = Select-Model -Models $finalUsage -Title "Select Embedding Model for AI Search (hint: filter by 'embedding' or press Esc to skip)" -AllowSkip $true -ContextLines $contextLines
+$selectedEmbedModel = Select-Model -Models $finalUsage -Title "Select Embedding Model for AI Search (hint: filter by 'embedding' or press Esc to skip)" -AllowSkip $true -ContextLines $contextLines -ExcludedModelNames $excludedModelNames
 
 if ($null -ne $selectedEmbedModel) {
 	$embedModelName = if ($selectedEmbedModel.PSObject.Properties['name']) {
@@ -581,23 +659,13 @@ if ($null -ne $selectedEmbedModel) {
 	Write-Host "Selected embedding model: $($embedParsed.Name)"
 	$contextLines += "Embedding Model: ..."
 
-	# Fetch available versions for the selected embedding model
-	Write-Host "Fetching available versions for $($embedParsed.Name) with SKU $($embedParsed.Sku)..."
-	$embedVersions = @()
-	try {
-		$raw = az cognitiveservices model list --subscription $selectedSub.id --location $selectedLoc 2>$null
-		if (-not [string]::IsNullOrWhiteSpace($raw)) {
-			$allModels = $raw | ConvertFrom-Json
-			$embedVersions = $allModels | Where-Object { 
-				$_.model.name -eq $embedParsed.Name -and 
-				$_.model.format -eq $embedParsed.Format -and
-				@($_.model.skus | Where-Object { $_.name -eq $embedParsed.Sku }).Count -gt 0
-			}
-			$embedVersions = $embedVersions | Sort-Object { $_.model.version } -Descending -Unique
-		}
-	} catch {
-		$embedVersions = @()
+	if (-not ($excludedModelNames -contains $embedParsed.Name)) {
+		$excludedModelNames += $embedParsed.Name
 	}
+
+	# Fetch available versions for the selected embedding model
+	$catalog = Get-CognitiveModelCatalog -SubscriptionId $selectedSub.id -Location $selectedLoc
+	$embedVersions = Get-ModelVersionsForParsedModel -Catalog $catalog -ParsedModel $embedParsed
 
 	$selectedEmbedVersion = ''
 	if ($embedVersions -and $embedVersions.Count -gt 0) {
@@ -612,9 +680,7 @@ if ($null -ne $selectedEmbedModel) {
 	}
 	
 	# Get quota available for embedding model
-	$embedCurrent = if ($selectedEmbedModel.PSObject.Properties['currentValue']) { [decimal]$selectedEmbedModel.currentValue } else { 0 }
-	$embedLimit = if ($selectedEmbedModel.PSObject.Properties['limit']) { [decimal]$selectedEmbedModel.limit } else { 0 }
-	$embedAvailable = if ($embedLimit -gt 0) { $embedLimit - $embedCurrent } else { 'n/a' }
+	$embedAvailable = $selectedEmbedModel.AvailableDisplay
 	
 	# Prompt for embedding capacity
 	Write-Host ""
@@ -638,7 +704,7 @@ $additionalModels = @()
 while ($true) {
 	Write-Host ''
 	
-	$selectedAdditionalModel = Select-Model -Models $finalUsage -Title "Select Additional Model (or press Esc to finish)" -AllowSkip $true -ContextLines $contextLines
+	$selectedAdditionalModel = Select-Model -Models $finalUsage -Title "Select Additional Model (or press Esc to finish)" -AllowSkip $true -ContextLines $contextLines -ExcludedModelNames $excludedModelNames
 	
 	if ($null -eq $selectedAdditionalModel) {
 		Write-Host 'No more models to add. Proceeding...' -ForegroundColor Yellow
@@ -655,24 +721,14 @@ while ($true) {
 	}
 	Write-Host "Selected additional model: $($additionalParsed.Name)"
 	$contextLines += "Additional Model: ..."
+
+	if (-not ($excludedModelNames -contains $additionalParsed.Name)) {
+		$excludedModelNames += $additionalParsed.Name
+	}
 	
 	# Fetch available versions for the additional model
-	Write-Host "Fetching available versions for $($additionalParsed.Name) with SKU $($additionalParsed.Sku)..."
-	$additionalVersions = @()
-	try {
-		$raw = az cognitiveservices model list --subscription $selectedSub.id --location $selectedLoc 2>$null
-		if (-not [string]::IsNullOrWhiteSpace($raw)) {
-			$allModels = $raw | ConvertFrom-Json
-			$additionalVersions = $allModels | Where-Object { 
-				$_.model.name -eq $additionalParsed.Name -and 
-				$_.model.format -eq $additionalParsed.Format -and
-				@($_.model.skus | Where-Object { $_.name -eq $additionalParsed.Sku }).Count -gt 0
-			}
-			$additionalVersions = $additionalVersions | Sort-Object { $_.model.version } -Descending -Unique
-		}
-	} catch {
-		$additionalVersions = @()
-	}
+	$catalog = Get-CognitiveModelCatalog -SubscriptionId $selectedSub.id -Location $selectedLoc
+	$additionalVersions = Get-ModelVersionsForParsedModel -Catalog $catalog -ParsedModel $additionalParsed
 	
 	$selectedAdditionalVersion = ''
 	if ($additionalVersions -and $additionalVersions.Count -gt 0) {
@@ -687,9 +743,7 @@ while ($true) {
 	}
 	
 	# Get quota available for additional model
-	$additionalCurrent = if ($selectedAdditionalModel.PSObject.Properties['currentValue']) { [decimal]$selectedAdditionalModel.currentValue } else { 0 }
-	$additionalLimit = if ($selectedAdditionalModel.PSObject.Properties['limit']) { [decimal]$selectedAdditionalModel.limit } else { 0 }
-	$additionalAvailable = if ($additionalLimit -gt 0) { $additionalLimit - $additionalCurrent } else { 'n/a' }
+	$additionalAvailable = $selectedAdditionalModel.AvailableDisplay
 	
 	# Prompt for capacity
 	Write-Host ""
