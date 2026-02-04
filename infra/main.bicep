@@ -154,6 +154,8 @@ param a2aConnectionTarget string = ''
 @description('Allowed domains for Bing Custom Search configuration')
 param bingCustomSearchAllowedDomains string = '[]'
 
+param alwaysReprovision bool = false
+
 var abbrs = loadJsonContent('./abbreviations.json')
 
 var resourceToken = templateValidationMode? toLower(uniqueString(subscription().id, environmentName, location, seed)) :  toLower(uniqueString(subscription().id, environmentName, location))
@@ -234,7 +236,7 @@ var resolvedSearchServiceName = !useSearchService
   : !empty(searchServiceName) ? searchServiceName : '${abbrs.searchSearchServices}${resourceToken}'
   
 
-module ai 'core/host/ai-environment.bicep' = if (empty(azureExistingAIProjectResourceId)) {
+module ai 'core/host/ai-environment.bicep' = if (empty(azureExistingAIProjectResourceId) || alwaysReprovision) {
   name: 'ai'
   scope: rg
   params: {

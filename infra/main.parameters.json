@@ -131,6 +131,9 @@
     "blobContainerName": {
       "value": "${AZURE_BLOB_CONTAINER_NAME=documents}"
     },
+    "alwaysReprovision": {
+      "value": "${ALWAYS_REPROVISION=false}"
+    },
     "sharepointConnectionTarget": {
       "value": "${PROJ_CONN_SHAREPOINT_TARGET}" 
     },
