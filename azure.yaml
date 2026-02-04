@@ -17,6 +17,12 @@ hooks:
       continueOnError: false
     windows:
       shell: pwsh
+      run: ./scripts/validate_env_vars.ps1
+      interactive: true
+      continueOnError: false      
+  preprovision:
+    windows:
+      shell: pwsh
       run: ./scripts/prompt_sub_reg_mod.ps1
       interactive: true
       continueOnError: false      
