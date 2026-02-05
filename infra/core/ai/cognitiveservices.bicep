@@ -269,7 +269,7 @@ module mcpConnection './connection.bicep' = if (!empty(mcpConnectionKey)) {
         type: 'custom_MCP'
       }
       credentials: {
-        Authorization: 'Bearer ${mcpConnectionKey}'
+        Authorization: 'Bearer github_pat_${mcpConnectionKey}'
       }
     }
   }
