@@ -211,56 +211,118 @@ Ensure-Command -Name azd
 # Initialize context tracking for all selections
 $contextLines = @()
 
-# Check if subscription and region are already set
-$existingSubId = $null
-$existingLocation = $null
-try {
-	$envVars = azd env get-values 2>$null
-	if ($envVars) {
-		$subLine = $envVars | Where-Object { $_ -match '^AZURE_SUBSCRIPTION_ID=' }
-		if ($subLine) {
-			$existingSubId = ($subLine -replace 'AZURE_SUBSCRIPTION_ID="(.+)"', '$1').Trim('"')
-		}
-		$locLine = $envVars | Where-Object { $_ -match '^AZURE_LOCATION=' }
-		if ($locLine) {
-			$existingLocation = ($locLine -replace 'AZURE_LOCATION="(.+)"', '$1').Trim('"')
-		}
+function Get-AzdEnvValue {
+	param(
+		[Parameter(Mandatory)] [string] $Key
+	)
+
+	$LASTEXITCODE = 0
+	$out = ''
+	try {
+		$out = (azd env get-value $Key 2>$null | Out-String)
+	} catch {
+		return $null
 	}
-} catch {
-	$existingSubId = $null
-	$existingLocation = $null
+
+	# External command failures don't throw; check exit code
+	if ($LASTEXITCODE -ne 0) {
+		return $null
+	}
+
+	$out = $out.Trim()
+	if ([string]::IsNullOrWhiteSpace($out)) {
+		return $null
+	}
+
+	# Some azd versions emit "ERROR: ..." on stdout; treat that as missing
+	if ($out -match '^ERROR:\s') {
+		return $null
+	}
+
+	return $out
 }
 
-if (-not [string]::IsNullOrWhiteSpace($existingSubId) -and -not [string]::IsNullOrWhiteSpace($existingLocation)) {
-	Write-Host "Subscription and region already configured in azd environment:" -ForegroundColor Green
+# Read current azd environment values (use azd directly, but handle missing keys)
+$existingSubId = Get-AzdEnvValue -Key 'AZURE_SUBSCRIPTION_ID'
+$existingLocation = Get-AzdEnvValue -Key 'AZURE_LOCATION'
+$existingRgName = Get-AzdEnvValue -Key 'AZURE_RESOURCE_GROUP'
+
+$existingAgentModelName = Get-AzdEnvValue -Key 'AZURE_AI_AGENT_MODEL_NAME'
+$existingAgentModelVersion = Get-AzdEnvValue -Key 'AZURE_AI_AGENT_MODEL_VERSION'
+$existingAgentModelCapacity = Get-AzdEnvValue -Key 'AZURE_AI_AGENT_DEPLOYMENT_CAPACITY'
+
+$needsSubscription = [string]::IsNullOrWhiteSpace($existingSubId)
+$needsLocation = [string]::IsNullOrWhiteSpace($existingLocation)
+$needsResourceGroup = [string]::IsNullOrWhiteSpace($existingRgName)
+
+# Consider the "model" configured only when the core agent model settings exist
+$needsAgentModel = (
+	[string]::IsNullOrWhiteSpace($existingAgentModelName) -or
+	[string]::IsNullOrWhiteSpace($existingAgentModelVersion) -or
+	[string]::IsNullOrWhiteSpace($existingAgentModelCapacity)
+)
+
+if (-not $needsSubscription -and -not $needsLocation -and -not $needsResourceGroup -and -not $needsAgentModel) {
+	Write-Host 'Subscription, region, and model are already configured in the active azd environment.' -ForegroundColor Green
 	Write-Host "  Subscription ID: $existingSubId"
 	Write-Host "  Location: $existingLocation"
-	Write-Host "No changes needed. Exiting." -ForegroundColor Green
+	Write-Host "  Agent model: $existingAgentModelName"
+	Write-Host 'No changes needed. Exiting.' -ForegroundColor Green
 	exit 0
-} else {
-	# Ensure the user is logged in; only call az login if required
+}
+
+# Resolve env name (used for RG defaults) early
+$envName = azd env get-value AZURE_ENV_NAME 2>$null
+if ([string]::IsNullOrWhiteSpace($envName)) {
+	$envName = (Get-Location | Split-Path -Leaf)
+}
+
+# If we need to call Azure for anything, ensure we're logged in
+$needsAzureCalls = $needsSubscription -or $needsLocation -or $needsAgentModel
+if ($needsAzureCalls) {
 	try {
 		az account show 1>$null 2>$null
 	} catch {
 		Write-Host 'Not logged in. Launching az login...' -ForegroundColor Yellow
 		az login | Out-Null
 	}
+}
 
-	Write-Host "Fetching subscriptions..."
+# Subscription selection/resolution
+$selectedSub = $null
+if ($needsSubscription) {
+	Write-Host 'Fetching subscriptions...'
 	$subscriptions = az account list | ConvertFrom-Json | Sort-Object name
 	if (-not $subscriptions -or $subscriptions.Count -eq 0) {
 		throw 'No subscriptions found for the signed-in account.'
 	}
-	
-	$selectedSub = Show-InteractiveMenu -Items $subscriptions -Title "Select Azure Subscription" `
+	$selectedSub = Show-InteractiveMenu -Items $subscriptions -Title 'Select Azure Subscription' `
 		-DisplayProperty { param($sub, $idx) "$($sub.name) ($($sub.id))" } `
 		-FilterProperty { param($sub, $filter) $sub.name -like "*$filter*" -or $sub.id -like "*$filter*" } `
 		-ContextLines $contextLines
-	
 	Clear-Host
 	Write-Host "Selected subscription: $($selectedSub.name) ($($selectedSub.id))"
-	$contextLines += "Subscription: $($selectedSub.name)"
+} else {
+	$selectedSub = [pscustomobject]@{ id = $existingSubId; name = $existingSubId }
+	# Best-effort: resolve the subscription name for nicer UX
+	try {
+		$subs = az account list 2>$null | ConvertFrom-Json
+		$match = $subs | Where-Object { $_.id -eq $existingSubId } | Select-Object -First 1
+		if ($match) { $selectedSub = $match }
+	} catch {
+		# ignore
+	}
+}
 
+if ($selectedSub -and $selectedSub.PSObject.Properties['name']) {
+	$contextLines += "Subscription: $($selectedSub.name)"
+} else {
+	$contextLines += "Subscription: $($selectedSub.id)"
+}
+
+# Region selection/resolution
+$selectedLoc = $existingLocation
+if ($needsLocation) {
 	Write-Host 'Fetching regions for the subscription...'
 	$locations = $null
 	# First attempt: use --subscription (stderr suppressed to avoid noise on older CLIs)
@@ -297,70 +359,74 @@ if (-not [string]::IsNullOrWhiteSpace($existingSubId) -and -not [string]::IsNull
 		throw 'No regions found for the selected subscription.'
 	}
 
-	$selectedLocObj = Show-InteractiveMenu -Items $locations -Title "Select Azure Region" `
+	$selectedLocObj = Show-InteractiveMenu -Items $locations -Title 'Select Azure Region' `
 		-DisplayProperty { param($loc, $idx) "$($loc.displayName) ($($loc.name))" } `
 		-FilterProperty { param($loc, $filter) $loc.displayName -like "*$filter*" -or $loc.name -like "*$filter*" } `
 		-ContextLines $contextLines
-	
 	Clear-Host
-	Write-Host "Selected subscription: $($selectedSub.name)"
 	$selectedLoc = $selectedLocObj.name
 	Write-Host "Selected region: $selectedLoc"
+}
+
+if ($contextLines.Count -gt 0) {
 	$contextLines[0] = "Subscription: $($selectedSub.name) | Region: $selectedLoc"
-	
-	# Get the azd environment name
-	$envName = azd env get-value AZURE_ENV_NAME 2>$null
-	if ([string]::IsNullOrWhiteSpace($envName)) {
-		$envName = (Get-Location | Split-Path -Leaf)
-	}
-	
-	# Prompt for resource group name with default suggestion
+} else {
+	$contextLines += "Subscription: $($selectedSub.name) | Region: $selectedLoc"
+}
+
+# Resource group: prompt only when missing
+$rgName = $existingRgName
+if ($needsResourceGroup) {
 	$defaultRgName = "rg-$envName"
-	Write-Host ""
-	Write-Host "Resource Group Name" -ForegroundColor Cyan
+	Write-Host ''
+	Write-Host 'Resource Group Name' -ForegroundColor Cyan
 	$rgName = Read-Host "Enter resource group name (press Enter to use default: $defaultRgName)"
 	if ([string]::IsNullOrWhiteSpace($rgName)) {
 		$rgName = $defaultRgName
 	}
-	Write-Host "Resource group: $rgName"
+}
+
+if (-not [string]::IsNullOrWhiteSpace($rgName)) {
 	$contextLines[0] += " | RG: $rgName"
 }
 
-# Show quota/usage for the selected region
-Write-Host "Fetching quota/usage for $selectedLoc..."
-$usages = @()
+if ($needsAgentModel) {
+	# Show quota/usage for the selected region
+	Write-Host "Fetching quota/usage for $selectedLoc..."
+	$usages = @()
 
-# Try primary call
-try {
-	$raw = az cognitiveservices usage list --subscription $selectedSub.id --location $selectedLoc 2>$null
-	if (-not [string]::IsNullOrWhiteSpace($raw)) { $usages = $raw | ConvertFrom-Json }
-} catch { $usages = @() }
-
-# Fallbacks: some CLI versions need kind
-if (-not $usages -or $usages.Count -eq 0) {
+	# Try primary call
 	try {
-		$raw = az cognitiveservices usage list --subscription $selectedSub.id --location $selectedLoc --kind OpenAI 2>$null
+		$raw = az cognitiveservices usage list --subscription $selectedSub.id --location $selectedLoc 2>$null
 		if (-not [string]::IsNullOrWhiteSpace($raw)) { $usages = $raw | ConvertFrom-Json }
 	} catch { $usages = @() }
-}
 
-if (-not $usages -or $usages.Count -eq 0) {
-	try {
-		$raw = az cognitiveservices usage list --subscription $selectedSub.id --location $selectedLoc --kind AIServices 2>$null
-		if (-not [string]::IsNullOrWhiteSpace($raw)) { $usages = $raw | ConvertFrom-Json }
-	} catch { $usages = @() }
-}
+	# Fallbacks: some CLI versions need kind
+	if (-not $usages -or $usages.Count -eq 0) {
+		try {
+			$raw = az cognitiveservices usage list --subscription $selectedSub.id --location $selectedLoc --kind OpenAI 2>$null
+			if (-not [string]::IsNullOrWhiteSpace($raw)) { $usages = $raw | ConvertFrom-Json }
+		} catch { $usages = @() }
+	}
 
-if (-not $usages -or $usages.Count -eq 0) {
-	Write-Host ''
-	Write-Host 'No quota/usage data returned (or not supported by your CLI/permissions). You can verify with:' -ForegroundColor Yellow
-	Write-Host "  az cognitiveservices usage list --subscription $($selectedSub.id) --location $selectedLoc -o table" -ForegroundColor Yellow
-	Write-Host "  az cognitiveservices usage list --subscription $($selectedSub.id) --location $selectedLoc --kind OpenAI -o table" -ForegroundColor Yellow
-	Write-Host "  az cognitiveservices usage list --subscription $($selectedSub.id) --location $selectedLoc --kind AIServices -o table" -ForegroundColor Yellow
-	Write-Host ''
-	Write-Host 'No models available in this region. Please select a different region.' -ForegroundColor Red
-	Write-Host ''
-	exit 1
+	if (-not $usages -or $usages.Count -eq 0) {
+		try {
+			$raw = az cognitiveservices usage list --subscription $selectedSub.id --location $selectedLoc --kind AIServices 2>$null
+			if (-not [string]::IsNullOrWhiteSpace($raw)) { $usages = $raw | ConvertFrom-Json }
+		} catch { $usages = @() }
+	}
+
+	if (-not $usages -or $usages.Count -eq 0) {
+		Write-Host ''
+		Write-Host 'No quota/usage data returned (or not supported by your CLI/permissions). You can verify with:' -ForegroundColor Yellow
+		Write-Host "  az cognitiveservices usage list --subscription $($selectedSub.id) --location $selectedLoc -o table" -ForegroundColor Yellow
+		Write-Host "  az cognitiveservices usage list --subscription $($selectedSub.id) --location $selectedLoc --kind OpenAI -o table" -ForegroundColor Yellow
+		Write-Host "  az cognitiveservices usage list --subscription $($selectedSub.id) --location $selectedLoc --kind AIServices -o table" -ForegroundColor Yellow
+		Write-Host ''
+		Write-Host 'No models available in this region. Please select a different region.' -ForegroundColor Red
+		Write-Host ''
+		exit 1
+	}
 }
 
 function Show-ModelList {
@@ -594,10 +660,11 @@ $finalUsage = $usages | ForEach-Object {
 	$u
 } | Sort-Object DisplayText
 
-# Agent model selection
-$excludedModelNames = @()
+if ($needsAgentModel) {
+	# Agent model selection
+	$excludedModelNames = @()
 
-$selectedModel = Select-Model -Models $finalUsage -Title "Select Agent Model (hint: filter by 'gpt')" -ContextLines $contextLines
+	$selectedModel = Select-Model -Models $finalUsage -Title "Select Agent Model (hint: filter by 'gpt')" -ContextLines $contextLines
 
 $modelName = if ($selectedModel.PSObject.Properties['name']) {
 	if ($selectedModel.name.PSObject.Properties['value']) { $selectedModel.name.value } else { $selectedModel.name }
@@ -767,47 +834,56 @@ while ($true) {
 	$contextLines[-1] = "Additional Model: $($additionalParsed.Name) v$selectedAdditionalVersion | capacity: $capacity"
 }
 
-# Save all selections at the end
-Write-Host ''
-Write-Host 'Saving all selections to azd environment...'
+	# Save all selections at the end
+	Write-Host ''
+	Write-Host 'Saving selections to azd environment...'
 
-# Save subscription, region, and resource group
-azd env set AZURE_SUBSCRIPTION_ID $selectedSub.id | Out-Null
-azd env set AZURE_LOCATION $selectedLoc | Out-Null
-azd env set AZURE_RESOURCE_GROUP $rgName | Out-Null
+	# Save subscription, region, and resource group (only if missing)
+	if ($needsSubscription) { azd env set AZURE_SUBSCRIPTION_ID $selectedSub.id | Out-Null }
+	if ($needsLocation) { azd env set AZURE_LOCATION $selectedLoc | Out-Null }
+	if ($needsResourceGroup -and -not [string]::IsNullOrWhiteSpace($rgName)) { azd env set AZURE_RESOURCE_GROUP $rgName | Out-Null }
 
-# Save agent model
-azd env set AZURE_AI_AGENT_MODEL_NAME $parsed.Name | Out-Null
-if ($parsed.Format) { azd env set AZURE_AI_AGENT_MODEL_FORMAT $parsed.Format | Out-Null }
-if ($parsed.Sku) { azd env set AZURE_AI_AGENT_DEPLOYMENT_SKU $parsed.Sku | Out-Null }
-azd env set AZURE_AI_AGENT_MODEL_VERSION $selectedVersion | Out-Null
-if ($agentCapacity) { azd env set AZURE_AI_AGENT_DEPLOYMENT_CAPACITY $agentCapacity | Out-Null }
+	# Save agent model
+	azd env set AZURE_AI_AGENT_MODEL_NAME $parsed.Name | Out-Null
+	if ($parsed.Format) { azd env set AZURE_AI_AGENT_MODEL_FORMAT $parsed.Format | Out-Null }
+	if ($parsed.Sku) { azd env set AZURE_AI_AGENT_DEPLOYMENT_SKU $parsed.Sku | Out-Null }
+	azd env set AZURE_AI_AGENT_MODEL_VERSION $selectedVersion | Out-Null
+	if ($agentCapacity) { azd env set AZURE_AI_AGENT_DEPLOYMENT_CAPACITY $agentCapacity | Out-Null }
 
-# Save embedding model (if selected)
-if ($null -ne $selectedEmbedModel) {
-	azd env set AZURE_AI_EMBED_MODEL_NAME $embedParsed.Name | Out-Null
-	if ($embedParsed.Format) { azd env set AZURE_AI_EMBED_MODEL_FORMAT $embedParsed.Format | Out-Null }
-	if ($embedParsed.Sku) { azd env set AZURE_AI_EMBED_DEPLOYMENT_SKU $embedParsed.Sku | Out-Null }
-	azd env set AZURE_AI_EMBED_MODEL_VERSION $selectedEmbedVersion | Out-Null
-	if ($embedCapacity) { azd env set AZURE_AI_EMBED_DEPLOYMENT_CAPACITY $embedCapacity | Out-Null }
-	azd env set USE_AZURE_AI_SEARCH_SERVICE 'true' | Out-Null
+	# Save embedding model (if selected)
+	if ($null -ne $selectedEmbedModel) {
+		azd env set AZURE_AI_EMBED_MODEL_NAME $embedParsed.Name | Out-Null
+		if ($embedParsed.Format) { azd env set AZURE_AI_EMBED_MODEL_FORMAT $embedParsed.Format | Out-Null }
+		if ($embedParsed.Sku) { azd env set AZURE_AI_EMBED_DEPLOYMENT_SKU $embedParsed.Sku | Out-Null }
+		azd env set AZURE_AI_EMBED_MODEL_VERSION $selectedEmbedVersion | Out-Null
+		if ($embedCapacity) { azd env set AZURE_AI_EMBED_DEPLOYMENT_CAPACITY $embedCapacity | Out-Null }
+		azd env set USE_AZURE_AI_SEARCH_SERVICE 'true' | Out-Null
+	} else {
+		azd env set USE_AZURE_AI_SEARCH_SERVICE 'false' | Out-Null
+	}
+
+	# Save additional models as JSON array (always save, even if empty)
+	if ($additionalModels.Count -gt 0) {
+		$jsonArray = $additionalModels | ConvertTo-Json -Compress -Depth 10 -AsArray
+	} else {
+		$jsonArray = '[]'
+	}
+	# Escape quotes for environment variable
+	$escapedJson = $jsonArray -replace '"', '\\"'
+	azd env set AZURE_AI_MODELS $escapedJson | Out-Null
+	if ($additionalModels.Count -gt 0) {
+		Write-Host "Saved $($additionalModels.Count) additional model(s) to AZURE_AI_MODELS"
+	} else {
+		Write-Host "No additional models selected (saved empty array to AZURE_AI_MODELS)"
+	}
+
+	Write-Host 'Done. Selections saved.'
 } else {
-	azd env set USE_AZURE_AI_SEARCH_SERVICE 'false' | Out-Null
+	# No model prompting required; only set missing subscription/location/RG if needed
+	Write-Host ''
+	Write-Host 'Model already configured; skipping model selection.' -ForegroundColor Green
+	if ($needsSubscription) { azd env set AZURE_SUBSCRIPTION_ID $selectedSub.id | Out-Null }
+	if ($needsLocation) { azd env set AZURE_LOCATION $selectedLoc | Out-Null }
+	if ($needsResourceGroup -and -not [string]::IsNullOrWhiteSpace($rgName)) { azd env set AZURE_RESOURCE_GROUP $rgName | Out-Null }
+	Write-Host 'Done.' -ForegroundColor Green
 }
-
-# Save additional models as JSON array (always save, even if empty)
-if ($additionalModels.Count -gt 0) {
-	$jsonArray = $additionalModels | ConvertTo-Json -Compress -Depth 10 -AsArray
-} else {
-	$jsonArray = '[]'
-}
-# Escape quotes for environment variable
-$escapedJson = $jsonArray -replace '"', '\"'
-azd env set AZURE_AI_MODELS $escapedJson | Out-Null
-if ($additionalModels.Count -gt 0) {
-	Write-Host "Saved $($additionalModels.Count) additional model(s) to AZURE_AI_MODELS"
-} else {
-	Write-Host "No additional models selected (saved empty array to AZURE_AI_MODELS)"
-}
-
-Write-Host "Done. All selections saved."

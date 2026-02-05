@@ -23,7 +23,7 @@ hooks:
   preprovision:
     windows:
       shell: pwsh
-      run: ./scripts/prompt_sub_reg_mod.ps1
+      run: ./scripts/sync_root_env_to_azd_env.ps1; ./scripts/prompt_sub_reg_mod.ps1
       interactive: true
       continueOnError: false      
   postdeploy:
