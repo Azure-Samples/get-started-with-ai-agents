@@ -20,6 +20,14 @@ param searchServiceName string = ''
 param appInsightConnectionName string
 param tags object = {}
 param aoaiConnectionName string
+@description('Name of the parent deployment (passed from the top-level deployment) used to generate unique nested deployment names.')
+param parentDeploymentName string
+
+@description('A per-deployment seed value (passed from the top-level deployment) used to avoid collisions on nested deployment names across retries.')
+param deploymentSeed string
+
+var deploymentSuffix = substring(uniqueString(parentDeploymentName, deploymentSeed), 0, 8)
+
 param sharepointConnectionTarget string = ''
 @secure()
 param browserAutomationConnectionKey string = ''
@@ -121,7 +129,7 @@ module storageAccount '../storage/storage-account.bicep' = {
 
 module logAnalytics '../monitor/loganalytics.bicep' =
   if (!empty(logAnalyticsName)) {
-    name: 'logAnalytics'
+    name: 'logAnalytics-${deploymentSuffix}'
     params: {
       location: location
       tags: tags
@@ -131,7 +139,7 @@ module logAnalytics '../monitor/loganalytics.bicep' =
 
 module applicationInsights '../monitor/applicationinsights.bicep' =
   if (!empty(applicationInsightsName) && !empty(logAnalyticsName)) {
-    name: 'applicationInsights'
+    name: 'applicationInsights-${deploymentSuffix}'
     params: {
       location: location
       tags: tags
