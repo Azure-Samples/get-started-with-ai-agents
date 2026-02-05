@@ -228,7 +228,7 @@ var searchServiceEndpoint_final = empty(searchServiceEndpoint) ? searchServiceEn
 var searchConnectionId_final = empty(searchConnectionId) ? searchConnectionIdFromAIOutput : searchConnectionId
 
 // If bringing an existing AI project, set up the log analytics workspace here
-module logAnalytics 'core/monitor/loganalytics.bicep' = if (!empty(azureExistingAIProjectResourceId) || alwaysReprovision) {
+module logAnalytics 'core/monitor/loganalytics.bicep' = if (!empty(azureExistingAIProjectResourceId) && !alwaysReprovision) {
   name: 'logAnalytics-${substring(uniqueString(deployment().name, seed), 0, 8)}'
   scope: rg
   params: {
@@ -237,13 +237,13 @@ module logAnalytics 'core/monitor/loganalytics.bicep' = if (!empty(azureExisting
     name: logAnalyticsWorkspaceResolvedName
   }
 }
-var existingProjEndpoint = !empty(azureExistingAIProjectResourceId) ? format('https://{0}.services.ai.azure.com/api/projects/{1}',split(azureExistingAIProjectResourceId, '/')[8], split(azureExistingAIProjectResourceId, '/')[10]) : ''
+var existingProjEndpoint = (!empty(azureExistingAIProjectResourceId) && !alwaysReprovision) ? format('https://{0}.services.ai.azure.com/api/projects/{1}',split(azureExistingAIProjectResourceId, '/')[8], split(azureExistingAIProjectResourceId, '/')[10]) : ''
 
-var projectResourceId = !empty(azureExistingAIProjectResourceId)
+var projectResourceId = (!empty(azureExistingAIProjectResourceId) && !alwaysReprovision)
   ? azureExistingAIProjectResourceId
   : ai!.outputs.projectResourceId
 
-var projectEndpoint = !empty(azureExistingAIProjectResourceId)
+var projectEndpoint = (!empty(azureExistingAIProjectResourceId) && !alwaysReprovision)
   ? existingProjEndpoint
   : ai!.outputs.aiProjectEndpoint
 
@@ -261,11 +261,11 @@ module monitoringMetricsContribuitorRoleAzureAIDeveloperRG 'core/security/appins
   }
 }
 
-resource existingProjectRG 'Microsoft.Resources/resourceGroups@2021-04-01' existing = if (!empty(azureExistingAIProjectResourceId) && contains(azureExistingAIProjectResourceId, '/')) {
+resource existingProjectRG 'Microsoft.Resources/resourceGroups@2021-04-01' existing = if (!empty(azureExistingAIProjectResourceId) && !alwaysReprovision && contains(azureExistingAIProjectResourceId, '/')) {
   name: split(azureExistingAIProjectResourceId, '/')[4]
 }
 
-module userRoleAzureAIDeveloperBackendExistingProjectRG 'core/security/role.bicep' = if (!empty(azureExistingAIProjectResourceId)) {
+module userRoleAzureAIDeveloperBackendExistingProjectRG 'core/security/role.bicep' = if (!empty(azureExistingAIProjectResourceId) && !alwaysReprovision) {
   name: 'backend-role-azureai-developer-existing-project-rg'
   scope: existingProjectRG
   params: {
@@ -286,7 +286,7 @@ module containerApps 'core/host/container-apps.bicep' = {
     containerRegistryName: '${abbrs.containerRegistryRegistries}${resourceToken}'
     tags: tags
     containerAppsEnvironmentName: 'containerapps-env-${resourceToken}'
-    logAnalyticsWorkspaceName: empty(azureExistingAIProjectResourceId)
+    logAnalyticsWorkspaceName: empty(azureExistingAIProjectResourceId) || alwaysReprovision
       ? ai!.outputs.logAnalyticsWorkspaceName
       : logAnalytics!.outputs.name
   }
