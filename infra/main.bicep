@@ -128,6 +128,7 @@ param searchConnectionId string = ''
 
 @description('The name of the blob container for document storage')
 param blobContainerName string = 'documents'
+param alwaysReprovision bool = false
 
 var abbrs = loadJsonContent('./abbreviations.json')
 
@@ -190,12 +191,14 @@ var resolvedSearchServiceName = !useSearchService
   : !empty(searchServiceName) ? searchServiceName : '${abbrs.searchSearchServices}${resourceToken}'
   
 
-module ai 'core/host/ai-environment.bicep' = if (empty(azureExistingAIProjectResourceId)) {
+module ai 'core/host/ai-environment.bicep' = if (empty(azureExistingAIProjectResourceId) || alwaysReprovision) {
   name: 'ai'
   scope: rg
   params: {
     location: location
     tags: tags
+    parentDeploymentName: deployment().name
+    deploymentSeed: seed
     storageAccountName: !empty(storageAccountName)
       ? storageAccountName
       : '${abbrs.storageStorageAccounts}${resourceToken}'
@@ -225,8 +228,8 @@ var searchServiceEndpoint_final = empty(searchServiceEndpoint) ? searchServiceEn
 var searchConnectionId_final = empty(searchConnectionId) ? searchConnectionIdFromAIOutput : searchConnectionId
 
 // If bringing an existing AI project, set up the log analytics workspace here
-module logAnalytics 'core/monitor/loganalytics.bicep' = if (!empty(azureExistingAIProjectResourceId)) {
-  name: 'logAnalytics'
+module logAnalytics 'core/monitor/loganalytics.bicep' = if (!empty(azureExistingAIProjectResourceId) || alwaysReprovision) {
+  name: 'logAnalytics-${substring(uniqueString(deployment().name, seed), 0, 8)}'
   scope: rg
   params: {
     location: location
