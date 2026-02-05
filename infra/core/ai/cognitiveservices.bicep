@@ -221,7 +221,7 @@ module openApiConnection './connection.bicep' = if (!empty(openApiConnectionKey)
         type: 'openapi'
       }
       credentials: {
-        Authorization: openApiConnectionKey
+        key: openApiConnectionKey
       }      
     }
   }
