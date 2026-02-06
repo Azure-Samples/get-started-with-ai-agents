@@ -134,6 +134,9 @@ var abbrs = loadJsonContent('./abbreviations.json')
 
 var resourceToken = templateValidationMode? toLower(uniqueString(subscription().id, environmentName, location, seed)) :  toLower(uniqueString(subscription().id, environmentName, location))
 
+// Stable token that never depends on `seed` (and therefore never on `newGuid()`).
+var resourceTokenStable = toLower(uniqueString(subscription().id, environmentName, location))
+
 var tags = { 'azd-env-name': environmentName }
 
 var tempAgentID = !empty(aiAgentID) ? aiAgentID : ''
@@ -189,7 +192,11 @@ var logAnalyticsWorkspaceResolvedName = !useApplicationInsights
 var resolvedSearchServiceName = !useSearchService
   ? ''
   : !empty(searchServiceName) ? searchServiceName : '${abbrs.searchSearchServices}${resourceToken}'
-  
+ // Storage account name used when we need to reference an existing storage account (must be deterministic for Bicep diagnostics).
+// Note: for normal deployments (templateValidationMode == false), resourceTokenStable == resourceToken.
+var resolvedStorageAccountName = !empty(storageAccountName)
+  ? storageAccountName
+  : '${abbrs.storageStorageAccounts}${resourceTokenStable}' 
 
 module ai 'core/host/ai-environment.bicep' = if (empty(azureExistingAIProjectResourceId) || alwaysReprovision) {
   name: 'ai'
@@ -199,9 +206,7 @@ module ai 'core/host/ai-environment.bicep' = if (empty(azureExistingAIProjectRes
     tags: tags
     parentDeploymentName: deployment().name
     deploymentSeed: seed
-    storageAccountName: !empty(storageAccountName)
-      ? storageAccountName
-      : '${abbrs.storageStorageAccounts}${resourceToken}'
+    storageAccountName: resolvedStorageAccountName
     aiServicesName: !empty(aiServicesName) ? aiServicesName : 'aoai-${resourceToken}'
     aiProjectName: !empty(aiProjectName) ? aiProjectName : 'proj-${resourceToken}'
     aiServiceModelDeployments: aiDeployments
@@ -226,6 +231,13 @@ var searchConnectionIdFromAIOutput = !useSearchService
 var searchServiceEndpoint_final = empty(searchServiceEndpoint) ? searchServiceEndpointFromAIOutput : searchServiceEndpoint
 
 var searchConnectionId_final = empty(searchConnectionId) ? searchConnectionIdFromAIOutput : searchConnectionId
+
+resource resolvedStorageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' existing = {
+  name: resolvedStorageAccountName
+  scope: rg
+}
+
+var storageAccountResourceId_final = resolvedStorageAccount.id
 
 // If bringing an existing AI project, set up the log analytics workspace here
 module logAnalytics 'core/monitor/loganalytics.bicep' = if (!empty(azureExistingAIProjectResourceId) && !alwaysReprovision) {
@@ -316,7 +328,7 @@ module api 'api.bicep' = {
     otelInstrumentationGenAICaptureMessageContent: otelInstrumentationGenAICaptureMessageContent
     projectEndpoint: projectEndpoint
     searchConnectionId: searchConnectionId_final
-    storageAccountResourceId: ai!.outputs.storageAccountId
+    storageAccountResourceId: storageAccountResourceId_final
     blobContainerName: blobContainerName
     useAzureAISearch: useSearchService
   }
@@ -511,7 +523,7 @@ output AZURE_EXISTING_AGENT_ID string = agentID
 output AZURE_EXISTING_AIPROJECT_ENDPOINT string = projectEndpoint
 output ENABLE_AZURE_MONITOR_TRACING bool = enableAzureMonitorTracing
 output OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT bool = otelInstrumentationGenAICaptureMessageContent
-output STORAGE_ACCOUNT_RESOURCE_ID string = ai!.outputs.storageAccountId
+output STORAGE_ACCOUNT_RESOURCE_ID string = storageAccountResourceId_final
 output AZURE_BLOB_CONTAINER_NAME string = blobContainerName
 
 // Outputs required by azd for ACA
