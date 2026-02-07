@@ -130,39 +130,6 @@
     },
     "blobContainerName": {
       "value": "${AZURE_BLOB_CONTAINER_NAME=documents}"
-    },
-    "alwaysReprovision": {
-      "value": "${ALWAYS_REPROVISION=false}"
-    },
-    "sharepointConnectionTarget": {
-      "value": "${PROJ_CONN_SHAREPOINT_TARGET}" 
-    },
-    "browserAutomationConnectionKey": {
-      "value": "${PROJ_CONN_BROWSER_AUTOMATION_KEY}"
-    },
-    "browserAutomationConnectionTarget": {
-      "value": "${PROJ_CONN_BROWSER_AUTOMATION_TARGET}"
-    },
-    "openApiConnectionKey": {
-      "value": "${PROJ_CONN_OPEN_API_KEY}"
-    },
-    "fabricConnectionWorkspaceId": {
-      "value": "${PROJ_CONN_FABRIC_WORKSPACE_ID}"
-    },
-    "fabricConnectionArtifactId": {
-      "value": "${PROJ_CONN_FABRIC_ARTIFACT_ID}" 
-    },
-    "mcpConnectionKey": {
-      "value": "${PROJ_CONN_MCP_KEY}"
-    },
-    "a2aConnectionTarget": {
-      "value": "${PROJ_CONN_A2A_TARGET}"
-    },
-    "additionalAiModels": {
-      "value": "${AZURE_AI_MODELS}"
-    },
-    "bingCustomSearchAllowedDomains": {
-      "value": "${BING_CUSTOM_SEARCH_ALLOWED_DOMAINS}"
     }
   }
 }
