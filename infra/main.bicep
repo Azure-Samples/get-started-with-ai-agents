@@ -10,22 +10,22 @@ param environmentName string
 // The combination of allowed and usageName below is for AZD to check AI model gpt-5-mini quota only for the allowed regions for creating an agent.
 // If using different models, update the SKU,capacity depending on the model you use.
 // https://learn.microsoft.com/azure/ai-services/agents/concepts/model-region-support
-// @allowed([
-//   'eastus'
-//   'eastus2'
-//   'swedencentral'
-//   'westus'
-//   'westus3'
-// ])
-// @metadata({
-//   azd: {
-//     type: 'location'
-//     // quota-validation for ai models: gpt-5-mini
-//     usageName: [
-//       'OpenAI.GlobalStandard.gpt-5-mini,80'
-//     ]
-//   }
-// })
+@allowed([
+  'eastus'
+  'eastus2'
+  'swedencentral'
+  'westus'
+  'westus3'
+])
+@metadata({
+  azd: {
+    type: 'location'
+    // quota-validation for ai models: gpt-5-mini
+    usageName: [
+      'OpenAI.GlobalStandard.gpt-5-mini,80'
+    ]
+  }
+})
 param location string
 
 @description('Use this parameter to use an existing AI project resource ID')
@@ -128,42 +128,16 @@ param searchConnectionId string = ''
 
 @description('The name of the blob container for document storage')
 param blobContainerName string = 'documents'
-@secure()
-@description('Target URL for SharePoint connection')
-param sharepointConnectionTarget string = ''
-@secure()
-@description('API key for Browser Automation connection')
-param browserAutomationConnectionKey string = ''
-@description('Target URL for Browser Automation connection')
-param browserAutomationConnectionTarget string = ''
-@secure()
-@description('API key for OpenAPI connection')
-param openApiConnectionKey string = ''
-@secure()
-@description('API key for Fabric connection')
-param fabricConnectionWorkspaceId string = ''
-@secure()
-@description('Target URL for Fabric connection')
-param fabricConnectionArtifactId string = ''
-@secure()
-@description('API key for MCP connection')
-param mcpConnectionKey string = ''
-@description('Target URL for A2A connection')
-param a2aConnectionTarget string = ''
-
-@description('Allowed domains for Bing Custom Search configuration')
-param bingCustomSearchAllowedDomains string = '[]'
-
 param alwaysReprovision bool = false
 
 var abbrs = loadJsonContent('./abbreviations.json')
 
 var resourceToken = templateValidationMode? toLower(uniqueString(subscription().id, environmentName, location, seed)) :  toLower(uniqueString(subscription().id, environmentName, location))
 
-var tags = { 'azd-env-name': environmentName }
+// Stable token that never depends on `seed` (and therefore never on `newGuid()`).
+var resourceTokenStable = toLower(uniqueString(subscription().id, environmentName, location))
 
-@description('Additional AI models to deploy as an array of objects with name, format, version, sku, and capacity')
-param additionalAiModels string = '[]'
+var tags = { 'azd-env-name': environmentName }
 
 var tempAgentID = !empty(aiAgentID) ? aiAgentID : ''
 var agentID = !empty(azureExistingAgentId) ? azureExistingAgentId : tempAgentID
@@ -197,25 +171,9 @@ var aiEmbeddingModel = [
   }
 ]
 
-// Transform additional models to deployment format
-param additionalAiModelArray array = json(additionalAiModels)
-var additionalModelsTransformed = [for model in additionalAiModelArray: {
-  name: model.name
-  model: {
-    format: model.format
-    name: model.name
-    version: model.version
-  }
-  sku: {
-    name: model.sku
-    capacity: contains(model, 'capacity') ? model.capacity : 10
-  }
-}]
-
 var aiDeployments = concat(
   aiChatModel,
-  useSearchService ? aiEmbeddingModel : [],
-  additionalModelsTransformed)
+  useSearchService ? aiEmbeddingModel : [])
 
 
 // Organize resources in a resource group
@@ -234,7 +192,11 @@ var logAnalyticsWorkspaceResolvedName = !useApplicationInsights
 var resolvedSearchServiceName = !useSearchService
   ? ''
   : !empty(searchServiceName) ? searchServiceName : '${abbrs.searchSearchServices}${resourceToken}'
-  
+ // Storage account name used when we need to reference an existing storage account (must be deterministic for Bicep diagnostics).
+// Note: for normal deployments (templateValidationMode == false), resourceTokenStable == resourceToken.
+var resolvedStorageAccountName = !empty(storageAccountName)
+  ? storageAccountName
+  : '${abbrs.storageStorageAccounts}${resourceTokenStable}' 
 
 module ai 'core/host/ai-environment.bicep' = if (empty(azureExistingAIProjectResourceId) || alwaysReprovision) {
   name: 'ai'
@@ -244,9 +206,7 @@ module ai 'core/host/ai-environment.bicep' = if (empty(azureExistingAIProjectRes
     tags: tags
     parentDeploymentName: deployment().name
     deploymentSeed: seed
-    storageAccountName: !empty(storageAccountName)
-      ? storageAccountName
-      : '${abbrs.storageStorageAccounts}${resourceToken}'
+    storageAccountName: resolvedStorageAccountName
     aiServicesName: !empty(aiServicesName) ? aiServicesName : 'aoai-${resourceToken}'
     aiProjectName: !empty(aiProjectName) ? aiProjectName : 'proj-${resourceToken}'
     aiServiceModelDeployments: aiDeployments
@@ -257,15 +217,6 @@ module ai 'core/host/ai-environment.bicep' = if (empty(azureExistingAIProjectRes
     searchServiceName: resolvedSearchServiceName
     appInsightConnectionName: 'appinsights-connection'
     aoaiConnectionName: 'aoai-connection'
-    sharepointConnectionTarget: sharepointConnectionTarget
-    browserAutomationConnectionKey: browserAutomationConnectionKey
-    browserAutomationConnectionTarget: browserAutomationConnectionTarget
-    openApiConnectionKey: openApiConnectionKey
-    fabricConnectionWorkspaceId: fabricConnectionWorkspaceId
-    fabricConnectionArtifactId: fabricConnectionArtifactId
-    mcpConnectionKey: mcpConnectionKey
-    a2aConnectionTarget: a2aConnectionTarget
-    allowedDomains: json(bingCustomSearchAllowedDomains)
   }
 }
 
@@ -280,6 +231,13 @@ var searchConnectionIdFromAIOutput = !useSearchService
 var searchServiceEndpoint_final = empty(searchServiceEndpoint) ? searchServiceEndpointFromAIOutput : searchServiceEndpoint
 
 var searchConnectionId_final = empty(searchConnectionId) ? searchConnectionIdFromAIOutput : searchConnectionId
+
+resource resolvedStorageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' existing = {
+  name: resolvedStorageAccountName
+  scope: rg
+}
+
+var storageAccountResourceId_final = resolvedStorageAccount.id
 
 // If bringing an existing AI project, set up the log analytics workspace here
 module logAnalytics 'core/monitor/loganalytics.bicep' = if (!empty(azureExistingAIProjectResourceId) && !alwaysReprovision) {
@@ -370,7 +328,7 @@ module api 'api.bicep' = {
     otelInstrumentationGenAICaptureMessageContent: otelInstrumentationGenAICaptureMessageContent
     projectEndpoint: projectEndpoint
     searchConnectionId: searchConnectionId_final
-    storageAccountResourceId: ai!.outputs.storageAccountId
+    storageAccountResourceId: storageAccountResourceId_final
     blobContainerName: blobContainerName
     useAzureAISearch: useSearchService
   }
@@ -565,7 +523,7 @@ output AZURE_EXISTING_AGENT_ID string = agentID
 output AZURE_EXISTING_AIPROJECT_ENDPOINT string = projectEndpoint
 output ENABLE_AZURE_MONITOR_TRACING bool = enableAzureMonitorTracing
 output OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT bool = otelInstrumentationGenAICaptureMessageContent
-output STORAGE_ACCOUNT_RESOURCE_ID string = ai!.outputs.storageAccountId
+output STORAGE_ACCOUNT_RESOURCE_ID string = storageAccountResourceId_final
 output AZURE_BLOB_CONTAINER_NAME string = blobContainerName
 
 // Outputs required by azd for ACA
