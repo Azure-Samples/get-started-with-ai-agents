@@ -191,6 +191,10 @@ $azdEnvPath = Join-Path $azdEnvDir '.env'
 $rootMap = Get-DotEnvMap -Path $rootEnvPath
 $azdMap = Get-DotEnvMap -Path $azdEnvPath
 
+$excludedKeys = @(
+	'AZD_ALLOW_NON_EMPTY_FOLDER'
+)
+
 if ($rootMap.Keys.Count -eq 0) {
 	Write-Host "Repo-root .env has no parseable keys; nothing to sync." -ForegroundColor DarkGray
 	exit 0
@@ -199,6 +203,9 @@ if ($rootMap.Keys.Count -eq 0) {
 $missingInAzd = @()
 $different = @()
 foreach ($key in ($rootMap.Keys | Sort-Object)) {
+	if ($excludedKeys -contains $key) {
+		continue
+	}
 	if (-not $azdMap.ContainsKey($key)) {
 		$missingInAzd += $key
 		continue
@@ -243,7 +250,7 @@ if ($answer -notin @('y', 'Y', 'yes', 'YES', 'Yes')) {
 	exit 0
 }
 
-$keysToSync = @($missingInAzd + $different) | Sort-Object -Unique
+$keysToSync = @($missingInAzd + $different) | Where-Object { $excludedKeys -notcontains $_ } | Sort-Object -Unique
 foreach ($key in $keysToSync) {
 	$value = [string]$rootMap[$key]
 	if ($value -match "`r|`n") {
@@ -256,4 +263,4 @@ foreach ($key in $keysToSync) {
 	}
 }
 
-Write-Host "Synced $($keysToSync.Count) key(s) into the active azd environment via 'azd env set'." -ForegroundColor Green
+Write-Host "Synced $(@($keysToSync).Count) key(s) into azd environment '$envName' via 'azd env set'." -ForegroundColor Green
