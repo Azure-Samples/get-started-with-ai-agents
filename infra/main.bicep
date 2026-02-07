@@ -128,10 +128,14 @@ param searchConnectionId string = ''
 
 @description('The name of the blob container for document storage')
 param blobContainerName string = 'documents'
+param alwaysReprovision bool = false
 
 var abbrs = loadJsonContent('./abbreviations.json')
 
 var resourceToken = templateValidationMode? toLower(uniqueString(subscription().id, environmentName, location, seed)) :  toLower(uniqueString(subscription().id, environmentName, location))
+
+// Stable token that never depends on `seed` (and therefore never on `newGuid()`).
+var resourceTokenStable = toLower(uniqueString(subscription().id, environmentName, location))
 
 var tags = { 'azd-env-name': environmentName }
 
@@ -188,17 +192,21 @@ var logAnalyticsWorkspaceResolvedName = !useApplicationInsights
 var resolvedSearchServiceName = !useSearchService
   ? ''
   : !empty(searchServiceName) ? searchServiceName : '${abbrs.searchSearchServices}${resourceToken}'
-  
+ // Storage account name used when we need to reference an existing storage account (must be deterministic for Bicep diagnostics).
+// Note: for normal deployments (templateValidationMode == false), resourceTokenStable == resourceToken.
+var resolvedStorageAccountName = !empty(storageAccountName)
+  ? storageAccountName
+  : '${abbrs.storageStorageAccounts}${resourceTokenStable}' 
 
-module ai 'core/host/ai-environment.bicep' = if (empty(azureExistingAIProjectResourceId)) {
+module ai 'core/host/ai-environment.bicep' = if (empty(azureExistingAIProjectResourceId) || alwaysReprovision) {
   name: 'ai'
   scope: rg
   params: {
     location: location
     tags: tags
-    storageAccountName: !empty(storageAccountName)
-      ? storageAccountName
-      : '${abbrs.storageStorageAccounts}${resourceToken}'
+    parentDeploymentName: deployment().name
+    deploymentSeed: seed
+    storageAccountName: resolvedStorageAccountName
     aiServicesName: !empty(aiServicesName) ? aiServicesName : 'aoai-${resourceToken}'
     aiProjectName: !empty(aiProjectName) ? aiProjectName : 'proj-${resourceToken}'
     aiServiceModelDeployments: aiDeployments
@@ -224,9 +232,16 @@ var searchServiceEndpoint_final = empty(searchServiceEndpoint) ? searchServiceEn
 
 var searchConnectionId_final = empty(searchConnectionId) ? searchConnectionIdFromAIOutput : searchConnectionId
 
+resource resolvedStorageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' existing = {
+  name: resolvedStorageAccountName
+  scope: rg
+}
+
+var storageAccountResourceId_final = resolvedStorageAccount.id
+
 // If bringing an existing AI project, set up the log analytics workspace here
-module logAnalytics 'core/monitor/loganalytics.bicep' = if (!empty(azureExistingAIProjectResourceId)) {
-  name: 'logAnalytics'
+module logAnalytics 'core/monitor/loganalytics.bicep' = if (!empty(azureExistingAIProjectResourceId) && !alwaysReprovision) {
+  name: 'logAnalytics-${substring(uniqueString(deployment().name, seed), 0, 8)}'
   scope: rg
   params: {
     location: location
@@ -234,13 +249,13 @@ module logAnalytics 'core/monitor/loganalytics.bicep' = if (!empty(azureExisting
     name: logAnalyticsWorkspaceResolvedName
   }
 }
-var existingProjEndpoint = !empty(azureExistingAIProjectResourceId) ? format('https://{0}.services.ai.azure.com/api/projects/{1}',split(azureExistingAIProjectResourceId, '/')[8], split(azureExistingAIProjectResourceId, '/')[10]) : ''
+var existingProjEndpoint = (!empty(azureExistingAIProjectResourceId) && !alwaysReprovision) ? format('https://{0}.services.ai.azure.com/api/projects/{1}',split(azureExistingAIProjectResourceId, '/')[8], split(azureExistingAIProjectResourceId, '/')[10]) : ''
 
-var projectResourceId = !empty(azureExistingAIProjectResourceId)
+var projectResourceId = (!empty(azureExistingAIProjectResourceId) && !alwaysReprovision)
   ? azureExistingAIProjectResourceId
   : ai!.outputs.projectResourceId
 
-var projectEndpoint = !empty(azureExistingAIProjectResourceId)
+var projectEndpoint = (!empty(azureExistingAIProjectResourceId) && !alwaysReprovision)
   ? existingProjEndpoint
   : ai!.outputs.aiProjectEndpoint
 
@@ -258,11 +273,11 @@ module monitoringMetricsContribuitorRoleAzureAIDeveloperRG 'core/security/appins
   }
 }
 
-resource existingProjectRG 'Microsoft.Resources/resourceGroups@2021-04-01' existing = if (!empty(azureExistingAIProjectResourceId) && contains(azureExistingAIProjectResourceId, '/')) {
+resource existingProjectRG 'Microsoft.Resources/resourceGroups@2021-04-01' existing = if (!empty(azureExistingAIProjectResourceId) && !alwaysReprovision && contains(azureExistingAIProjectResourceId, '/')) {
   name: split(azureExistingAIProjectResourceId, '/')[4]
 }
 
-module userRoleAzureAIDeveloperBackendExistingProjectRG 'core/security/role.bicep' = if (!empty(azureExistingAIProjectResourceId)) {
+module userRoleAzureAIDeveloperBackendExistingProjectRG 'core/security/role.bicep' = if (!empty(azureExistingAIProjectResourceId) && !alwaysReprovision) {
   name: 'backend-role-azureai-developer-existing-project-rg'
   scope: existingProjectRG
   params: {
@@ -283,7 +298,7 @@ module containerApps 'core/host/container-apps.bicep' = {
     containerRegistryName: '${abbrs.containerRegistryRegistries}${resourceToken}'
     tags: tags
     containerAppsEnvironmentName: 'containerapps-env-${resourceToken}'
-    logAnalyticsWorkspaceName: empty(azureExistingAIProjectResourceId)
+    logAnalyticsWorkspaceName: empty(azureExistingAIProjectResourceId) || alwaysReprovision
       ? ai!.outputs.logAnalyticsWorkspaceName
       : logAnalytics!.outputs.name
   }
@@ -313,7 +328,7 @@ module api 'api.bicep' = {
     otelInstrumentationGenAICaptureMessageContent: otelInstrumentationGenAICaptureMessageContent
     projectEndpoint: projectEndpoint
     searchConnectionId: searchConnectionId_final
-    storageAccountResourceId: ai!.outputs.storageAccountId
+    storageAccountResourceId: storageAccountResourceId_final
     blobContainerName: blobContainerName
     useAzureAISearch: useSearchService
   }
@@ -508,7 +523,7 @@ output AZURE_EXISTING_AGENT_ID string = agentID
 output AZURE_EXISTING_AIPROJECT_ENDPOINT string = projectEndpoint
 output ENABLE_AZURE_MONITOR_TRACING bool = enableAzureMonitorTracing
 output OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT bool = otelInstrumentationGenAICaptureMessageContent
-output STORAGE_ACCOUNT_RESOURCE_ID string = ai!.outputs.storageAccountId
+output STORAGE_ACCOUNT_RESOURCE_ID string = storageAccountResourceId_final
 output AZURE_BLOB_CONTAINER_NAME string = blobContainerName
 
 // Outputs required by azd for ACA
