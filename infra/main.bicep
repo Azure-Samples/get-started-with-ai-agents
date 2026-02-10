@@ -10,22 +10,22 @@ param environmentName string
 // The combination of allowed and usageName below is for AZD to check AI model gpt-5-mini quota only for the allowed regions for creating an agent.
 // If using different models, update the SKU,capacity depending on the model you use.
 // https://learn.microsoft.com/azure/ai-services/agents/concepts/model-region-support
-@allowed([
-  'eastus'
-  'eastus2'
-  'swedencentral'
-  'westus'
-  'westus3'
-])
-@metadata({
-  azd: {
-    type: 'location'
-    // quota-validation for ai models: gpt-5-mini
-    usageName: [
-      'OpenAI.GlobalStandard.gpt-5-mini,80'
-    ]
-  }
-})
+// @allowed([
+//   'eastus'
+//   'eastus2'
+//   'swedencentral'
+//   'westus'
+//   'westus3'
+// ])
+// @metadata({
+//   azd: {
+//     type: 'location'
+//     // quota-validation for ai models: gpt-5-mini
+//     usageName: [
+//       'OpenAI.GlobalStandard.gpt-5-mini,80'
+//     ]
+//   }
+// })
 param location string
 
 @description('Use this parameter to use an existing AI project resource ID')
@@ -128,6 +128,32 @@ param searchConnectionId string = ''
 
 @description('The name of the blob container for document storage')
 param blobContainerName string = 'documents'
+@secure()
+@description('Target URL for SharePoint connection')
+param sharepointConnectionTarget string = ''
+@secure()
+@description('API key for Browser Automation connection')
+param browserAutomationConnectionKey string = ''
+@description('Target URL for Browser Automation connection')
+param browserAutomationConnectionTarget string = ''
+@secure()
+@description('API key for OpenAPI connection')
+param openApiConnectionKey string = ''
+@secure()
+@description('API key for Fabric connection')
+param fabricConnectionWorkspaceId string = ''
+@secure()
+@description('Target URL for Fabric connection')
+param fabricConnectionArtifactId string = ''
+@secure()
+@description('API key for MCP connection')
+param mcpConnectionKey string = ''
+@description('Target URL for A2A connection')
+param a2aConnectionTarget string = ''
+
+@description('Allowed domains for Bing Custom Search configuration')
+param bingCustomSearchAllowedDomains string = '[]'
+
 param alwaysReprovision bool = false
 
 var abbrs = loadJsonContent('./abbreviations.json')
@@ -138,6 +164,9 @@ var resourceToken = templateValidationMode? toLower(uniqueString(subscription().
 var resourceTokenStable = toLower(uniqueString(subscription().id, environmentName, location))
 
 var tags = { 'azd-env-name': environmentName }
+
+@description('Additional AI models to deploy as an array of objects with name, format, version, sku, and capacity')
+param additionalAiModels string = '[]'
 
 var tempAgentID = !empty(aiAgentID) ? aiAgentID : ''
 var agentID = !empty(azureExistingAgentId) ? azureExistingAgentId : tempAgentID
@@ -171,9 +200,25 @@ var aiEmbeddingModel = [
   }
 ]
 
+// Transform additional models to deployment format
+param additionalAiModelArray array = json(additionalAiModels)
+var additionalModelsTransformed = [for model in additionalAiModelArray: {
+  name: model.name
+  model: {
+    format: model.format
+    name: model.name
+    version: model.version
+  }
+  sku: {
+    name: model.sku
+    capacity: contains(model, 'capacity') ? model.capacity : 10
+  }
+}]
+
 var aiDeployments = concat(
   aiChatModel,
-  useSearchService ? aiEmbeddingModel : [])
+  useSearchService ? aiEmbeddingModel : [],
+  additionalModelsTransformed)
 
 
 // Organize resources in a resource group
@@ -217,6 +262,15 @@ module ai 'core/host/ai-environment.bicep' = if (empty(azureExistingAIProjectRes
     searchServiceName: resolvedSearchServiceName
     appInsightConnectionName: 'appinsights-connection'
     aoaiConnectionName: 'aoai-connection'
+    sharepointConnectionTarget: sharepointConnectionTarget
+    browserAutomationConnectionKey: browserAutomationConnectionKey
+    browserAutomationConnectionTarget: browserAutomationConnectionTarget
+    openApiConnectionKey: openApiConnectionKey
+    fabricConnectionWorkspaceId: fabricConnectionWorkspaceId
+    fabricConnectionArtifactId: fabricConnectionArtifactId
+    mcpConnectionKey: mcpConnectionKey
+    a2aConnectionTarget: a2aConnectionTarget
+    allowedDomains: json(bingCustomSearchAllowedDomains)
   }
 }
 

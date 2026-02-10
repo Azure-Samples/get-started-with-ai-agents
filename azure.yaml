@@ -20,6 +20,12 @@ hooks:
       run: ./scripts/validate_env_vars.ps1
       interactive: true
       continueOnError: false      
+  preprovision:
+    windows:
+      shell: pwsh
+      run: ./scripts/sync_root_env_to_azd_env.ps1; ./scripts/prompt_sub_reg_mod.ps1
+      interactive: true
+      continueOnError: false      
   postdeploy:
     windows:
       shell: pwsh

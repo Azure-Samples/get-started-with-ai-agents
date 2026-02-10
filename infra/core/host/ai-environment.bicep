@@ -28,6 +28,68 @@ param deploymentSeed string
 
 var deploymentSuffix = substring(uniqueString(parentDeploymentName, deploymentSeed), 0, 8)
 
+param sharepointConnectionTarget string = ''
+@secure()
+param browserAutomationConnectionKey string = ''
+param browserAutomationConnectionTarget string = ''
+@secure()
+param openApiConnectionKey string = ''
+@secure()
+param fabricConnectionWorkspaceId string = ''
+@secure()
+param fabricConnectionArtifactId string = ''
+@secure()
+param mcpConnectionKey string = ''
+param a2aConnectionTarget string = ''
+
+param allowedDomains array = []
+
+var bingLocation = 'global'
+var bingSearchAccountName = '${aiServicesName}-bing'
+var bingCustomSearchAccountName = '${aiServicesName}-bingcustom'
+
+resource bingSearch 'Microsoft.Bing/accounts@2020-06-10' = {
+  name: bingSearchAccountName
+  location: bingLocation
+  tags: tags
+  sku: {
+    name: 'G1'
+  }
+  kind: 'Bing.Grounding'
+  properties: {
+    statisticsEnabled: false
+  }
+}
+
+resource bingCustomSearch 'Microsoft.Bing/accounts@2020-06-10' = {
+  name: bingCustomSearchAccountName
+  location: bingLocation
+  tags: tags
+  sku: {
+    name: 'G2'
+  }
+  kind: 'Bing.GroundingCustomSearch'
+  properties: {
+    statisticsEnabled: false
+  }
+}
+
+resource bingCustomSearchConfig 'Microsoft.Bing/accounts/customSearchConfigurations@2025-05-01-preview' = {
+  parent: bingCustomSearch
+  name: 'agentdoc'
+  properties: {
+    allowedDomains: allowedDomains
+    blockedDomains: []
+    pinnedDomains: []
+  }
+}
+
+
+var bingSearchKeys = listKeys(bingSearch.id, '2020-06-10')
+var bingCustomSearchKeys = listKeys(bingCustomSearch.id, '2020-06-10')
+var bingSearchEndpoint = bingSearch.properties.endpoint
+var bingCustomSearchEndpoint = bingCustomSearch.properties.endpoint
+
 module storageAccount '../storage/storage-account.bicep' = {
   name: 'storageAccount'
   params: {
@@ -102,6 +164,20 @@ module cognitiveServices '../ai/cognitiveservices.bicep' = {
     storageAccountConnectionName: 'storageAccount'
     storageAccountBlobEndpoint: storageAccount.outputs.primaryEndpoints.blob
     aoaiConnectionName: aoaiConnectionName
+    sharepointConnectionTarget: sharepointConnectionTarget
+    bingConnectionKey: bingSearchKeys.key1
+    bingConnectionTarget: bingSearchEndpoint
+    bingConnectionResourceId: bingSearch.id
+    bingCustomConnectionKey: bingCustomSearchKeys.key1
+    bingCustomConnectionTarget: bingCustomSearchEndpoint
+    bingCustomConnectionResourceId: bingCustomSearch.id
+    browserAutomationConnectionKey: browserAutomationConnectionKey
+    browserAutomationConnectionTarget: browserAutomationConnectionTarget
+    openApiConnectionKey: openApiConnectionKey
+    fabricConnectionWorkspaceId: fabricConnectionWorkspaceId
+    fabricConnectionArtifactId: fabricConnectionArtifactId
+    mcpConnectionKey: mcpConnectionKey
+    a2aConnectionTarget: a2aConnectionTarget
   }
 }
 
