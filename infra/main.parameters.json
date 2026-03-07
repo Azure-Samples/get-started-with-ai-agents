@@ -32,6 +32,9 @@
     "searchServiceName": {
       "value": "${AZURE_SEARCH_SERVICE_NAME}"
     },
+    "searchServiceSku": {
+      "value": "${AZURE_SEARCH_SERVICE_SKU=basic}"
+    },
     "applicationInsightsName": {
       "value": "${AZURE_APPLICATION_INSIGHTS_NAME}"
     },
@@ -43,6 +46,9 @@
     },
     "storageAccountName": {
       "value": "${AZURE_STORAGE_ACCOUNT_NAME}"
+    },
+    "storageAccountSku": {
+      "value": "${AZURE_STORAGE_ACCOUNT_SKU=Standard_LRS}"
     },
     "logAnalyticsWorkspaceName": {
       "value": "${AZURE_LOG_ANALYTICS_WORKSPACE_NAME}"

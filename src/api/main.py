@@ -22,7 +22,7 @@ logger = None
 
 @contextlib.asynccontextmanager
 async def lifespan(app: fastapi.FastAPI):
-    agent_version_obj = None
+    agent_version_details = None
     proj_endpoint = os.environ.get("AZURE_EXISTING_AIPROJECT_ENDPOINT")
     agent_id = os.environ.get("AZURE_EXISTING_AGENT_ID")    
     try:
@@ -59,19 +59,19 @@ async def lifespan(app: fastapi.FastAPI):
                 try: 
                     agent_name = agent_id.split(":")[0]
                     agent_version = agent_id.split(":")[1]
-                    agent_version_obj = await project_client.agents.get_version(agent_name, agent_version)
-                    logger.info(f"Fetched agent, agent ID: {agent_version_obj.id}")
+                    agent_version_details = await project_client.agents.get_version(agent_name, agent_version)
+                    logger.info(f"Fetched agent, agent ID: {agent_version_details.id}")
                 except Exception as e:
                     logger.error(f"Error fetching agent: {e}", exc_info=True)
 
-            if not agent_version_obj:
+            if not agent_version_details:
                 message = "Fail to fetch agent. Ensure qunicorn.py created one or set AZURE_EXISTING_AGENT_ID."
                 if env_file:
                     message += f" (Environment from {env_file})"
                 raise RuntimeError(message)
 
             app.state.ai_project = project_client
-            app.state.agent_version_obj = agent_version_obj
+            app.state.agent_version_details = agent_version_details
             yield
 
     except Exception as e:

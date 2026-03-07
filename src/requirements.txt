@@ -4,11 +4,14 @@ gunicorn==23.0.0
 azure-identity==1.19.0
 aiohttp==3.13.2
 openai
-azure_ai_projects==2.0.0b2
-azure-core==1.36.0  # other versions might not compatible
+azure_ai_projects==2.0.0
+azure-core==1.38.0
 azure-core-tracing-opentelemetry==1.0.0b12
-azure-monitor-opentelemetry-exporter==1.0.0b44
+azure-monitor-opentelemetry-exporter==1.0.0b48
 azure-monitor-opentelemetry==1.8.1 # version such as 1.6.11 isn't compatible
+opentelemetry-sdk==1.39.0
+opentelemetry-api==1.39.0
+opentelemetry-semantic-conventions==0.60b0
 azure-search-documents
 urllib3==2.5.0
 setuptools==80.9.0

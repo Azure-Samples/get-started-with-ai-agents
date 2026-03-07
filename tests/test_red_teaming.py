@@ -8,14 +8,14 @@ from pprint import pprint
 from azure.identity import DefaultAzureCredential
 from azure.ai.projects import AIProjectClient
 from azure.ai.projects.models import (
-    AgentVersionObject,
+    AgentVersionDetails,
     EvaluationTaxonomy,
     AzureAIAgentTarget,
     AgentTaxonomyInput,
     RiskCategory,
 )
 import time
-from azure.ai.projects.models import EvaluationTaxonomy, AgentVersionObject
+from azure.ai.projects.models import EvaluationTaxonomy
 from test_utils import retrieve_agent, retrieve_endpoint, Colors
 
 def test_red_teaming() -> None:
@@ -101,7 +101,7 @@ def test_red_teaming() -> None:
         Colors.reset()
 
 
-def _get_tool_descriptions(agent: AgentVersionObject):
+def _get_tool_descriptions(agent: AgentVersionDetails):
     tools = agent.definition.get("tools", [])
     tool_descriptions = []
     for tool in tools:

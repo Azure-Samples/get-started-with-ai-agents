@@ -40,12 +40,16 @@ param applicationInsightsName string = ''
 param aiServicesName string = ''
 @description('The Azure Search resource name. If ommited will be generated')
 param searchServiceName string = ''
+@description('The Azure Search SKU')
+param searchServiceSku string = 'basic'
 @description('The Azure Search connection name. If ommited will use a default value')
 param searchConnectionName string = ''
 @description('The search index name')
 param aiSearchIndexName string = ''
 @description('The Azure Storage Account resource name. If ommited will be generated')
 param storageAccountName string = ''
+@description('The Azure Storage Account SKU')
+param storageAccountSku string = 'Standard_LRS'
 @description('The log analytics workspace name. If ommited will be generated')
 param logAnalyticsWorkspaceName string = ''
 @description('Type of the user or app to assign application roles')
@@ -207,6 +211,7 @@ module ai 'core/host/ai-environment.bicep' = if (empty(azureExistingAIProjectRes
     parentDeploymentName: deployment().name
     deploymentSeed: seed
     storageAccountName: resolvedStorageAccountName
+    storageAccountSku: storageAccountSku
     aiServicesName: !empty(aiServicesName) ? aiServicesName : 'aoai-${resourceToken}'
     aiProjectName: !empty(aiProjectName) ? aiProjectName : 'proj-${resourceToken}'
     aiServiceModelDeployments: aiDeployments
@@ -215,6 +220,7 @@ module ai 'core/host/ai-environment.bicep' = if (empty(azureExistingAIProjectRes
       ? ''
       : !empty(applicationInsightsName) ? applicationInsightsName : '${abbrs.insightsComponents}${resourceToken}'
     searchServiceName: resolvedSearchServiceName
+    searchServiceSku: searchServiceSku
     appInsightConnectionName: 'appinsights-connection'
     aoaiConnectionName: 'aoai-connection'
   }

@@ -6,6 +6,8 @@ param location string
 param aiProjectName string
 @description('The Storage Account resource name.')
 param storageAccountName string
+@description('The Storage Account SKU.')
+param storageAccountSku string = 'Standard_LRS'
 @description('The AI Services resource name.')
 param aiServicesName string
 @description('The AI Services model deployments.')
@@ -16,6 +18,8 @@ param logAnalyticsName string = ''
 param applicationInsightsName string = ''
 @description('The Azure Search resource name.')
 param searchServiceName string = ''
+@description('The Azure Search SKU.')
+param searchServiceSku string = 'basic'
 @description('The Application Insights connection name.')
 param appInsightConnectionName string
 param tags object = {}
@@ -34,6 +38,9 @@ module storageAccount '../storage/storage-account.bicep' = {
     location: location
     tags: tags
     name: storageAccountName
+    sku: {
+      name: storageAccountSku
+    }
     containers: [
       {
         name: 'default'
@@ -141,6 +148,9 @@ module searchService '../search/search-services.bicep' =
       location: location
       tags: tags
       name: searchServiceName
+      sku: {
+        name: searchServiceSku
+      }
       semanticSearch: 'free'
       authOptions: { aadOrApiKey: { aadAuthFailureMode: 'http401WithBearerChallenge'}}
       projectName: cognitiveServices.outputs.projectName
