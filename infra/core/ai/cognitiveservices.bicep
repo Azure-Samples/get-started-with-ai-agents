@@ -11,9 +11,10 @@ param appInsightsId string
 param appInsightConnectionString string
 param appInsightConnectionName string
 param aoaiConnectionName string
-param storageAccountId string
-param storageAccountConnectionName string
-param storageAccountBlobEndpoint string
+param useStorageAccount bool = true
+param storageAccountId string = ''
+param storageAccountConnectionName string = ''
+param storageAccountBlobEndpoint string = ''
 
 @allowed([ 'Enabled', 'Disabled' ])
 param publicNetworkAccess string = 'Enabled'
@@ -83,7 +84,7 @@ resource appInsightConnection 'Microsoft.CognitiveServices/accounts/connections@
 }
 
 // Creates the Azure Foundry connection to your Azure Storage resource
-resource storageAccountConnection 'Microsoft.CognitiveServices/accounts/connections@2025-04-01-preview' = {
+resource storageAccountConnection 'Microsoft.CognitiveServices/accounts/connections@2025-04-01-preview' = if (useStorageAccount) {
   name: storageAccountConnectionName
   parent: account
   properties: {
@@ -139,5 +140,5 @@ output projectEndpoint string = aiProject.properties.endpoints['AI Foundry API']
 output PrincipalId string = account.identity.principalId
 output accountPrincipalId string = account.identity.principalId
 output projectPrincipalId string = aiProject.identity.principalId
-output storageConnectionId string = storageAccountConnection.id
-output storageConnectionName string = storageAccountConnection.name
+output storageConnectionId string = useStorageAccount ? storageAccountConnection.id : ''
+output storageConnectionName string = useStorageAccount ? storageAccountConnection.name : ''

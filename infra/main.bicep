@@ -113,6 +113,8 @@ param embedDeploymentSku string = 'Standard'
 param embedDeploymentCapacity int = 30
 
 param useApplicationInsights bool = true
+@description('Do we want to use the Azure Storage Account')
+param useStorageAccount bool = true
 @description('Do we want to use the Azure AI Search')
 param useSearchService bool = false
 
@@ -193,14 +195,16 @@ var logAnalyticsWorkspaceResolvedName = !useApplicationInsights
       ? logAnalyticsWorkspaceName
       : '${abbrs.operationalInsightsWorkspaces}${resourceToken}'
 
-var resolvedSearchServiceName = !useSearchService
+var resolvedSearchServiceName = !useSearchService || !useStorageAccount
   ? ''
   : !empty(searchServiceName) ? searchServiceName : '${abbrs.searchSearchServices}${resourceToken}'
  // Storage account name used when we need to reference an existing storage account (must be deterministic for Bicep diagnostics).
 // Note: for normal deployments (templateValidationMode == false), resourceTokenStable == resourceToken.
-var resolvedStorageAccountName = !empty(storageAccountName)
-  ? storageAccountName
-  : '${abbrs.storageStorageAccounts}${resourceTokenStable}' 
+var resolvedStorageAccountName = !useStorageAccount
+  ? ''
+  : !empty(storageAccountName)
+      ? storageAccountName
+      : '${abbrs.storageStorageAccounts}${resourceTokenStable}' 
 
 module ai 'core/host/ai-environment.bicep' = if (empty(azureExistingAIProjectResourceId) || alwaysReprovision) {
   name: 'ai'
@@ -223,6 +227,7 @@ module ai 'core/host/ai-environment.bicep' = if (empty(azureExistingAIProjectRes
     searchServiceSku: searchServiceSku
     appInsightConnectionName: 'appinsights-connection'
     aoaiConnectionName: 'aoai-connection'
+    useStorageAccount: useStorageAccount
   }
 }
 
@@ -238,12 +243,12 @@ var searchServiceEndpoint_final = empty(searchServiceEndpoint) ? searchServiceEn
 
 var searchConnectionId_final = empty(searchConnectionId) ? searchConnectionIdFromAIOutput : searchConnectionId
 
-resource resolvedStorageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' existing = {
+resource resolvedStorageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' existing = if (useStorageAccount) {
   name: resolvedStorageAccountName
   scope: rg
 }
 
-var storageAccountResourceId_final = resolvedStorageAccount.id
+var storageAccountResourceId_final = useStorageAccount ? resolvedStorageAccount.id : ''
 
 // If bringing an existing AI project, set up the log analytics workspace here
 module logAnalytics 'core/monitor/loganalytics.bicep' = if (!empty(azureExistingAIProjectResourceId) && !alwaysReprovision) {
@@ -337,6 +342,7 @@ module api 'api.bicep' = {
     storageAccountResourceId: storageAccountResourceId_final
     blobContainerName: blobContainerName
     useAzureAISearch: useSearchService
+    useStorageAccount: useStorageAccount
   }
 }
 
@@ -433,7 +439,7 @@ module backendRoleSearchServiceContributorRG 'core/security/role.bicep' = if (us
   }
 }
 
-module backendRoleStorageAccountContributorRG 'core/security/role.bicep' = if (useSearchService) {
+module backendRoleStorageAccountContributorRG 'core/security/role.bicep' = if (useSearchService && useStorageAccount) {
   name: 'backend-role-storage-account-contributor-rg'
   scope: rg
   params: {
@@ -443,7 +449,7 @@ module backendRoleStorageAccountContributorRG 'core/security/role.bicep' = if (u
   }
 }
 
-module backendRoleStorageBlobDataContributorRG 'core/security/role.bicep' = if (useSearchService) {
+module backendRoleStorageBlobDataContributorRG 'core/security/role.bicep' = if (useSearchService && useStorageAccount) {
   name: 'backend-role-storage-blob-data-contributor-rg'
   scope: rg
   params: {
@@ -483,7 +489,7 @@ module userRoleSearchServiceContributorRG 'core/security/role.bicep' = if (useSe
   }
 }
 
-module userRoleStorageAccountContributorRG 'core/security/role.bicep' = if (useSearchService) {
+module userRoleStorageAccountContributorRG 'core/security/role.bicep' = if (useSearchService && useStorageAccount) {
   name: 'user-role-storage-account-contributor-rg'
   scope: rg
   params: {
@@ -493,7 +499,7 @@ module userRoleStorageAccountContributorRG 'core/security/role.bicep' = if (useS
   }
 }
 
-module userRoleStorageBlobDataContributorRG 'core/security/role.bicep' = if (useSearchService) {
+module userRoleStorageBlobDataContributorRG 'core/security/role.bicep' = if (useSearchService && useStorageAccount) {
   name: 'user-role-storage-blob-data-contributor-rg'
   scope: rg
   params: {
@@ -529,8 +535,9 @@ output AZURE_EXISTING_AGENT_ID string = agentID
 output AZURE_EXISTING_AIPROJECT_ENDPOINT string = projectEndpoint
 output ENABLE_AZURE_MONITOR_TRACING bool = enableAzureMonitorTracing
 output OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT bool = otelInstrumentationGenAICaptureMessageContent
-output STORAGE_ACCOUNT_RESOURCE_ID string = storageAccountResourceId_final
-output AZURE_BLOB_CONTAINER_NAME string = blobContainerName
+output STORAGE_ACCOUNT_RESOURCE_ID string = useStorageAccount ? storageAccountResourceId_final : ''
+output AZURE_BLOB_CONTAINER_NAME string = useStorageAccount ? blobContainerName : ''
+output USE_STORAGE_ACCOUNT bool = useStorageAccount
 
 // Outputs required by azd for ACA
 output AZURE_CONTAINER_ENVIRONMENT_NAME string = containerApps.outputs.environmentName
