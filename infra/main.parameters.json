@@ -32,6 +32,12 @@
     "searchServiceName": {
       "value": "${AZURE_SEARCH_SERVICE_NAME}"
     },
+    "searchServiceSku": {
+      "value": "${AZURE_SEARCH_SERVICE_SKU=basic}"
+    },
+    "searchConnectionName": {
+      "value": "${AZURE_AI_SEARCH_CONNECTION_NAME}"
+    },
     "applicationInsightsName": {
       "value": "${AZURE_APPLICATION_INSIGHTS_NAME}"
     },
@@ -44,6 +50,9 @@
     "storageAccountName": {
       "value": "${AZURE_STORAGE_ACCOUNT_NAME}"
     },
+    "storageAccountSku": {
+      "value": "${AZURE_STORAGE_ACCOUNT_SKU=Standard_LRS}"
+    },
     "logAnalyticsWorkspaceName": {
       "value": "${AZURE_LOG_ANALYTICS_WORKSPACE_NAME}"
     },
@@ -52,6 +61,9 @@
     },
     "useApplicationInsights": {
       "value": "${USE_APPLICATION_INSIGHTS=true}"
+    },
+    "useStorageAccount": {
+      "value": "${USE_STORAGE_ACCOUNT=true}"
     },
     "useSearchService": {
       "value": "${USE_AZURE_AI_SEARCH_SERVICE=false}"

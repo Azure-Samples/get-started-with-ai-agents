@@ -5,7 +5,7 @@ param tags object = {}
 param projectName string
 param serviceName string
 param sku object = {
-  name: 'standard'
+  name: 'basic'
 }
 
 param authOptions object = {}
@@ -48,9 +48,7 @@ resource search 'Microsoft.Search/searchServices@2024-06-01-preview' = {
   name: name
   location: location
   tags: tags  
-  sku: {
-    name: 'basic'
-  }
+  sku: sku
   identity: searchIdentityProvider  
   properties: {
     authOptions: authOptions
