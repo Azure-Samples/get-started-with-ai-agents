@@ -68,6 +68,9 @@
     "useSearchService": {
       "value": "${USE_AZURE_AI_SEARCH_SERVICE=false}"
     },
+    "functionAppName": {
+      "value": "${FUNCTION_APP_NAME}"
+    },
     "agentName": {
       "value": "${AZURE_AI_AGENT_NAME=agent-template-assistant}"
     },

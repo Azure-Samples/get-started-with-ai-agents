@@ -117,6 +117,8 @@ param useApplicationInsights bool = true
 param useStorageAccount bool = true
 @description('Do we want to use the Azure AI Search')
 param useSearchService bool = false
+@description('The Function App name')
+param functionAppName string = ''
 
 @description('Do we want to use the Azure Monitor tracing')
 param enableAzureMonitorTracing bool = false
@@ -245,11 +247,10 @@ var resolvedSearchServiceName = !useSearchService || !useStorageAccount
   : !empty(searchServiceName) ? searchServiceName : '${abbrs.searchSearchServices}${resourceToken}'
  // Storage account name used when we need to reference an existing storage account (must be deterministic for Bicep diagnostics).
 // Note: for normal deployments (templateValidationMode == false), resourceTokenStable == resourceToken.
-var resolvedStorageAccountName = !useStorageAccount
-  ? ''
-  : !empty(storageAccountName)
-      ? storageAccountName
-      : '${abbrs.storageStorageAccounts}${resourceTokenStable}' 
+// Function App always requires storage, so storage is created when useStorageAccount=true OR for Function App
+var resolvedStorageAccountName = !empty(storageAccountName)
+  ? storageAccountName
+  : '${abbrs.storageStorageAccounts}${resourceTokenStable}' 
 
 module ai 'core/host/ai-environment.bicep' = if (empty(azureExistingAIProjectResourceId) || alwaysReprovision) {
   name: 'ai'
@@ -297,12 +298,12 @@ var searchServiceEndpoint_final = empty(searchServiceEndpoint) ? searchServiceEn
 
 var searchConnectionId_final = empty(searchConnectionId) ? searchConnectionIdFromAIOutput : searchConnectionId
 
-resource resolvedStorageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' existing = if (useStorageAccount) {
+resource resolvedStorageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' existing = {
   name: resolvedStorageAccountName
   scope: rg
 }
 
-var storageAccountResourceId_final = useStorageAccount ? resolvedStorageAccount.id : ''
+var storageAccountResourceId_final = resolvedStorageAccount.id
 
 // If bringing an existing AI project, set up the log analytics workspace here
 module logAnalytics 'core/monitor/loganalytics.bicep' = if (!empty(azureExistingAIProjectResourceId) && !alwaysReprovision) {
@@ -314,6 +315,19 @@ module logAnalytics 'core/monitor/loganalytics.bicep' = if (!empty(azureExisting
     name: logAnalyticsWorkspaceResolvedName
   }
 }
+
+// If using Function App with existing AI project, deploy Application Insights
+module functionAppApplicationInsights 'core/monitor/applicationinsights.bicep' = if (!empty(azureExistingAIProjectResourceId) && !alwaysReprovision) {
+  name: 'functionapp-appinsights-${substring(uniqueString(deployment().name, seed), 0, 8)}'
+  scope: rg
+  params: {
+    location: location
+    tags: tags
+    name: '${abbrs.insightsComponents}${resourceToken}'
+    logAnalyticsWorkspaceId: logAnalytics!.outputs.id
+  }
+}
+
 var existingProjEndpoint = (!empty(azureExistingAIProjectResourceId) && !alwaysReprovision) ? format('https://{0}.services.ai.azure.com/api/projects/{1}',split(azureExistingAIProjectResourceId, '/')[8], split(azureExistingAIProjectResourceId, '/')[10]) : ''
 
 var projectResourceId = (!empty(azureExistingAIProjectResourceId) && !alwaysReprovision)
@@ -327,6 +341,10 @@ var projectEndpoint = (!empty(azureExistingAIProjectResourceId) && !alwaysReprov
 var resolvedApplicationInsightsName = !useApplicationInsights || !empty(azureExistingAIProjectResourceId)
   ? ''
   : !empty(applicationInsightsName) ? applicationInsightsName : '${abbrs.insightsComponents}${resourceToken}'
+
+var applicationInsightsConnectionString = !empty(azureExistingAIProjectResourceId) && !alwaysReprovision
+  ? functionAppApplicationInsights!.outputs.connectionString
+  : (empty(azureExistingAIProjectResourceId) || alwaysReprovision) ? ai!.outputs.applicationInsightsConnectionString : ''
 
 module monitoringMetricsContribuitorRoleAzureAIDeveloperRG 'core/security/appinsights-access.bicep' = if (!empty(resolvedApplicationInsightsName)) {
   name: 'monitoringmetricscontributor-role-azureai-developer-rg'
@@ -400,6 +418,79 @@ module api 'api.bicep' = {
   }
 }
 
+// Function App managed identity (must be created before role assignments)
+module functionAppIdentity 'core/security/user-assigned-identity.bicep' = {
+  name: 'function-app-identity'
+  scope: rg
+  params: {
+    name: '${abbrs.managedIdentityUserAssignedIdentities}func-${resourceToken}'
+    location: location
+    tags: tags
+  }
+}
+
+// Function App role assignments (must happen before Function App creation)
+module functionAppRoleStorageQueueDataContributor 'core/security/role.bicep' = {
+  name: 'functionapp-role-storage-queue-data-contributor'
+  scope: rg
+  dependsOn: [ai]
+  params: {
+    principalType: 'ServicePrincipal'
+    principalId: functionAppIdentity!.outputs.principalId
+    roleDefinitionId: '974c5e8b-45b9-4653-ba55-5f855dd0fb88' // Storage Queue Data Contributor
+  }
+}
+
+module functionAppRoleStorageBlobDataContributor 'core/security/role.bicep' = {
+  name: 'functionapp-role-storage-blob-data-contributor'
+  scope: rg
+  dependsOn: [ai]
+  params: {
+    principalType: 'ServicePrincipal'
+    principalId: functionAppIdentity!.outputs.principalId
+    roleDefinitionId: 'ba92f5b4-2d11-453d-a403-e96b0029c9fe' // Storage Blob Data Contributor
+  }
+}
+
+module functionAppRoleStorageFileDataContributor 'core/security/role.bicep' = {
+  name: 'functionapp-role-storage-file-data-contributor'
+  scope: rg
+  dependsOn: [ai]
+  params: {
+    principalType: 'ServicePrincipal'
+    principalId: functionAppIdentity!.outputs.principalId
+    roleDefinitionId: '69566ab7-960f-475b-8e7c-b3118f30c6bd' // Storage File Data Privileged Contributor
+  }
+}
+
+// Function App for queue triggers
+module functionApp 'core/host/function-app.bicep' = {
+  name: 'function-app'
+  scope: rg
+  dependsOn: [
+    ai
+    functionAppApplicationInsights
+    functionAppRoleStorageQueueDataContributor
+    functionAppRoleStorageBlobDataContributor
+    functionAppRoleStorageFileDataContributor
+    userRoleStorageAccountContributorRG
+    userRoleStorageBlobDataContributorRG
+    userRoleStorageFileDataContributorRG
+    userRoleStorageQueueDataContributorRG
+  ]
+  params: {
+    name: !empty(functionAppName) ? functionAppName : 'func-${resourceToken}'
+    location: location
+    tags: tags
+    appServicePlanName: 'plan-${resourceToken}'
+    appServicePlanSku: 'EP1'
+    storageAccountName: resolvedStorageAccountName
+    applicationInsightsConnectionString: applicationInsightsConnectionString
+    identityId: functionAppIdentity!.outputs.id
+    runtime: 'python'
+    runtimeVersion: '3.11'
+  }
+}
 
 
 module userRoleAzureAIDeveloper 'core/security/role.bicep' = {
@@ -543,7 +634,7 @@ module userRoleSearchServiceContributorRG 'core/security/role.bicep' = if (useSe
   }
 }
 
-module userRoleStorageAccountContributorRG 'core/security/role.bicep' = if (useSearchService && useStorageAccount) {
+module userRoleStorageAccountContributorRG 'core/security/role.bicep' = {
   name: 'user-role-storage-account-contributor-rg'
   scope: rg
   params: {
@@ -553,13 +644,33 @@ module userRoleStorageAccountContributorRG 'core/security/role.bicep' = if (useS
   }
 }
 
-module userRoleStorageBlobDataContributorRG 'core/security/role.bicep' = if (useSearchService && useStorageAccount) {
+module userRoleStorageBlobDataContributorRG 'core/security/role.bicep' = {
   name: 'user-role-storage-blob-data-contributor-rg'
   scope: rg
   params: {
     principalType: principalTypeOverride
     principalId: principalIdOverride
     roleDefinitionId: 'ba92f5b4-2d11-453d-a403-e96b0029c9fe'
+  }
+}
+
+module userRoleStorageFileDataContributorRG 'core/security/role.bicep' = {
+  name: 'user-role-storage-file-data-contributor-rg'
+  scope: rg
+  params: {
+    principalType: principalTypeOverride
+    principalId: principalIdOverride
+    roleDefinitionId: '69566ab7-960f-475b-8e7c-b3118f30c6bd' // Storage File Data Privileged Contributor
+  }
+}
+
+module userRoleStorageQueueDataContributorRG 'core/security/role.bicep' = {
+  name: 'user-role-storage-queue-data-contributor-rg'
+  scope: rg
+  params: {
+    principalType: principalTypeOverride
+    principalId: principalIdOverride
+    roleDefinitionId: '974c5e8b-45b9-4653-ba55-5f855dd0fb88' // Storage Queue Data Contributor
   }
 }
 
@@ -589,7 +700,7 @@ output AZURE_EXISTING_AGENT_ID string = agentID
 output AZURE_EXISTING_AIPROJECT_ENDPOINT string = projectEndpoint
 output ENABLE_AZURE_MONITOR_TRACING bool = enableAzureMonitorTracing
 output OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT bool = otelInstrumentationGenAICaptureMessageContent
-output STORAGE_ACCOUNT_RESOURCE_ID string = useStorageAccount ? storageAccountResourceId_final : ''
+output STORAGE_ACCOUNT_RESOURCE_ID string = storageAccountResourceId_final
 output AZURE_BLOB_CONTAINER_NAME string = useStorageAccount ? blobContainerName : ''
 output USE_STORAGE_ACCOUNT bool = useStorageAccount
 
@@ -601,3 +712,8 @@ output SERVICE_API_URI string = api.outputs.SERVICE_API_URI
 output SERVICE_API_ENDPOINTS array = ['${api.outputs.SERVICE_API_URI}']
 output SEARCH_CONNECTION_ID string = searchConnectionId_final
 output AZURE_CONTAINER_REGISTRY_ENDPOINT string = containerApps.outputs.registryLoginServer
+
+// Function App outputs
+output SERVICE_FUNCTION_APP_NAME string = functionApp.outputs.name
+output FUNCTION_APP_HOSTNAME string = functionApp.outputs.defaultHostname
+output FUNCTION_APP_PRINCIPAL_ID string = functionApp.outputs.principalId

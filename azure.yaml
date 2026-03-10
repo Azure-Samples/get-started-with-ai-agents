@@ -45,6 +45,10 @@ services:
     docker:
       image: api_and_frontend
       remoteBuild: true
+  function_app:
+    project: ./function_app
+    language: py
+    host: function
 pipeline:
   variables:
     - AZURE_RESOURCE_GROUP
@@ -59,6 +63,7 @@ pipeline:
     - AZURE_LOG_ANALYTICS_WORKSPACE_NAME
     - USE_CONTAINER_REGISTRY
     - USE_APPLICATION_INSIGHTS
+    - USE_STORAGE_ACCOUNT
     - USE_AZURE_AI_SEARCH_SERVICE
     - AZURE_AI_AGENT_NAME
     - AZURE_AI_AGENT_ID
