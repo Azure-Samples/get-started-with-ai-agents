@@ -8,6 +8,7 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+.azure
 
 # Node.js dependencies
 node_modules/
@@ -16,4 +17,3 @@ node_modules/
 
 # React build output
 src/api/static/react/
-test
