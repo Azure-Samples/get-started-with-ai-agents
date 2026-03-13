@@ -16,3 +16,4 @@ node_modules/
 
 # React build output
 src/api/static/react/
+test
