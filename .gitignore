@@ -8,7 +8,6 @@ venv/
 ENV/
 env.bak/
 venv.bak/
-.azure
 
 # Node.js dependencies
 node_modules/
