@@ -96,7 +96,7 @@ var bingCustomSearchKeys = listKeys(bingCustomSearch.id, '2020-06-10')
 var bingSearchEndpoint = bingSearch.properties.endpoint
 var bingCustomSearchEndpoint = bingCustomSearch.properties.endpoint
 
-module storageAccount '../storage/storage-account.bicep' = {
+module storageAccount '../storage/storage-account.bicep' = if (useStorageAccount) {
   name: 'storageAccount'
   params: {
     location: location
@@ -217,12 +217,12 @@ module projectStorageRoleAssignment  '../../core/security/role.bicep' = if (useS
 }
 
 // Reference the storage account for scoped role assignments
-resource existingStorageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' existing = {
+resource existingStorageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' existing = if (useStorageAccount) {
   name: storageAccountName
 }
 
 // Storage Queue Data Contributor role assignment scoped to storage account for project
-resource projectStorageQueueRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+resource projectStorageQueueRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (useStorageAccount) {
   name: guid(subscription().id, existingStorageAccount.id, 'project', '974c5e8b-45b9-4653-ba55-5f855dd0fb88')
   scope: existingStorageAccount
   properties: {
@@ -236,7 +236,7 @@ resource projectStorageQueueRoleAssignment 'Microsoft.Authorization/roleAssignme
 }
 
 // Storage Queue Data Contributor role assignment scoped to storage account for account
-resource accountStorageQueueRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+resource accountStorageQueueRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (useStorageAccount) {
   name: guid(subscription().id, existingStorageAccount.id, 'account', '974c5e8b-45b9-4653-ba55-5f855dd0fb88')
   scope: existingStorageAccount
   properties: {
@@ -288,8 +288,8 @@ module searchServiceStorageRoleAssignment '../../core/security/role.bicep' =
 
 
 // Outputs
-output storageAccountId string = storageAccount!.outputs.id
-output storageAccountName string = storageAccount!.outputs.name
+output storageAccountId string = useStorageAccount ? storageAccount!.outputs.id : ''
+output storageAccountName string = useStorageAccount ? storageAccount!.outputs.name : ''
 output storageConnectionId string = useStorageAccount ? cognitiveServices.outputs.storageConnectionId : ''
 output storageConnectionName string = useStorageAccount ? cognitiveServices.outputs.storageConnectionName : ''
 

@@ -298,12 +298,12 @@ var searchServiceEndpoint_final = empty(searchServiceEndpoint) ? searchServiceEn
 
 var searchConnectionId_final = empty(searchConnectionId) ? searchConnectionIdFromAIOutput : searchConnectionId
 
-resource resolvedStorageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' existing = {
+resource resolvedStorageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' existing = if (useStorageAccount) {
   name: resolvedStorageAccountName
   scope: rg
 }
 
-var storageAccountResourceId_final = resolvedStorageAccount.id
+var storageAccountResourceId_final = useStorageAccount ? resolvedStorageAccount.id : ''
 
 // If bringing an existing AI project, set up the log analytics workspace here
 module logAnalytics 'core/monitor/loganalytics.bicep' = if (!empty(azureExistingAIProjectResourceId) && !alwaysReprovision) {
@@ -700,7 +700,7 @@ output AZURE_EXISTING_AGENT_ID string = agentID
 output AZURE_EXISTING_AIPROJECT_ENDPOINT string = projectEndpoint
 output ENABLE_AZURE_MONITOR_TRACING bool = enableAzureMonitorTracing
 output OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT bool = otelInstrumentationGenAICaptureMessageContent
-output STORAGE_ACCOUNT_RESOURCE_ID string = storageAccountResourceId_final
+output STORAGE_ACCOUNT_RESOURCE_ID string = useStorageAccount ? storageAccountResourceId_final : ''
 output AZURE_BLOB_CONTAINER_NAME string = useStorageAccount ? blobContainerName : ''
 output USE_STORAGE_ACCOUNT bool = useStorageAccount
 
