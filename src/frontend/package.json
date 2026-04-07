@@ -41,7 +41,7 @@
     "remark-math": "^6.0.0",
     "remark-parse": "^11.0.0",
     "remark-supersub": "^1.0.0",
-    "vite": "^6.4.1"
+    "vite": "^6.4.2"
   },
   "devDependencies": {
     "@types/node": "22.14.1",
