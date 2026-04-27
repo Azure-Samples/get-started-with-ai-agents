@@ -1,9 +1,9 @@
 ---
-name: deploy
+name: up
 description: Creates an azd environment, checks prerequisites (RBAC, model quota), provisions infrastructure via `azd up`, and health-checks the deployed app.
 ---
 
-# Deploy Skill
+# Up Skill
 
 ## Goal
 
@@ -16,7 +16,7 @@ executing, in case it has been updated since the last run.
 
 Then **print the full list of steps** so the user knows what to expect:
 
-> **Deploy Skill — Steps Overview**
+> **Up Skill — Steps Overview**
 >
 > 1. Resolve subscription
 > 2. Check RBAC permissions
@@ -315,14 +315,14 @@ $existingEnvs = azd env list -o json 2>$null | ConvertFrom-Json
 #### 7a. Generate a suggested name
 
 Scan `$existingEnvs` for names matching the pattern `<prefix><number>` (e.g., `myapp1`,
-`test-env3`, `howie-qt-2`). If found, take the one with the **highest number** and suggest
-the next increment (e.g., `myapp2`, `test-env4`, `howie-qt-3`).
+`test-env3`, `agent-qt-2`). If found, take the one with the **highest number** and suggest
+the next increment (e.g., `myapp2`, `test-env4`, `agent-qt-3`).
 
 If no numbered environments exist, generate a default name:
 
 ```powershell
 $suffix = -join ((0..9) + ('a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z') | Get-Random -Count 6)
-$suggestedName = "howie-qt-$suffix"
+$suggestedName = "agent-qt-$suffix"
 ```
 
 #### 7b. Confirm with the user
