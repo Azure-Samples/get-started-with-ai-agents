@@ -53,7 +53,7 @@ You can run this template virtually by using GitHub Codespaces. The button will 
     [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/Azure-Samples/get-started-with-ai-agents)
 
 2. Open a terminal window
-3. Continue with the [deploying steps](#deploying-with-azd)
+3. Continue with the [deploying steps](#deploying-to-azure)
 
 </details>
 
@@ -70,7 +70,7 @@ A related option is VS Code Dev Containers, which will open the project in your 
     [![Open in Dev Containers](https://img.shields.io/static/v1?style=for-the-badge&label=Dev%20Containers&message=Open&color=blue&logo=visualstudiocode)](https://vscode.dev/redirect?url=vscode://ms-vscode-remote.remote-containers/cloneInVolume?url=https://github.com/Azure-Samples/get-started-with-ai-agents)
 
 3. In the VS Code window that opens, once the project files show up (this may take several minutes), open a terminal window.
-4. Continue with the [deploying steps](#deploying-with-azd).
+4. Continue with the [deploying steps](#deploying-to-azure).
 
 </details>
 
@@ -95,7 +95,7 @@ If you're not using one of the above options for opening the project, then you'l
    ```
 
 3. Open the project folder in your terminal or editor.
-4. Continue with the [deploying steps](#deploying-with-azd).
+4. Continue with the [deploying steps](#deploying-to-azure).
 
 </details>
 
@@ -104,7 +104,7 @@ If you're not using one of the above options for opening the project, then you'l
 
 ### Develop with Local Development Server
 
-You can optionally use a local development server to test app changes locally. Make sure you first [deployed the app](#deploying-with-azd) to Azure before running the development server.
+You can optionally use a local development server to test app changes locally. Make sure you first [deployed the app](#deploying-to-azure) to Azure before running the development server.
 
 1. Create a [Python virtual environment](https://docs.python.org/3/tutorial/venv.html#creating-virtual-environments) and activate it.
 
@@ -246,9 +246,13 @@ The default for the model capacity in deployment is 80k tokens for chat model an
 </details>
 
 
-### Deploying with AZD
+### Deploying to Azure
 
-Once you've opened the project in [Codespaces](#github-codespaces) or in [Dev Containers](#vs-code-dev-containers) or [locally](#local-environment), you can deploy it to Azure following the following steps.
+Once you've opened the project in [Codespaces](#github-codespaces) or in [Dev Containers](#vs-code-dev-containers) or [locally](#local-environment), choose one of the options below to deploy to Azure.
+
+#### Option A: `azd up` (7–15 minutes)
+
+If you have experience with `azd` templates, run directly in the terminal:
 
 1. (Optional) If you would like to customize the deployment to [disable resources](deploy_customization.md#enabling-and-disabling-resources-provision), [customize resource names](deploy_customization.md#customizing-resource-names), [customize the models](deploy_customization.md#customizing-model-deployments) or [increase quota](deploy_customization.md#setting-models-capacity-and-deployment-sku), you can follow those steps now.
 
@@ -266,27 +270,51 @@ Once you've opened the project in [Codespaces](#github-codespaces) or in [Dev Co
     azd up
     ```
 
-3. You will be prompted to provide an `azd` environment name (like "azureaiapp"), select a subscription from your Azure account, and select a location which has quota for all the resources. Then, it will provision the resources in your account and deploy the latest code.
+3. You will be prompted to provide an `azd` environment name (like "azureaiapp"), select a subscription from your Azure account, and select a location which has quota for all the resources. Then, it will provision the resources in your account and deploy the latest code. When `azd` has finished deploying, you'll see an endpoint URI in the command output. Visit that URI, and you should see the app! 🎉
 
     - For guidance on selecting a region with quota and model availability, follow the instructions in the [quota recommendations](#quota-recommendations) section and ensure that your model is available in your selected region by checking the [list of models supported by Foundry Agent Service](https://learn.microsoft.com/azure/ai-services/agents/concepts/model-region-support)
-    - This deployment will take 7-10 minutes to provision the resources in your account and set up the solution with sample data.
+    - This deployment will take 7–15 minutes to provision the resources in your account and set up the solution with sample data.
     - If you get an error or timeout with deployment, changing the location can help, as there may be availability constraints for the resources. You can do this by running `azd down` and deleting the `.azure` folder from your code, and then running `azd up` again and selecting a new region.
 
     **NOTE!** If you get authorization failed and/or permission related errors during the deployment, please refer to the Azure account requirements in the [Prerequisites](#prerequisites) section. If you were recently granted these permissions, it may take a few minutes for the authorization to apply.
 
-4. When `azd` has finished deploying, you'll see an endpoint URI in the command output. Visit that URI, and you should see the app! 🎉
+#### Option B: Copilot-assisted `/up` (~40 minutes)
 
-    - From here, you can interact with the agent. Try chatting with the agent by asking for a joke, or you could try a more specific query to see the agent's citation capabilities. By default, this solution uploads two documents from the `src/files` folder. To see the agent use this information, try asking about Contoso's products.
+If you're new to `azd` templates and want guided assistance, use the Copilot CLI:
 
-    - You can view information about your deployment with:
+1. Launch the Copilot CLI in the terminal:
 
-        ```shell
-        azd show
-        ```
+    ```bash
+    copilot
+    ```
+
+2. Once the Copilot CLI is running, type:
+
+    ```
+    /up
+    ```
+
+    Copilot will walk you through each step interactively — checking prerequisites
+    (RBAC, model quota), selecting your subscription and region, provisioning
+    infrastructure, and health-checking the deployed app.
+
+3. Follow the prompts and wait for deployment to complete. You'll get a web app URL when finished.
+
+    See [up-example.md](../.github/skills/up/up-example.md) for a sample interaction.
+
+#### After deployment
+
+4. From here, you can interact with the agent. Try chatting with the agent by asking for a joke, or you could try a more specific query to see the agent's citation capabilities. By default, this solution uploads two documents from the `src/files` folder. To see the agent use this information, try asking about Contoso's products.
+
+   You can view information about your deployment with:
+
+   ```shell
+   azd show
+   ```
 
 5. (Optional) Now that your app has deployed, you can view your resources in the Azure Portal and your deployments in Microsoft Foundry.
-    - In the [Azure Portal](https://portal.azure.com/), navigate to your environment's resource group. The name will be `rg-[your environment name]`. Here, you should see your container app, storage account, and all of the other [resources](#resources) that are created in the deployment.
-    - In the [Microsoft Foundry Portal](https://ai.azure.com/), select your project. If you navigate to the Agents tab, you should be able to view your new agent, named `agent-template-assistant`. If you navigate to the Models and Endpoints tab, you should see your AI Services connection with your model deployments.
+   - In the [Azure Portal](https://portal.azure.com/), navigate to your environment's resource group. The name will be `rg-[your environment name]`. Here, you should see your container app, storage account, and all of the other [resources](#resources) that are created in the deployment.
+   - In the [Microsoft Foundry Portal](https://ai.azure.com/), select your project. If you navigate to the Agents tab, you should be able to view your new agent, named `agent-template-assistant`. If you navigate to the Models and Endpoints tab, you should see your AI Services connection with your model deployments.
 
 6. (Optional) You can use a local development server to test app changes locally. To do so, follow the steps in [local deployment server](#develop-with-local-development-server) after your app is deployed.
 
