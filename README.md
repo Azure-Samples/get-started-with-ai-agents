@@ -62,12 +62,38 @@ Here is a screenshot showing the chatting web application with requests and resp
 
 1. Click `Open in GitHub Codespaces` or `Dev Containers` button above
 2. Wait for the environment to load
-3. Run the following commands in the terminal:
+3. Deploy to Azure — choose one of the options below:
+
+   #### Option A: `azd up` (7–15 minutes)
+
+   If you have experience with `azd` templates, run directly in the terminal:
+
    ```bash
    azd up
    ```
-4. Follow the prompts to select your Azure subscription and region
-5. Wait for deployment to complete (5-20 minutes) - you'll get a web app URL when finished
+
+   Follow the prompts to select your Azure subscription and region, then wait for
+   deployment to complete — you’ll get a web app URL when finished.
+
+   #### Option B: Copilot-assisted `/up` (~40 minutes)
+
+   If you’re new to `azd` templates and want guided assistance, use the Copilot CLI:
+
+   ```bash
+   copilot
+   ```
+
+   Then type `/up` in the Copilot CLI:
+
+   ```
+   /up
+   ```
+
+   Copilot will walk you through each step
+   interactively — checking prerequisites (RBAC, model quota), selecting your
+   subscription and region, provisioning infrastructure, and health-checking the
+   deployed app.
+   See [up-example.md](.github/skills/up/up-example.md) for a sample interaction.
 
 For detailed deployment options and troubleshooting, see the [full deployment guide](./docs/deployment.md).
 **After deployment, try these [sample questions](./docs/sample_questions.md) to test your agent.**
