@@ -280,6 +280,8 @@ If you have experience with `azd` templates, run directly in the terminal:
 
 #### Option B: Copilot-assisted `/up` (~40 minutes)
 
+> ⚠️ **Important:** The `/up` skill only works in the **Copilot CLI terminal** (launched via the `copilot` command). It does **not** work in the VS Code Copilot Chat window.
+
 If you're new to `azd` templates and want guided assistance, use the Copilot CLI:
 
 1. Launch the Copilot CLI in the terminal:

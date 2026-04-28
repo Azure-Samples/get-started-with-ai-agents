@@ -77,6 +77,8 @@ Here is a screenshot showing the chatting web application with requests and resp
 
    #### Option B: Copilot-assisted `/up` (~40 minutes)
 
+   > ⚠️ **Important:** The `/up` skill only works in the **Copilot CLI terminal** (launched via the `copilot` command). It does **not** work in the VS Code Copilot Chat window.
+
    If you’re new to `azd` templates and want guided assistance, use the Copilot CLI:
 
    ```bash
