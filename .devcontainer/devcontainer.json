@@ -1,5 +1,5 @@
 {
-    "name": "get-started-with-ai-agents",
+    "name": "get-started-with-ai-chat",
     "image": "mcr.microsoft.com/devcontainers/python:3.11-bullseye",
     "forwardPorts": [50505],
     "features": {
