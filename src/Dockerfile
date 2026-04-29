@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM python:3.13.9-slim-bookworm
+FROM python:3.13.13-slim-bookworm
 
 WORKDIR /code
 
@@ -16,7 +16,7 @@ RUN apt-get update \
     && apt-get install -y curl \
     && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
     && apt-get install -y nodejs \
-    && npm install -g pnpm@10.6.0 \
+    && npm install -g pnpm@10.33.2 \
     && node --version \
     && pnpm --version
 

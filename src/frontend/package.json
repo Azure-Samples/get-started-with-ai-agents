@@ -13,7 +13,7 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "packageManager": "pnpm@10.6.0",
+  "packageManager": "pnpm@10.33.2",
   "dependencies": {
     "@fluentui-copilot/react-copilot": "0.23.3",
     "@fluentui-copilot/react-copilot-chat": "0.9.6",
