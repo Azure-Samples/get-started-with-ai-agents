@@ -1,0 +1,34 @@
+{
+  "protected": [
+    {
+      "file": "src/api/routes.py",
+      "line": 168,
+      "method": "GET",
+      "path": "/",
+      "auth_protected": true
+    },
+    {
+      "file": "src/api/routes.py",
+      "line": 250,
+      "method": "GET",
+      "path": "/chat/history",
+      "auth_protected": true
+    },
+    {
+      "file": "src/api/routes.py",
+      "line": 302,
+      "method": "POST",
+      "path": "/chat",
+      "auth_protected": true
+    }
+  ],
+  "unprotected": [
+    {
+      "file": "src/api/routes.py",
+      "line": 290,
+      "method": "GET",
+      "path": "/agent",
+      "auth_protected": false
+    }
+  ]
+}

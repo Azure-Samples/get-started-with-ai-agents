@@ -1,0 +1,155 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Update Azure-dependent pytest behavior",
+			"type": "shell",
+			"command": "echo done",
+			"args": [],
+			"isBackground": false,
+			"problemMatcher": [
+				"$gcc"
+			]
+		},
+		{
+			"label": "apply-skip-to-azure-tests",
+			"type": "shell",
+			"command": "cd \"c:\\Users\\Hassan\\Documents\\get-started-with-ai-agents\" && exit 0",
+			"args": [],
+			"isBackground": false,
+			"problemMatcher": [
+				"$gcc"
+			]
+		},
+		{
+			"label": "edit-skip-azure-tests",
+			"type": "shell",
+			"command": "powershell -NoProfile -Command \"Write-Output 'ready'\"",
+			"args": [],
+			"isBackground": false,
+			"problemMatcher": [
+				"$gcc"
+			]
+		},
+		{
+			"label": "patch-azure-test-skips",
+			"type": "shell",
+			"command": "echo patching",
+			"args": [],
+			"isBackground": false,
+			"problemMatcher": [
+				"$gcc"
+			]
+		},
+		{
+			"label": "prepare-fast-pytest",
+			"type": "shell",
+			"command": "cd \"c:\\Users\\Hassan\\Documents\\get-started-with-ai-agents\" && echo ready",
+			"args": [],
+			"isBackground": false,
+			"problemMatcher": [
+				"$gcc"
+			]
+		},
+		{
+			"label": "patch-tests-and-ignore",
+			"type": "shell",
+			"command": "powershell -NoProfile -Command \"Write-Output 'applying patches'\"",
+			"args": [],
+			"isBackground": false,
+			"problemMatcher": [
+				"$gcc"
+			]
+		},
+		{
+			"label": "apply-repo-speed-fixes",
+			"type": "shell",
+			"command": "pwd",
+			"args": [],
+			"isBackground": false,
+			"problemMatcher": [
+				"$gcc"
+			]
+		},
+		{
+			"label": "apply-file-edits",
+			"type": "shell",
+			"command": "powershell -NoProfile -Command \"Write-Output 'ready'\"",
+			"args": [],
+			"isBackground": false,
+			"problemMatcher": [
+				"$gcc"
+			]
+		},
+		{
+			"label": "apply-speed-fixes",
+			"type": "shell",
+			"command": "powershell -NoProfile -Command \"Write-Output ready\"",
+			"args": [],
+			"isBackground": false,
+			"problemMatcher": [
+				"$gcc"
+			]
+		},
+		{
+			"label": "commit-speed-fixes",
+			"type": "shell",
+			"command": "powershell -NoProfile -Command \"Set-Location 'c:\\Users\\Hassan\\Documents\\get-started-with-ai-agents' ; git status --short\"",
+			"args": [],
+			"isBackground": false,
+			"problemMatcher": [
+				"$gcc"
+			]
+		},
+		{
+			"label": "apply-patches",
+			"type": "shell",
+			"command": "powershell -NoProfile -Command \"Write-Output 'ready'\"",
+			"args": [],
+			"isBackground": false,
+			"problemMatcher": [
+				"$gcc"
+			]
+		},
+		{
+			"label": "apply-speed-fixes",
+			"type": "shell",
+			"command": "powershell -NoProfile -Command \"Write-Output 'tool ready'\"",
+			"args": [],
+			"isBackground": false,
+			"problemMatcher": [
+				"$gcc"
+			]
+		},
+		{
+			"label": "Create integration check script",
+			"type": "shell",
+			"command": "powershell -NoProfile -Command \"Write-Output 'ready'\"",
+			"args": [],
+			"isBackground": false,
+			"problemMatcher": [
+				"$gcc"
+			]
+		},
+		{
+			"label": "Create integration script",
+			"type": "shell",
+			"command": "echo placeholder",
+			"args": [],
+			"isBackground": false,
+			"problemMatcher": [
+				"$gcc"
+			]
+		},
+		{
+			"label": "noop",
+			"type": "shell",
+			"command": "echo noop",
+			"args": [],
+			"isBackground": false,
+			"problemMatcher": [
+				"$gcc"
+			]
+		}
+	]
+}

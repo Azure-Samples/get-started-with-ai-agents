@@ -106,6 +106,14 @@ For developers who want to run the application locally or customize the agent:
 
 - **[Local Development Guide](./docs/local_development.md)** - Set up a local development environment, customize the frontend (starting with AgentPreview.tsx), modify agent instructions and tools, and use evaluation to improve your code.
 
+Quick local workflow:
+
+- `make install` — create the Python virtualenv and install dependencies.
+- `make run` — start the app locally.
+- `make test` — run `pytest`.
+- `./scripts/start.sh` — start the app on Linux/macOS.
+- `.\scripts\start.ps1` — start the app on Windows.
+
 This guide covers:
 - Environment setup and prerequisites
 - Running the development server locally
