@@ -14,6 +14,8 @@ The format is based on [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.
 
 ### Fixed
 
+- `/agent` route was missing `auth_dependency` (BLOCKER 1 from `integration-report.md`); it now matches the protection applied to `/`, `/chat/history`, and `/chat`, so HTTP Basic auth covers all four routes when `WEB_APP_USERNAME` + `WEB_APP_PASSWORD` are set.
+
 ## [0.1.0-fork] — 2026-05-19
 
 ### Added
