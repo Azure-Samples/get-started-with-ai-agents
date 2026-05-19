@@ -1,3 +1,5 @@
-src/frontend/src/components/agents/AgentPreview.tsx:123:      const response = await fetch("/chat/history", {
-src/frontend/src/components/agents/AgentPreview.tsx:229:      const response = await fetch("/chat", {
-src/frontend/src/components/App.tsx:24:        const response = await fetch("/agent", {
+# Frontend network calls (auto-generated)
+
+src/frontend/src/components/agents/AgentPreview.tsx:123:fetch       /chat/history                  credentials=include
+src/frontend/src/components/agents/AgentPreview.tsx:229:fetch       /chat                          credentials=include
+src/frontend/src/components/App.tsx:24:fetch       /agent                         credentials=include

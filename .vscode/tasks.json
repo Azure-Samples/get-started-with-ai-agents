@@ -120,6 +120,36 @@
 			"problemMatcher": [
 				"$gcc"
 			]
+		},
+		{
+			"label": "Create integration check script",
+			"type": "shell",
+			"command": "powershell -NoProfile -Command \"Write-Output 'ready'\"",
+			"args": [],
+			"isBackground": false,
+			"problemMatcher": [
+				"$gcc"
+			]
+		},
+		{
+			"label": "Create integration script",
+			"type": "shell",
+			"command": "echo placeholder",
+			"args": [],
+			"isBackground": false,
+			"problemMatcher": [
+				"$gcc"
+			]
+		},
+		{
+			"label": "noop",
+			"type": "shell",
+			"command": "echo noop",
+			"args": [],
+			"isBackground": false,
+			"problemMatcher": [
+				"$gcc"
+			]
 		}
 	]
 }

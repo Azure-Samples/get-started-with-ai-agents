@@ -1,0 +1,30 @@
+{
+  "GET /": [],
+  "GET /chat/history": [
+    {
+      "file": "src/frontend/src/components/agents/AgentPreview.tsx",
+      "line": 123,
+      "kind": "fetch",
+      "url": "/chat/history",
+      "credentials": "include"
+    }
+  ],
+  "GET /agent": [
+    {
+      "file": "src/frontend/src/components/App.tsx",
+      "line": 24,
+      "kind": "fetch",
+      "url": "/agent",
+      "credentials": "include"
+    }
+  ],
+  "POST /chat": [
+    {
+      "file": "src/frontend/src/components/agents/AgentPreview.tsx",
+      "line": 229,
+      "kind": "fetch",
+      "url": "/chat",
+      "credentials": "include"
+    }
+  ]
+}
