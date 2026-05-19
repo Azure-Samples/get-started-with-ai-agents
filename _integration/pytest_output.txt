@@ -1,0 +1,47 @@
+FF                                                                       [100%]
+================================== FAILURES ===================================
+_______________________________ test_evaluation _______________________________
+
+    def test_evaluation():
+        with (
+            DefaultAzureCredential(exclude_interactive_browser_credential=False) as credential,
+>           AIProjectClient(endpoint=retrieve_endpoint(), credential=credential) as project_client,
+                                     ^^^^^^^^^^^^^^^^^^^
+            project_client.get_openai_client() as openai_client,
+        ):
+
+tests\test_evaluation.py:17: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+    def retrieve_endpoint():
+        endpoint = os.environ.get("AZURE_EXISTING_AIPROJECT_ENDPOINT", "")
+        if not endpoint:
+>           raise ValueError("Please set AZURE_EXISTING_AIPROJECT_ENDPOINT environment variable.")
+E           ValueError: Please set AZURE_EXISTING_AIPROJECT_ENDPOINT environment variable.
+
+tests\test_utils.py:42: ValueError
+______________________________ test_red_teaming _______________________________
+
+    def test_red_teaming() -> None:
+    
+        with (
+            DefaultAzureCredential(exclude_interactive_browser_credential=False) as credential,
+>           AIProjectClient(endpoint=retrieve_endpoint(), credential=credential) as project_client,
+                                     ^^^^^^^^^^^^^^^^^^^
+            project_client.get_openai_client() as client,
+        ):
+
+tests\test_red_teaming.py:25: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+    def retrieve_endpoint():
+        endpoint = os.environ.get("AZURE_EXISTING_AIPROJECT_ENDPOINT", "")
+        if not endpoint:
+>           raise ValueError("Please set AZURE_EXISTING_AIPROJECT_ENDPOINT environment variable.")
+E           ValueError: Please set AZURE_EXISTING_AIPROJECT_ENDPOINT environment variable.
+
+tests\test_utils.py:42: ValueError
+=========================== short test summary info ===========================
+FAILED tests/test_evaluation.py::test_evaluation - ValueError: Please set AZU...
+FAILED tests/test_red_teaming.py::test_red_teaming - ValueError: Please set A...
+2 failed in 1.22s

@@ -1,0 +1,4 @@
+src/api/routes.py:168:@router.get("/", response_class=HTMLResponse)
+src/api/routes.py:250:@router.get("/chat/history")
+src/api/routes.py:290:@router.get("/agent")
+src/api/routes.py:302:@router.post("/chat")
