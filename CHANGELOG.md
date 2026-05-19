@@ -12,6 +12,8 @@ The format is based on [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.
 
 ### Changed
 
+- `src/api/routes.py` import header trimmed (WARNING 5 from `integration-report.md`): dropped the duplicate `from fastapi import FastAPI, Depends, HTTPException, status` (line 50) — `FastAPI` was unused, `Depends`/`HTTPException` already imported on line 12, `from typing import Optional` was already present on line 8. The retained `status` symbol now imports via `from fastapi import status`.
+
 ### Fixed
 
 - `/agent` route was missing `auth_dependency` (BLOCKER 1 from `integration-report.md`); it now matches the protection applied to `/`, `/chat/history`, and `/chat`, so HTTP Basic auth covers all four routes when `WEB_APP_USERNAME` + `WEB_APP_PASSWORD` are set.
