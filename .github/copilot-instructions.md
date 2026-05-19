@@ -10,15 +10,18 @@ Quick actions
 
   - `python -m venv .venv`
   - Windows (PowerShell): `.\.venv\Scripts\Activate.ps1`
-  - `python -m pip install -r requirements.txt`
+  - `python -m pip install -r requirements-dev.txt`
 
+- Run locally: `./scripts/start.sh` or `.\scripts\start.ps1`
+- Use Make helpers: `make install`, `make run`, `make test`
 - Run tests: `pytest`
-- Run linters/formatters: see `pyproject.toml` and `requirements-dev.txt`
+- Run lint: `python -m ruff check src tests`
 
 Where to look first
 - `docs/` — developer and deployment guides. Start with [docs/local_development.md](docs/local_development.md) and [docs/deployment.md](docs/deployment.md).
 - `src/` — application code and package layout.
 - `infra/` — infrastructure templates used for Azure provisioning.
+- `scripts/` — local helper scripts for setup and running the app.
 
 Behavioral rules
 - Link, don't copy: reference canonical docs instead of duplicating them.

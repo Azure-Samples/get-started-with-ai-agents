@@ -9,6 +9,27 @@ This guide helps you set up a local development environment to test and modify t
 - [pnpm](https://pnpm.io/installation)
 - An Azure deployment of the application (completed via `azd up`)
 
+## Quick Local Start
+
+For a simpler local workflow, use the repo helper scripts:
+
+```shell
+make install
+make run
+```
+
+On Windows, start directly with:
+
+```powershell
+.\scripts\start.ps1
+```
+
+On Linux/macOS, start directly with:
+
+```shell
+./scripts/start.sh
+```
+
 ## Environment Setup
 
 ### 1. Python Environment
