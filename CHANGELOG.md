@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.
 ### Changed
 
 - `src/api/routes.py` import header trimmed (WARNING 5 from `integration-report.md`): dropped the duplicate `from fastapi import FastAPI, Depends, HTTPException, status` (line 50) — `FastAPI` was unused, `Depends`/`HTTPException` already imported on line 12, `from typing import Optional` was already present on line 8. The retained `status` symbol now imports via `from fastapi import status`.
+- `Makefile` now ships a `frontend` target that runs `pnpm --dir src/frontend install && pnpm --dir src/frontend build`, and `run` depends on `frontend` so `make run` rebuilds the React bundle into `src/api/static/react/` before starting gunicorn (addresses WARNING 1 from `integration-report.md`).
 
 ### Fixed
 

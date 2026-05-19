@@ -1,6 +1,6 @@
 # Simple Makefile for common local tasks
 
-.PHONY: venv install test run
+.PHONY: venv install test frontend run
 
 venv:
 	python -m venv .venv
@@ -11,5 +11,8 @@ install: venv
 test: install
 	.venv/Scripts/activate && pytest
 
-run:
+frontend:
+	pnpm --dir src/frontend install && pnpm --dir src/frontend build
+
+run: frontend
 	./scripts/start.sh
