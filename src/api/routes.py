@@ -44,6 +44,18 @@ tracer = trace.get_tracer(__name__)
 directory = os.path.join(os.path.dirname(__file__), "templates")
 templates = Jinja2Templates(directory=directory)
 
+# Static asset used to derive a cache-busting version stamp. Tied to the
+# built React bundle so every rebuild invalidates browser-cached assets.
+_ASSET_STAMP_FILE = os.path.join(
+    os.path.dirname(__file__), "static", "react", "assets", "main-react-app.js"
+)
+
+def _get_asset_version() -> str:
+    try:
+        return str(int(os.path.getmtime(_ASSET_STAMP_FILE)))
+    except OSError:
+        return "0"
+
 # Create a new FastAPI router
 router = fastapi.APIRouter()
 
@@ -96,7 +108,7 @@ def get_agent_version_details(request: Request) -> AgentVersionDetails:
     return request.app.state.agent_version_details
 
 def get_openai_client(request: Request) -> AsyncOpenAI:
-    return get_project_client(request).get_openai_client()
+    return get_project_client(request).get_openai_client(agent_name=request.app.state.agent_version_details.name)
 
 def get_created_at_label(message_id: str) -> str:
     return f"{message_id}_created_at"
@@ -168,10 +180,9 @@ async def get_message_and_annotations(event: Message | ResponseOutputMessage) ->
 @router.get("/", response_class=HTMLResponse)
 async def index(request: Request, _ = auth_dependency):
     return templates.TemplateResponse(
-        "index.html", 
-        {
-            "request": request,
-        }
+        request,
+        "index.html",
+        {"asset_version": _get_asset_version()},
     )
 
 async def save_user_message_created_at(openai_client: AsyncOpenAI, conversation: Conversation,  input_created_at: float):
@@ -207,31 +218,37 @@ async def get_result(
 ) -> AsyncGenerator[str, None]:
     ctx = TraceContextTextMapPropagator().extract(carrier=carrier)
     with tracer.start_as_current_span('get_result', context=ctx):
-        async with project_client.get_openai_client() as openai_client:
+        async with project_client.get_openai_client(agent_name=agent.name) as openai_client:
             logger.info(f"get_result invoked for conversation={conversation.id}")
             input_created_at = datetime.now(timezone.utc).timestamp()
             try:
-                response = await openai_client.responses.create(
+                async with openai_client.responses.stream(
                     conversation=conversation.id,
                     input=user_message,
-                    extra_body={"agent_reference": {"name": agent.name, "type": "agent_reference"}},
-                    stream=True
-                )
-                logger.info("Successfully created stream; starting to process events")
-                async for event in response:
-                    if event.type == "response.created":
-                        logger.info(f"Stream response created with ID: {event.response.id}")
-                    elif event.type == "response.output_text.delta":
-                        logger.info(f"Delta: {event.delta}")
-                        stream_data = {'content': event.delta, 'type': "message"}
-                        yield serialize_sse_event(stream_data)
-                    elif event.type == "response.output_item.done" and event.item.type == "message":
-                        stream_data = await get_message_and_annotations(event.item)
-                        stream_data['type'] = "completed_message"
-                        yield serialize_sse_event(stream_data)
-                    elif event.type == "response.completed":
-                        logger.info(f"Response completed with full message: {event.response.output_text}")
-                                                        
+                    model=os.environ["AZURE_AI_AGENT_DEPLOYMENT_NAME"]
+                ) as stream:
+                    logger.info("Successfully created stream; starting to process events")
+                    stream_started_at = datetime.now(timezone.utc).timestamp()
+                    async for event in stream:
+                        elapsed_ms = int((datetime.now(timezone.utc).timestamp() - stream_started_at) * 1000)
+                        logger.info(f"[+{elapsed_ms}ms] event: {event.type}")
+                        if event.type == "response.created":
+                            logger.info(f"Stream response created with ID: {event.response.id}")
+                            # Emit an early "thinking" event so the browser flushes buffers
+                            # and can render a progress indicator during model reasoning.
+                            yield serialize_sse_event({'content': '', 'type': "message"})
+                        elif event.type == "response.output_text.delta":
+                            logger.info(f"Delta: {event.delta}")
+                            stream_data = {'content': event.delta, 'type': "message"}
+                            yield serialize_sse_event(stream_data)
+                        elif event.type == "response.output_item.done" and event.item.type == "message":
+                            stream_data = await get_message_and_annotations(event.item)
+                            stream_data['type'] = "completed_message"
+                            yield serialize_sse_event(stream_data)
+
+                    final_response = await stream.get_final_response()
+                    logger.info(f"Response completed with full message: {final_response.output_text}")
+
             except Exception as e:
                 logger.exception(f"Exception in get_result: {e}")
                 error_data = {
@@ -315,7 +332,7 @@ async def chat(
     TraceContextTextMapPropagator().inject(carrier)
 
     with tracer.start_as_current_span("chat_request"):
-        async with project_client.get_openai_client() as openai_client:
+        async with project_client.get_openai_client(agent_name=agent.name) as openai_client:
             # if the connection no longer exist or agent is changed, create a new one
             conversation = await get_or_create_conversation(
                 openai_client, conversation_id, agent_id, agent.id

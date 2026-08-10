@@ -37,7 +37,7 @@ var baseEnv = [
     name: 'AZURE_EXISTING_AIPROJECT_RESOURCE_ID'
     value: azureExistingAIProjectResourceId
   }
-  {
+  { 
     name: 'AZURE_AI_AGENT_NAME'
     value: agentName
   }

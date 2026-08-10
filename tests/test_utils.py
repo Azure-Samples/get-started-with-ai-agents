@@ -4,12 +4,19 @@
 # ------------------------------------
 
 import os
+import sys
 from pprint import pprint
 from dotenv import load_dotenv
 from azure.ai.projects import AIProjectClient
 
-env_file = os.path.abspath(os.path.join(os.path.dirname(__file__), "../src/.env"))
-load_dotenv(env_file)
+# Reuse the FastAPI app's env-file resolution so tests and the debugger-launched
+# app read from the same .azure/<defaultEnvironment>/.env.
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src")))
+from util import get_env_file_path  # type: ignore[import-not-found]  # noqa: E402
+
+env_file = get_env_file_path()
+if env_file:
+    load_dotenv(env_file)
 
 def retrieve_agent(project_client: AIProjectClient):
     agent_id = os.environ.get("AZURE_EXISTING_AGENT_ID", "")

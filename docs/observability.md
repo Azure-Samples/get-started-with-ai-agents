@@ -8,7 +8,7 @@ In **post-deployment** stage, you can utilize [Tracing and monitoring](#tracing-
 
 ## Prequisites 
 
-Execute `azd up` to generate most of these environment variables in `.azure/.env`. To specify the Agent ID, navigate to the Microsoft Foundry Portal:
+Execute `azd up` to generate most of these environment variables. `azd` writes them to `.azure/<your-azd-environment-name>/.env` (the file for the environment listed as `defaultEnvironment` in `.azure/config.json`). The evaluation and red teaming tests automatically load env vars from that file — no manual `.env` copy is required. To specify the Agent ID, navigate to the Microsoft Foundry Portal:
 
   1. Go to [Microsoft Foundry Portal](https://ai.azure.com/) and sign in
   2. Click on your project from the homepage

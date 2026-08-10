@@ -22,7 +22,7 @@ def test_red_teaming() -> None:
 
     with (
         DefaultAzureCredential(exclude_interactive_browser_credential=False) as credential,
-        AIProjectClient(endpoint=retrieve_endpoint(), credential=credential) as project_client,
+        AIProjectClient(endpoint=retrieve_endpoint(), credential=credential, allow_preview=True) as project_client,
         project_client.get_openai_client() as client,
     ):
             
@@ -58,7 +58,7 @@ def test_red_teaming() -> None:
         eval_taxonomy_input = EvaluationTaxonomy(
             description="Taxonomy for red teaming evaluation", taxonomy_input=agent_taxonomy_input
         )
-        taxonomy = project_client.evaluation_taxonomies.create(name=agent.name, body=eval_taxonomy_input)
+        taxonomy = project_client.beta.evaluation_taxonomies.create(name=agent.name, taxonomy=eval_taxonomy_input)
         
         # Submit evaluation run for red teaming
         eval_run_object = client.evals.runs.create(

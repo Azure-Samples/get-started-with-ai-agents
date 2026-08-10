@@ -1,8 +1,13 @@
 # syntax=docker/dockerfile:1
 
-FROM python:3.13.9-slim-bookworm
+FROM python:3.13.14-slim-bookworm
 
 WORKDIR /code
+
+# Apply latest OS security patches
+RUN apt-get update \
+    && apt-get upgrade -y \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY . .
 
@@ -13,12 +18,13 @@ RUN pip install --no-cache-dir --upgrade -r requirements.txt
 
 # Install Node.js and pnpm with specific versions
 RUN apt-get update \
-    && apt-get install -y curl \
+    && apt-get install -y --no-install-recommends curl ca-certificates \
     && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
-    && apt-get install -y nodejs \
+    && apt-get install -y --no-install-recommends nodejs \
     && npm install -g pnpm@10.6.0 \
     && node --version \
-    && pnpm --version
+    && pnpm --version \
+    && rm -rf /var/lib/apt/lists/*
 
 # Build React frontend
 WORKDIR /code/frontend
@@ -29,7 +35,9 @@ RUN pnpm install --frozen-lockfile=false \
     && rm -rf /root/.pnpm-store
 
 
-RUN apt-get purge -y krb5-user libkrb5-3 libkrb5support0 libgssapi-krb5-2
+RUN apt-get purge -y krb5-user libkrb5-3 libkrb5support0 libgssapi-krb5-2 curl \
+    && apt-get autoremove -y \
+    && rm -rf /var/lib/apt/lists/*
 
 # Return to backend directory
 WORKDIR /code
