@@ -6,7 +6,7 @@ In **pre-deployment** stage, you can leverage [Agent Evaluation](#agent-evaluati
 
 In **post-deployment** stage, you can utilize [Tracing and monitoring](#tracing-and-monitoring) and [Continuous Evaluation](#continuous-evaluation) capabilities to maintain ongoing visibility into your agent's performance and behavior in production. With the baselines established in pre-deployment, you can set up alerts for a desirable passing rate, so that you can review the failing traces that helps you quickly identify and address any issues that may arise, ensuring a consistent and high-quality user experience.
 
-## Prequisites 
+## Prequisites
 
 Execute `azd up` to generate most of these environment variables. `azd` writes them to `.azure/<your-azd-environment-name>/.env` (the file for the environment listed as `defaultEnvironment` in `.azure/config.json`). The evaluation and red teaming tests automatically load env vars from that file — no manual `.env` copy is required. To specify the Agent ID, navigate to the Microsoft Foundry Portal:
 

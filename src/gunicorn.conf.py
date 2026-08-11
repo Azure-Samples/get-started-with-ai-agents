@@ -436,7 +436,7 @@ async def initialize_eval(project_client: AIProjectClient, openai_client: AsyncO
                         eval_id=eval_object.id, # link to evaluation created above
                         max_hourly_runs=5), # set max eval run limit per hour
                     event_type=EvaluationRuleEventType.RESPONSE_COMPLETED,
-                filter=EvaluationRuleFilter(agent_name=agent_version_details.name),
+                    filter=EvaluationRuleFilter(agent_name=agent_version_details.name),
                     enabled=True,
                 ),
             )
@@ -452,11 +452,12 @@ async def initialize_resources():
         async with (
             DefaultAzureCredential() as credential,
             AIProjectClient(endpoint=proj_endpoint, credential=credential) as project_client,
+            project_client.get_openai_client() as openai_client,
         ):
             agent_version_details: Optional[AgentVersionDetails] = None
 
             agentID = os.environ.get("AZURE_EXISTING_AGENT_ID")
-            agent_name = ""
+
             if agentID:
                 try:
                     agent_name = agentID.split(":")[0]
@@ -482,14 +483,13 @@ async def initialize_resources():
                     logger.info(f"Agent name, {agent_name} not found.")
                     
             # Create a new agent
-            async with project_client.get_openai_client(agent_name=agent_name) as openai_client:
-                if not agent_version_details:
-                    agent_version_details = await create_agent(project_client, openai_client, credential)
-                    logger.info(f"Created agent, agent ID: {agent_version_details.id}")
+            if not agent_version_details:
+                agent_version_details = await create_agent(project_client, openai_client, credential)
+                logger.info(f"Created agent, agent ID: {agent_version_details.id}")
 
-                os.environ["AZURE_EXISTING_AGENT_ID"] = agent_version_details.id
+            os.environ["AZURE_EXISTING_AGENT_ID"] = agent_version_details.id
 
-                await initialize_eval(project_client, openai_client, agent_version_details, credential)
+            await initialize_eval(project_client, openai_client, agent_version_details, credential)
     except Exception as e:
         logger.info("Error creating agent: {e}", exc_info=True)
         raise RuntimeError(f"Failed to create the agent: {e}")  
