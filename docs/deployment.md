@@ -91,7 +91,7 @@ If you're not using one of the above options for opening the project, then you'l
 2. Clone the repository or download the project code via command-line:
 
    ```shell
-   azd init -t get-started-with-ai-agents
+   azd init -t get-started-with-ai-agents .
    ```
 
 3. Open the project folder in your terminal or editor.
