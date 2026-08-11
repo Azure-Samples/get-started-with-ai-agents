@@ -222,26 +222,33 @@ async def get_result(
             logger.info(f"get_result invoked for conversation={conversation.id}")
             input_created_at = datetime.now(timezone.utc).timestamp()
             try:
-                response = await openai_client.responses.create(
+                async with openai_client.responses.stream(
                     conversation=conversation.id,
                     input=user_message,
                     extra_body={"agent_reference": {"name": agent.name, "type": "agent_reference"}},
-                    stream=True
-                )
-                logger.info("Successfully created stream; starting to process events")
-                async for event in response:
-                    if event.type == "response.created":
-                        logger.info(f"Stream response created with ID: {event.response.id}")
-                    elif event.type == "response.output_text.delta":
-                        logger.info(f"Delta: {event.delta}")
-                        stream_data = {'content': event.delta, 'type': "message"}
-                        yield serialize_sse_event(stream_data)
-                    elif event.type == "response.output_item.done" and event.item.type == "message":
-                        stream_data = await get_message_and_annotations(event.item)
-                        stream_data['type'] = "completed_message"
-                        yield serialize_sse_event(stream_data)
-                    elif event.type == "response.completed":
-                        logger.info(f"Response completed with full message: {event.response.output_text}")
+                    model=os.environ["AZURE_AI_AGENT_DEPLOYMENT_NAME"]
+                ) as stream:
+                    logger.info("Successfully created stream; starting to process events")
+                    stream_started_at = datetime.now(timezone.utc).timestamp()
+                    async for event in stream:
+                        elapsed_ms = int((datetime.now(timezone.utc).timestamp() - stream_started_at) * 1000)
+                        logger.info(f"[+{elapsed_ms}ms] event: {event.type}")
+                        if event.type == "response.created":
+                            logger.info(f"Stream response created with ID: {event.response.id}")
+                            # Emit an early "thinking" event so the browser flushes buffers
+                            # and can render a progress indicator during model reasoning.
+                            yield serialize_sse_event({'content': '', 'type': "message"})
+                        elif event.type == "response.output_text.delta":
+                            logger.info(f"Delta: {event.delta}")
+                            stream_data = {'content': event.delta, 'type': "message"}
+                            yield serialize_sse_event(stream_data)
+                        elif event.type == "response.output_item.done" and event.item.type == "message":
+                            stream_data = await get_message_and_annotations(event.item)
+                            stream_data['type'] = "completed_message"
+                            yield serialize_sse_event(stream_data)
+
+                    final_response = await stream.get_final_response()
+                    logger.info(f"Response completed with full message: {final_response.output_text}")
                                                         
             except Exception as e:
                 logger.exception(f"Exception in get_result: {e}")
@@ -307,7 +314,7 @@ async def get_chat_agent(
     agent_name = agent_id.split(":")[0]
     agent_version = agent_id.split(":")[1]
     agent_playground_url = f"https://ai.azure.com/nextgen/r/{encode_project_resource_id(wsid)}/build/agents/{quote(agent_name)}/build?version={agent_version}"
-    return JSONResponse(content={"name": agent.name, "metadata": agent.metadata, "agentPlaygroundUrl": agent_playground_url})
+    return JSONResponse(content={"name": agent.name, "version": agent.version, "metadata": agent.metadata, "agentPlaygroundUrl": agent_playground_url})
 
 
 @router.post("/chat")

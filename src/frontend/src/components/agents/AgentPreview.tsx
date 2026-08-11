@@ -24,6 +24,7 @@ interface IAgent {
   object: string;
   created_at: number;
   name: string;
+  version: string;
   description?: string | null;
   model: string;
   instructions?: string;
@@ -533,6 +534,7 @@ export function AgentPreview({ agentDetails }: IAgentPreviewProps): ReactNode {
               />
               <Body1 as="h1" className={styles.agentName}>
                 {agentDetails.name}
+                {agentDetails.version ? ` v${agentDetails.version}` : ""}
               </Body1>
             </div>
           ) : (
