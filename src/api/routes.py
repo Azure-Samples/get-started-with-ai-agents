@@ -59,9 +59,8 @@ def _get_asset_version() -> str:
 # Create a new FastAPI router
 router = fastapi.APIRouter()
 
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import status
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
-from typing import Optional
 import secrets
 
 security = HTTPBasic()
@@ -308,6 +307,7 @@ async def history(
 @router.get("/agent")
 async def get_chat_agent(
     agent: AgentVersionDetails = Depends(get_agent_version_details),
+	_ = auth_dependency
 ):
     wsid = os.environ.get("AZURE_EXISTING_AIPROJECT_RESOURCE_ID")
     agent_id = os.environ.get("AZURE_EXISTING_AGENT_ID")

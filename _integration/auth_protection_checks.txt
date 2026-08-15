@@ -1,0 +1,16 @@
+src/api/routes.py:12:from fastapi import Request, Depends, HTTPException
+src/api/routes.py:50:from fastapi import FastAPI, Depends, HTTPException, status
+src/api/routes.py:51:from fastapi.security import HTTPBasic, HTTPBasicCredentials
+src/api/routes.py:55:security = HTTPBasic()
+src/api/routes.py:57:username = os.getenv("WEB_APP_USERNAME")
+src/api/routes.py:61:def authenticate(credentials: Optional[HTTPBasicCredentials] = Depends(security)) -> None:
+src/api/routes.py:64:        logger.info("Skipping authentication: WEB_APP_USERNAME or WEB_APP_PASSWORD not set.")
+src/api/routes.py:77:auth_dependency = Depends(authenticate) if basic_auth else None
+src/api/routes.py:169:async def index(request: Request, _ = auth_dependency):
+src/api/routes.py:253:    agent: AgentVersionDetails = Depends(get_agent_version_details),
+src/api/routes.py:254:    openai_client : AsyncOpenAI = Depends(get_openai_client),
+src/api/routes.py:255:	_ = auth_dependency
+src/api/routes.py:292:    agent: AgentVersionDetails = Depends(get_agent_version_details),
+src/api/routes.py:305:    project_client: AIProjectClient = Depends(get_project_client),
+src/api/routes.py:306:    agent: AgentVersionDetails = Depends(get_agent_version_details),
+src/api/routes.py:308:	_ = auth_dependency

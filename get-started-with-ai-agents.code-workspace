@@ -1,0 +1,12 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"name": "agent-browser",
+			"path": "../agent-browser"
+		}
+	],
+	"settings": {}
+}
