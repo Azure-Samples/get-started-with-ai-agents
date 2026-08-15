@@ -1,0 +1,12 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "type": "command",
+        "command": "./.github/hooks/scripts/validate-deployment-readiness.sh",
+        "timeout": 30,
+        "cwd": "."
+      }
+    ]
+  }
+}
