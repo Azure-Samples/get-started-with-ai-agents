@@ -1,0 +1,35 @@
+[1mdiff --git a/AI103-LEARNING-NOTES.md b/AI103-LEARNING-NOTES.md[m
+[1mnew file mode 100644[m
+[1mindex 0000000..0590ec9[m
+[1m--- /dev/null[m
+[1m+++ b/AI103-LEARNING-NOTES.md[m
+[36m@@ -0,0 +1,28 @@[m
+[32m+[m[32m# AI-103 Learning Notes[m
+[32m+[m
+[32m+[m[32mThis fork is being used to study Microsoft Azure AI application and agent development.[m
+[32m+[m
+[32m+[m[32m## Learning goals[m
+[32m+[m
+[32m+[m[32m- Understand the structure of a Microsoft Foundry agent application[m
+[32m+[m[32m- Trace the flow from the user interface to the Python backend[m
+[32m+[m[32m- Identify where agent instructions and tools are configured[m
+[32m+[m[32m- Learn how retrieval and citations are implemented[m
+[32m+[m[32m- Review evaluation, tracing, and monitoring components[m
+[32m+[m[32m- Practice using Git branches, commits, pull requests, and merges[m
+[32m+[m
+[32m+[m[32m## Initial repository areas to review[m
+[32m+[m
+[32m+[m[32m- `src/` — application source code[m
+[32m+[m[32m- `tests/` — automated evaluation and testing[m
+[32m+[m[32m- `infra/` — Azure infrastructure definitions[m
+[32m+[m[32m- `.vscode/` — VS Code launch and development configuration[m
+[32m+[m[32m- `docs/` — deployment and local-development guidance[m
+[32m+[m
+[32m+[m[32m## Planned changes[m
+[32m+[m
+[32m+[m[32m1. Document the main application flow.[m
+[32m+[m[32m2. Add comments to selected Python components.[m
+[32m+[m[32m3. Create a small custom agent tool.[m
+[32m+[m[32m4. Add tests for the custom behavior.[m
+[32m+[m[32m5. Document how the project maps to AI-103 exam objectives.[m
+\ No newline at end of file[m
