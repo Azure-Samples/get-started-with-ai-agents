@@ -34,6 +34,68 @@ param deploymentSeed string
 
 var deploymentSuffix = substring(uniqueString(parentDeploymentName, deploymentSeed), 0, 8)
 
+param sharepointConnectionTarget string = ''
+@secure()
+param browserAutomationConnectionKey string = ''
+param browserAutomationConnectionTarget string = ''
+@secure()
+param openApiConnectionKey string = ''
+@secure()
+param fabricConnectionWorkspaceId string = ''
+@secure()
+param fabricConnectionArtifactId string = ''
+@secure()
+param mcpConnectionKey string = ''
+param a2aConnectionTarget string = ''
+
+param allowedDomains array = []
+
+var bingLocation = 'global'
+var bingSearchAccountName = '${aiServicesName}-bing'
+var bingCustomSearchAccountName = '${aiServicesName}-bingcustom'
+
+resource bingSearch 'Microsoft.Bing/accounts@2020-06-10' = {
+  name: bingSearchAccountName
+  location: bingLocation
+  tags: tags
+  sku: {
+    name: 'G1'
+  }
+  kind: 'Bing.Grounding'
+  properties: {
+    statisticsEnabled: false
+  }
+}
+
+resource bingCustomSearch 'Microsoft.Bing/accounts@2020-06-10' = {
+  name: bingCustomSearchAccountName
+  location: bingLocation
+  tags: tags
+  sku: {
+    name: 'G2'
+  }
+  kind: 'Bing.GroundingCustomSearch'
+  properties: {
+    statisticsEnabled: false
+  }
+}
+
+resource bingCustomSearchConfig 'Microsoft.Bing/accounts/customSearchConfigurations@2025-05-01-preview' = {
+  parent: bingCustomSearch
+  name: 'agentdoc'
+  properties: {
+    allowedDomains: allowedDomains
+    blockedDomains: []
+    pinnedDomains: []
+  }
+}
+
+
+var bingSearchKeys = listKeys(bingSearch.id, '2020-06-10')
+var bingCustomSearchKeys = listKeys(bingCustomSearch.id, '2020-06-10')
+var bingSearchEndpoint = bingSearch.properties.endpoint
+var bingCustomSearchEndpoint = bingCustomSearch.properties.endpoint
+
 module storageAccount '../storage/storage-account.bicep' = if (useStorageAccount) {
   name: 'storageAccount'
   params: {
@@ -53,11 +115,18 @@ module storageAccount '../storage/storage-account.bicep' = if (useStorageAccount
         name: 'default'
       }
     ]
-    queues: [
+    queues: union([
       {
         name: 'default'
       }
-    ]
+    ], [
+      {
+        name: 'weather-input-queue'
+      }
+      {
+        name: 'weather-output-queue'
+      }
+    ])
     tables: [
       {
         name: 'default'
@@ -112,6 +181,20 @@ module cognitiveServices '../ai/cognitiveservices.bicep' = {
     storageAccountBlobEndpoint: useStorageAccount ? storageAccount!.outputs.primaryEndpoints.blob : ''
     aoaiConnectionName: aoaiConnectionName
     useStorageAccount: useStorageAccount
+    sharepointConnectionTarget: sharepointConnectionTarget
+    bingConnectionKey: bingSearchKeys.key1
+    bingConnectionTarget: bingSearchEndpoint
+    bingConnectionResourceId: bingSearch.id
+    bingCustomConnectionKey: bingCustomSearchKeys.key1
+    bingCustomConnectionTarget: bingCustomSearchEndpoint
+    bingCustomConnectionResourceId: bingCustomSearch.id
+    browserAutomationConnectionKey: browserAutomationConnectionKey
+    browserAutomationConnectionTarget: browserAutomationConnectionTarget
+    openApiConnectionKey: openApiConnectionKey
+    fabricConnectionWorkspaceId: fabricConnectionWorkspaceId
+    fabricConnectionArtifactId: fabricConnectionArtifactId
+    mcpConnectionKey: mcpConnectionKey
+    a2aConnectionTarget: a2aConnectionTarget
   }
 }
 
@@ -131,6 +214,39 @@ module projectStorageRoleAssignment  '../../core/security/role.bicep' = if (useS
     principalId: cognitiveServices.outputs.projectPrincipalId
     roleDefinitionId: 'ba92f5b4-2d11-453d-a403-e96b0029c9fe' // Storage Blob Data Contributor
   }
+}
+
+// Reference the storage account for scoped role assignments
+resource existingStorageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' existing = if (useStorageAccount) {
+  name: storageAccountName
+}
+
+// Storage Queue Data Contributor role assignment scoped to storage account for project
+resource projectStorageQueueRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (useStorageAccount) {
+  name: guid(subscription().id, existingStorageAccount.id, 'project', '974c5e8b-45b9-4653-ba55-5f855dd0fb88')
+  scope: existingStorageAccount
+  properties: {
+    principalId: cognitiveServices.outputs.projectPrincipalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: resourceId('Microsoft.Authorization/roleDefinitions', '974c5e8b-45b9-4653-ba55-5f855dd0fb88')
+  }
+  dependsOn: [
+    resourceGroup()
+  ]
+}
+
+// Storage Queue Data Contributor role assignment scoped to storage account for account
+resource accountStorageQueueRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (useStorageAccount) {
+  name: guid(subscription().id, existingStorageAccount.id, 'account', '974c5e8b-45b9-4653-ba55-5f855dd0fb88')
+  scope: existingStorageAccount
+  properties: {
+    principalId: cognitiveServices.outputs.accountPrincipalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: resourceId('Microsoft.Authorization/roleDefinitions', '974c5e8b-45b9-4653-ba55-5f855dd0fb88')
+  }
+  dependsOn: [
+    resourceGroup()
+  ]
 }
 
 module projectAIUserRoleAssignment  '../../core/security/role.bicep' = {
@@ -179,6 +295,7 @@ output storageConnectionName string = useStorageAccount ? cognitiveServices.outp
 
 output applicationInsightsId string = !empty(applicationInsightsName) ? applicationInsights!.outputs.id : ''
 output applicationInsightsName string = !empty(applicationInsightsName) ? applicationInsights!.outputs.name : ''
+output applicationInsightsConnectionString string = !empty(applicationInsightsName) ? applicationInsights!.outputs.connectionString : ''
 output logAnalyticsWorkspaceId string = !empty(logAnalyticsName) ? logAnalytics!.outputs.id : ''
 output logAnalyticsWorkspaceName string = !empty(logAnalyticsName) ? logAnalytics!.outputs.name : ''
 

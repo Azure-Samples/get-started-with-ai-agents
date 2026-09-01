@@ -10,22 +10,22 @@ param environmentName string
 // The combination of allowed and usageName below is for AZD to check AI model gpt-5-mini quota only for the allowed regions for creating an agent.
 // If using different models, update the SKU,capacity depending on the model you use.
 // https://learn.microsoft.com/azure/ai-services/agents/concepts/model-region-support
-@allowed([
-  'eastus'
-  'eastus2'
-  'swedencentral'
-  'westus'
-  'westus3'
-])
-@metadata({
-  azd: {
-    type: 'location'
-    // quota-validation for ai models: gpt-5-mini
-    usageName: [
-      'OpenAI.GlobalStandard.gpt-5-mini,80'
-    ]
-  }
-})
+// @allowed([
+//   'eastus'
+//   'eastus2'
+//   'swedencentral'
+//   'westus'
+//   'westus3'
+// ])
+// @metadata({
+//   azd: {
+//     type: 'location'
+//     // quota-validation for ai models: gpt-5-mini
+//     usageName: [
+//       'OpenAI.GlobalStandard.gpt-5-mini,80'
+//     ]
+//   }
+// })
 param location string
 
 @description('Use this parameter to use an existing AI project resource ID')
@@ -117,6 +117,8 @@ param useApplicationInsights bool = true
 param useStorageAccount bool = true
 @description('Do we want to use the Azure AI Search')
 param useSearchService bool = false
+@description('The Function App name')
+param functionAppName string = ''
 
 @description('Do we want to use the Azure Monitor tracing')
 param enableAzureMonitorTracing bool = false
@@ -134,6 +136,32 @@ param searchConnectionId string = ''
 
 @description('The name of the blob container for document storage')
 param blobContainerName string = 'documents'
+@secure()
+@description('Target URL for SharePoint connection')
+param sharepointConnectionTarget string = ''
+@secure()
+@description('API key for Browser Automation connection')
+param browserAutomationConnectionKey string = ''
+@description('Target URL for Browser Automation connection')
+param browserAutomationConnectionTarget string = ''
+@secure()
+@description('API key for OpenAPI connection')
+param openApiConnectionKey string = ''
+@secure()
+@description('API key for Fabric connection')
+param fabricConnectionWorkspaceId string = ''
+@secure()
+@description('Target URL for Fabric connection')
+param fabricConnectionArtifactId string = ''
+@secure()
+@description('API key for MCP connection')
+param mcpConnectionKey string = ''
+@description('Target URL for A2A connection')
+param a2aConnectionTarget string = ''
+
+@description('Allowed domains for Bing Custom Search configuration')
+param bingCustomSearchAllowedDomains string = '[]'
+
 param alwaysReprovision bool = false
 
 var abbrs = loadJsonContent('./abbreviations.json')
@@ -144,6 +172,9 @@ var resourceToken = templateValidationMode? toLower(uniqueString(subscription().
 var resourceTokenStable = toLower(uniqueString(subscription().id, environmentName, location))
 
 var tags = { 'azd-env-name': environmentName }
+
+@description('Additional AI models to deploy as an array of objects with name, format, version, sku, and capacity')
+param additionalAiModels string = '[]'
 
 var tempAgentID = !empty(aiAgentID) ? aiAgentID : ''
 var agentID = !empty(azureExistingAgentId) ? azureExistingAgentId : tempAgentID
@@ -177,9 +208,25 @@ var aiEmbeddingModel = [
   }
 ]
 
+// Transform additional models to deployment format
+param additionalAiModelArray array = json(additionalAiModels)
+var additionalModelsTransformed = [for model in additionalAiModelArray: {
+  name: model.name
+  model: {
+    format: model.format
+    name: model.name
+    version: model.version
+  }
+  sku: {
+    name: model.sku
+    capacity: contains(model, 'capacity') ? model.capacity : 10
+  }
+}]
+
 var aiDeployments = concat(
   aiChatModel,
-  useSearchService ? aiEmbeddingModel : [])
+  useSearchService ? aiEmbeddingModel : [],
+  additionalModelsTransformed)
 
 
 // Organize resources in a resource group
@@ -200,11 +247,10 @@ var resolvedSearchServiceName = !useSearchService || !useStorageAccount
   : !empty(searchServiceName) ? searchServiceName : '${abbrs.searchSearchServices}${resourceToken}'
  // Storage account name used when we need to reference an existing storage account (must be deterministic for Bicep diagnostics).
 // Note: for normal deployments (templateValidationMode == false), resourceTokenStable == resourceToken.
-var resolvedStorageAccountName = !useStorageAccount
-  ? ''
-  : !empty(storageAccountName)
-      ? storageAccountName
-      : '${abbrs.storageStorageAccounts}${resourceTokenStable}' 
+// Function App always requires storage, so storage is created when useStorageAccount=true OR for Function App
+var resolvedStorageAccountName = !empty(storageAccountName)
+  ? storageAccountName
+  : '${abbrs.storageStorageAccounts}${resourceTokenStable}' 
 
 module ai 'core/host/ai-environment.bicep' = if (empty(azureExistingAIProjectResourceId) || alwaysReprovision) {
   name: 'ai'
@@ -228,6 +274,15 @@ module ai 'core/host/ai-environment.bicep' = if (empty(azureExistingAIProjectRes
     appInsightConnectionName: 'appinsights-connection'
     aoaiConnectionName: 'aoai-connection'
     useStorageAccount: useStorageAccount
+    sharepointConnectionTarget: sharepointConnectionTarget
+    browserAutomationConnectionKey: browserAutomationConnectionKey
+    browserAutomationConnectionTarget: browserAutomationConnectionTarget
+    openApiConnectionKey: openApiConnectionKey
+    fabricConnectionWorkspaceId: fabricConnectionWorkspaceId
+    fabricConnectionArtifactId: fabricConnectionArtifactId
+    mcpConnectionKey: mcpConnectionKey
+    a2aConnectionTarget: a2aConnectionTarget
+    allowedDomains: json(bingCustomSearchAllowedDomains)
   }
 }
 
@@ -260,6 +315,19 @@ module logAnalytics 'core/monitor/loganalytics.bicep' = if (!empty(azureExisting
     name: logAnalyticsWorkspaceResolvedName
   }
 }
+
+// If using Function App with existing AI project, deploy Application Insights
+module functionAppApplicationInsights 'core/monitor/applicationinsights.bicep' = if (!empty(azureExistingAIProjectResourceId) && !alwaysReprovision) {
+  name: 'functionapp-appinsights-${substring(uniqueString(deployment().name, seed), 0, 8)}'
+  scope: rg
+  params: {
+    location: location
+    tags: tags
+    name: '${abbrs.insightsComponents}${resourceToken}'
+    logAnalyticsWorkspaceId: logAnalytics!.outputs.id
+  }
+}
+
 var existingProjEndpoint = (!empty(azureExistingAIProjectResourceId) && !alwaysReprovision) ? format('https://{0}.services.ai.azure.com/api/projects/{1}',split(azureExistingAIProjectResourceId, '/')[8], split(azureExistingAIProjectResourceId, '/')[10]) : ''
 
 var projectResourceId = (!empty(azureExistingAIProjectResourceId) && !alwaysReprovision)
@@ -273,6 +341,10 @@ var projectEndpoint = (!empty(azureExistingAIProjectResourceId) && !alwaysReprov
 var resolvedApplicationInsightsName = !useApplicationInsights || !empty(azureExistingAIProjectResourceId)
   ? ''
   : !empty(applicationInsightsName) ? applicationInsightsName : '${abbrs.insightsComponents}${resourceToken}'
+
+var applicationInsightsConnectionString = !empty(azureExistingAIProjectResourceId) && !alwaysReprovision
+  ? functionAppApplicationInsights!.outputs.connectionString
+  : (empty(azureExistingAIProjectResourceId) || alwaysReprovision) ? ai!.outputs.applicationInsightsConnectionString : ''
 
 module monitoringMetricsContribuitorRoleAzureAIDeveloperRG 'core/security/appinsights-access.bicep' = if (!empty(resolvedApplicationInsightsName)) {
   name: 'monitoringmetricscontributor-role-azureai-developer-rg'
@@ -346,6 +418,79 @@ module api 'api.bicep' = {
   }
 }
 
+// Function App managed identity (must be created before role assignments)
+module functionAppIdentity 'core/security/user-assigned-identity.bicep' = {
+  name: 'function-app-identity'
+  scope: rg
+  params: {
+    name: '${abbrs.managedIdentityUserAssignedIdentities}func-${resourceToken}'
+    location: location
+    tags: tags
+  }
+}
+
+// Function App role assignments (must happen before Function App creation)
+module functionAppRoleStorageQueueDataContributor 'core/security/role.bicep' = {
+  name: 'functionapp-role-storage-queue-data-contributor'
+  scope: rg
+  dependsOn: [ai]
+  params: {
+    principalType: 'ServicePrincipal'
+    principalId: functionAppIdentity!.outputs.principalId
+    roleDefinitionId: '974c5e8b-45b9-4653-ba55-5f855dd0fb88' // Storage Queue Data Contributor
+  }
+}
+
+module functionAppRoleStorageBlobDataContributor 'core/security/role.bicep' = {
+  name: 'functionapp-role-storage-blob-data-contributor'
+  scope: rg
+  dependsOn: [ai]
+  params: {
+    principalType: 'ServicePrincipal'
+    principalId: functionAppIdentity!.outputs.principalId
+    roleDefinitionId: 'ba92f5b4-2d11-453d-a403-e96b0029c9fe' // Storage Blob Data Contributor
+  }
+}
+
+module functionAppRoleStorageFileDataContributor 'core/security/role.bicep' = {
+  name: 'functionapp-role-storage-file-data-contributor'
+  scope: rg
+  dependsOn: [ai]
+  params: {
+    principalType: 'ServicePrincipal'
+    principalId: functionAppIdentity!.outputs.principalId
+    roleDefinitionId: '69566ab7-960f-475b-8e7c-b3118f30c6bd' // Storage File Data Privileged Contributor
+  }
+}
+
+// Function App for queue triggers
+module functionApp 'core/host/function-app.bicep' = {
+  name: 'function-app'
+  scope: rg
+  dependsOn: [
+    ai
+    functionAppApplicationInsights
+    functionAppRoleStorageQueueDataContributor
+    functionAppRoleStorageBlobDataContributor
+    functionAppRoleStorageFileDataContributor
+    userRoleStorageAccountContributorRG
+    userRoleStorageBlobDataContributorRG
+    userRoleStorageFileDataContributorRG
+    userRoleStorageQueueDataContributorRG
+  ]
+  params: {
+    name: !empty(functionAppName) ? functionAppName : 'func-${resourceToken}'
+    location: location
+    tags: tags
+    appServicePlanName: 'plan-${resourceToken}'
+    appServicePlanSku: 'EP1'
+    storageAccountName: resolvedStorageAccountName
+    applicationInsightsConnectionString: applicationInsightsConnectionString
+    identityId: functionAppIdentity!.outputs.id
+    runtime: 'python'
+    runtimeVersion: '3.11'
+  }
+}
 
 
 module userRoleAzureAIDeveloper 'core/security/role.bicep' = {
@@ -489,7 +634,7 @@ module userRoleSearchServiceContributorRG 'core/security/role.bicep' = if (useSe
   }
 }
 
-module userRoleStorageAccountContributorRG 'core/security/role.bicep' = if (useSearchService && useStorageAccount) {
+module userRoleStorageAccountContributorRG 'core/security/role.bicep' = {
   name: 'user-role-storage-account-contributor-rg'
   scope: rg
   params: {
@@ -499,13 +644,33 @@ module userRoleStorageAccountContributorRG 'core/security/role.bicep' = if (useS
   }
 }
 
-module userRoleStorageBlobDataContributorRG 'core/security/role.bicep' = if (useSearchService && useStorageAccount) {
+module userRoleStorageBlobDataContributorRG 'core/security/role.bicep' = {
   name: 'user-role-storage-blob-data-contributor-rg'
   scope: rg
   params: {
     principalType: principalTypeOverride
     principalId: principalIdOverride
     roleDefinitionId: 'ba92f5b4-2d11-453d-a403-e96b0029c9fe'
+  }
+}
+
+module userRoleStorageFileDataContributorRG 'core/security/role.bicep' = {
+  name: 'user-role-storage-file-data-contributor-rg'
+  scope: rg
+  params: {
+    principalType: principalTypeOverride
+    principalId: principalIdOverride
+    roleDefinitionId: '69566ab7-960f-475b-8e7c-b3118f30c6bd' // Storage File Data Privileged Contributor
+  }
+}
+
+module userRoleStorageQueueDataContributorRG 'core/security/role.bicep' = {
+  name: 'user-role-storage-queue-data-contributor-rg'
+  scope: rg
+  params: {
+    principalType: principalTypeOverride
+    principalId: principalIdOverride
+    roleDefinitionId: '974c5e8b-45b9-4653-ba55-5f855dd0fb88' // Storage Queue Data Contributor
   }
 }
 
@@ -547,3 +712,8 @@ output SERVICE_API_URI string = api.outputs.SERVICE_API_URI
 output SERVICE_API_ENDPOINTS array = ['${api.outputs.SERVICE_API_URI}']
 output SEARCH_CONNECTION_ID string = searchConnectionId_final
 output AZURE_CONTAINER_REGISTRY_ENDPOINT string = containerApps.outputs.registryLoginServer
+
+// Function App outputs
+output SERVICE_FUNCTION_APP_NAME string = functionApp.outputs.name
+output FUNCTION_APP_HOSTNAME string = functionApp.outputs.defaultHostname
+output FUNCTION_APP_PRINCIPAL_ID string = functionApp.outputs.principalId
