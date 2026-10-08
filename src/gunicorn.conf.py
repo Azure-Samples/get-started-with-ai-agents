@@ -399,7 +399,7 @@ async def create_agent(ai_project: AIProjectClient,
     return agent
 
 
-async def initialize_eval(project_client: AIProjectClient, openai_client: AsyncOpenAI, agent_version_details: AgentVersionDetails, credential: AsyncTokenCredential):
+async def initialize_eval(project_client: AIProjectClient, agent_version_details: AgentVersionDetails):
     eval_rule_id = f"eval-rule-for-{agent_version_details.name}"
     try:
         eval_rules = project_client.evaluation_rules.list(
@@ -419,11 +419,12 @@ async def initialize_eval(project_client: AIProjectClient, openai_client: AsyncO
                     "initialization_parameters": {"deployment_name": os.environ["AZURE_AI_AGENT_DEPLOYMENT_NAME"]},
                 }
             ]
-            eval_object = await openai_client.evals.create(
-                name=f"{agent_version_details.name} Continuous Evaluation",
-                data_source_config=data_source_config,  # type: ignore
-                testing_criteria=testing_criteria,  # type: ignore
-            )
+            async with project_client.get_openai_client() as openai_client:
+                eval_object = await openai_client.evals.create(
+                    name=f"{agent_version_details.name} Continuous Evaluation",
+                    data_source_config=data_source_config,  # type: ignore
+                    testing_criteria=testing_criteria,  # type: ignore
+                )
             logger.info(f"Evaluation created (id: {eval_object.id}, name: {eval_object.name})")
 
             # Configure a rule that triggers the evaluation on agent responses
@@ -489,7 +490,7 @@ async def initialize_resources():
 
             os.environ["AZURE_EXISTING_AGENT_ID"] = agent_version_details.id
 
-            await initialize_eval(project_client, openai_client, agent_version_details, credential)
+            await initialize_eval(project_client, agent_version_details)
     except Exception as e:
         logger.info("Error creating agent: {e}", exc_info=True)
         raise RuntimeError(f"Failed to create the agent: {e}")  

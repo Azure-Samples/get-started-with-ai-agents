@@ -20,7 +20,8 @@ Check the [Azure Products by Region](https://azure.microsoft.com/explore/global-
 - [Azure AI Search](https://learn.microsoft.com/azure/search/)
 - [GPT Model Capacity](https://learn.microsoft.com/azure/ai-services/openai/concepts/models)
 
-Here are some examples of the regions where the services are available: East US, East US2, Japan East, UK South, Sweden Central.
+> [!IMPORTANT]
+> The template enables continuous evaluation with the `builtin.violence` risk and safety evaluator. This evaluator is supported only when the Microsoft Foundry project is in **East US 2, North Central US, France Central, Sweden Central, Switzerland West, Germany West Central, or Australia East**. In other regions, the application can deploy, but its safety evaluation runs fail. Of the regions offered by this template, **East US 2** and **Sweden Central** support the default evaluator.
 
 ### **Important Note for PowerShell Users**
 
@@ -185,7 +186,7 @@ When you start a deployment, most parameters will have default values. You can c
 | **Setting** | **Description** |  **Default value** |
 |------------|----------------|  ------------|
 | **Existing Project Resource ID** | Specify an existing project resource ID to be used instead of provisioning new Microsoft Foundry project and Foundry Tools. |   |
-| **Azure Region** | Select a region with quota which supports your selected model. |   |
+| **Azure Region** | Select a region with quota that supports your selected model. To use the default continuous evaluator, also follow the [continuous evaluation region requirements](observability.md#continuous-evaluation). |   |
 | **Model** | Choose from the [list of models supported by Foundry Agent Service](https://learn.microsoft.com/azure/ai-services/agents/concepts/model-region-support) for your selected region. | gpt-5-mini |  
 | **Model Format** | Choose from OpenAI or Microsoft, depending on your model. | OpenAI |  
 | **Model Deployment Capacity** | Configure capacity for your model. | 80k |
