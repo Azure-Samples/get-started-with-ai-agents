@@ -5,7 +5,7 @@ targetScope = 'subscription'
 @description('Name of the the environment which is used to generate a short unique hash used in all resources.')
 param environmentName string
 
-@description('Location for all resources')
+@description('Location for all resources. The default builtin.violence continuous evaluator is supported only in East US 2, North Central US, France Central, Sweden Central, Switzerland West, Germany West Central, and Australia East. Evaluation runs fail in other regions.')
 // Based on the model, creating an agent is not supported in all regions. 
 // The combination of allowed and usageName below is for AZD to check AI model gpt-5-mini quota only for the allowed regions for creating an agent.
 // If using different models, update the SKU,capacity depending on the model you use.

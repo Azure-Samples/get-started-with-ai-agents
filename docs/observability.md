@@ -114,6 +114,9 @@ Continuous evaluation is an automated monitoring capability that continuously as
 
 During container startup, continuous evaluation is `enabled` by default and pre-configured with a sample evaluator set to evaluate up to `5` agent responses per hour. Continuous evaluation does not generate test inputs—instead, it evaluates real user conversations as they occur. This means evaluation runs are triggered only when actual users interact with your agent, and if there are no user interactions, there will be no evaluation entries.
 
+> [!IMPORTANT]
+> The default `builtin.violence` evaluator is a risk and safety evaluator. It is supported only when the Microsoft Foundry project is in **East US 2, North Central US, France Central, Sweden Central, Switzerland West, Germany West Central, or Australia East**. In other regions, the evaluation rule can be created, but its evaluation runs fail. Choose a supported project region or replace the evaluator before relying on continuous evaluation.
+
 To customize continuous evaluation from the Microsoft Foundry:
 
 1. Go to [Microsoft Foundry Portal](https://ai.azure.com/) and sign in
